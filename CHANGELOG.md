@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-24: v1 spec
+
+**What.** v0 is done and kept on branch `v0` (`ea600a0`). `SPEC.md` now defines v1 and v2, and
+`TODO.md` is organised by v1 milestone.
+
+**Why.** This is the agreed scope.
+- v1 is a complete small game for single- and multi-agent RL, meant to become the main environment
+  for new RL experiments.
+- Trading, PvP, more monsters and encounters, and additional skills (still to be chosen) are v2.
+- Quests, farming and minigames are not planned.
+
+**Decisions.**
+- The RL interface and several players per world are part of v1, so v1 can be used for
+  experiments on its own.
+- The multi-player engine change comes before the new systems, so skilling, shops and death are
+  written for many players from the start.
+
 ## 2026-10-24: v0 island gym
 
 **What.** New repo. A map compiler builds a 192×192 island out of b237 cache content; the copied
