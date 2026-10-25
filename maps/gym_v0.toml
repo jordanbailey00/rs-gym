@@ -1,0 +1,122 @@
+# Gym v0: a 192x192 island built from b237 cache content.
+# Coordinates are tiles relative to the playable area's south-west corner (world = origin * 64 + value).
+# Source coordinates in [[stamp]] are real-world b237 tiles.
+
+[map]
+name = "gym_v0"
+origin = [2, 2]    # south-west mapsquare; the real world starts at mapsquare x 15, y 19
+size = [3, 3]      # mapsquares: 192x192 tiles, world tiles 128..319
+ocean_ring = 1     # extra all-water mapsquares around the area so the view never ends in a void
+seed = 1
+start = [94, 94]
+
+# Floor ids sampled from real tiles (map floor ids, as stored in mapsquare terrain).
+[materials]
+grass = { underlay = 48 }                                    # Tutorial Island / Lumbridge grass
+grass_alt = { underlay = 50 }                                # lighter grass patches
+sand = { underlay = 48, overlay = 22 }                       # Tutorial Island beach
+path = { overlay = 10 }                                      # Lumbridge stone path
+# Sea overlays as found off Tutorial Island; settings = 1 blocks the tile (the real sea relies on unreachable coasts).
+shallow = { underlay = 48, overlay = 442, settings = 1 }
+water_mid = { underlay = 48, overlay = 445, settings = 1 }
+water_deep = { underlay = 48, overlay = 448, settings = 1 }
+ocean = { underlay = 48, overlay = 451, settings = 1 }
+
+[island]
+radius = 74            # tiles from the area centre; the coast wobbles about +-15%
+wobble = 0.1
+beach_width = 3
+sea_height = 0         # height bytes: OSRS height = -byte * 8, larger is higher
+ramp_tiles = 12        # land rises over this many tiles inland from the coast
+height_scale = 0.4     # scales the client's procedural height noise for rolling hills
+water_depths = [[2, "shallow"], [4, "water_mid"], [8, "water_deep"], [999, "ocean"]]
+
+[[path]]
+points = [[40, 94], [152, 94]]
+width = 3
+
+[[path]]
+points = [[102, 94], [102, 150]]
+width = 3
+
+[[path]]
+points = [[100, 94], [104, 72], [112, 64]]
+width = 3
+
+# Real-world rects copied with all four planes; rotation is quarter turns clockwise.
+[[stamp]]
+name = "Draynor bank"
+source = [3086, 3236]
+size = [14, 13]
+at = [86, 98]
+rotation = 0
+
+[[stamp]]
+name = "Lumbridge general store"
+source = [3206, 3240]
+size = [11, 14]
+at = [66, 99]
+rotation = 1
+
+[[stamp]]
+name = "Lumbridge smithy"   # furnace and anvil
+source = [3219, 3248]
+size = [13, 13]
+at = [105, 97]
+rotation = 3
+
+[[stamp]]
+name = "Varrock south-east mine"   # copper, tin and iron rocks
+source = [3277, 3355]
+size = [19, 17]
+at = [104, 46]
+rotation = 0
+
+[[scatter]]
+ids = [1276, 1278]               # Tree
+area = [45, 120, 150, 168]
+count = 45
+spacing = 1
+
+[[scatter]]
+ids = [10820]                    # Oak tree
+area = [125, 105, 165, 150]
+count = 10
+spacing = 1
+
+[[scatter]]
+ids = [10829, 10831, 10833]      # Willow tree
+area = [22, 60, 55, 135]
+count = 10
+spacing = 1
+
+# NPC spawn groups: random open tiles inside each area (b237 npc ids, as spawned around Lumbridge).
+[[npc]]
+ids = [1173, 1174]               # Chicken
+area = [60, 70, 82, 88]
+count = 6
+
+[[npc]]
+ids = [2790, 2791, 2793]         # Cow
+area = [30, 52, 66, 86]
+count = 6
+
+[[npc]]
+ids = [3029, 3031, 3033]         # Goblin
+area = [122, 72, 162, 92]
+count = 6
+
+[[npc]]
+ids = [2854]                     # Rat
+area = [108, 48, 120, 60]
+count = 3
+
+[[npc]]
+ids = [5086, 5087]               # Dark wizard
+area = [80, 140, 124, 160]
+count = 3
+
+[[npc]]
+ids = [3106, 3108]               # Man
+area = [80, 84, 116, 92]
+count = 2

@@ -1,0 +1,48 @@
+#ifndef RC_QUESTS_H
+#define RC_QUESTS_H
+
+#include "types.h"
+
+#include <stdint.h>
+
+#define RC_QUEST_MAX_SKILL_REQS 16
+
+typedef struct {
+    uint8_t skill_id, level;
+} RcQuestSkillReq;
+
+typedef struct {
+    char name[96];
+    uint8_t difficulty, length, req_count;
+    RcQuestSkillReq reqs[RC_QUEST_MAX_SKILL_REQS];
+} RcQuestDef;
+
+typedef struct {
+    RcQuestDef *defs;
+    int count;
+} RcQuestData;
+
+// Quest state per player (simple integer per quest)
+#define RC_MAX_QUESTS 512
+
+typedef struct {
+    int state[RC_MAX_QUESTS];   // 0 = not started, completed_state = done
+} RcQuestProgress;
+
+extern RcQuestDef *g_rc_quest_defs;
+extern int g_rc_quest_count;
+
+int rc_load_quests(const char *path);
+void rc_quest_data_init(RcQuestData *data);
+void rc_quest_data_free(RcQuestData *data);
+int rc_load_quests_into(const char *path, RcQuestData *out);
+int rc_quest_data_import_globals(RcQuestData *out);
+int rc_quests_mirror_to_globals(const RcQuestData *data);
+void rc_quests_use_data(const RcQuestData *data);
+void rc_quests_reset_data_if_active(const RcQuestData *data);
+const RcQuestDef *rc_quest_def_get(int quest_idx);
+int rc_quest_find(const char *name);
+int rc_quest_get_state(const RcQuestProgress *progress, int quest_id);
+void rc_quest_set_state(RcQuestProgress *progress, int quest_id, int state);
+
+#endif

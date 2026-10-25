@@ -1,0 +1,47 @@
+#ifndef RUNEC_VIEWER_DEV_VALIDATION_H
+#define RUNEC_VIEWER_DEV_VALIDATION_H
+
+#include "../rc-core/types.h"
+
+typedef struct RuneCDevTransport {
+    const char *key;
+    const char *label;
+    int target_x, target_y, plane;
+    int npc_id;
+    int npc_size;
+} RuneCDevTransport;
+
+typedef struct RuneCDevEncounterNpc {
+    int npc_id;
+    int x, y, plane;
+    int size;
+} RuneCDevEncounterNpc;
+
+enum {
+    RUNEC_DEV_BANK_TAB_RANGED = 0,
+    RUNEC_DEV_BANK_TAB_MAGE = 1,
+    RUNEC_DEV_BANK_TAB_MELEE = 2,
+    RUNEC_DEV_BANK_TAB_PVP = 3,
+    RUNEC_DEV_BANK_TAB_SPECIAL = 4,
+};
+
+enum {
+    /* Player start: maps/gym_v0.toml [map].start (94, 94) plus the area origin (128, 128). */
+    RS_GYM_START_X = 222,
+    RS_GYM_START_Y = 222,
+};
+
+int runec_dev_validation_enabled(void);
+int runec_dev_validation_set_spellbook(RcWorld *world, int book);
+int runec_dev_validation_set_god_mode(RcWorld *world, bool enabled);
+int runec_dev_validation_seed_prayers(RcWorld *world);
+const RuneCDevTransport *runec_dev_validation_transports(int *count);
+const RuneCDevTransport *runec_dev_validation_find_transport(const char *key);
+const RuneCDevEncounterNpc *runec_dev_validation_encounter_npcs(
+    const RuneCDevTransport *transport, int *count);
+int runec_dev_validation_prepare_encounter(RcWorld *world,
+                                           const RuneCDevTransport *transport);
+void runec_dev_validation_seed_bank(RcWorld *world);
+int runec_dev_validation_spawn_start_dummy(RcWorld *world);
+
+#endif

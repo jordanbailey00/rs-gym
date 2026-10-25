@@ -1,0 +1,155 @@
+#ifndef RC_OBJECTS_H
+#define RC_OBJECTS_H
+
+#include <stdint.h>
+
+#define RC_MAX_OBJECT_ID 65536
+#define RC_OBJECT_ACTIONS 5
+#define RC_OBJECT_PLACEMENT_DEFAULT_CACHE_PAGES 64
+
+typedef struct RcObjectPlacementStore RcObjectPlacementStore;
+
+enum {
+    RC_OBJ_BEHAVIOR_DOOR      = 1u << 0,
+    RC_OBJ_BEHAVIOR_LADDER    = 1u << 1,
+    RC_OBJ_BEHAVIOR_STAIR     = 1u << 2,
+    RC_OBJ_BEHAVIOR_BANK      = 1u << 3,
+    RC_OBJ_BEHAVIOR_ALTAR     = 1u << 4,
+    RC_OBJ_BEHAVIOR_RESOURCE  = 1u << 5,
+    RC_OBJ_BEHAVIOR_TRANSPORT = 1u << 6,
+    RC_OBJ_BEHAVIOR_STORAGE   = 1u << 7,
+    RC_OBJ_BEHAVIOR_PAIR_LEFT = 1u << 8,
+    RC_OBJ_BEHAVIOR_PAIR_RIGHT = 1u << 9,
+    RC_OBJ_BEHAVIOR_PAIR_WIDE = 1u << 10,
+};
+
+enum {
+    RC_OBJ_SKILL_NONE = 0,
+    RC_OBJ_SKILL_WOODCUTTING = 1,
+    RC_OBJ_SKILL_MINING = 2,
+    RC_OBJ_SKILL_FISHING = 3,
+    RC_OBJ_SKILL_FARMING = 4,
+    RC_OBJ_SKILL_PRAYER = 5,
+};
+
+enum {
+    RC_OBJECT_CLIP_BLOCKS_PROJECTILE = 1u << 0,
+    RC_OBJECT_CLIP_MODEL_CLIPPED = 1u << 1,
+    RC_OBJECT_CLIP_HOLLOW = 1u << 2,
+    RC_OBJECT_CLIP_RANDOMIZE_ANIM_START = 1u << 3,
+    RC_OBJECT_CLIP_DEFER_ANIM_CHANGE = 1u << 4,
+};
+
+typedef struct {
+    uint32_t obj_id;
+    uint32_t key;
+    int32_t value;
+} RcObjectParam;
+
+typedef struct {
+    int id;
+    char name[64];
+    char actions[RC_OBJECT_ACTIONS][32];
+    uint32_t transform_offset;
+    uint16_t width, length;
+    uint16_t transform_count;
+    uint8_t interact_type, action_count;
+    uint8_t force_approach;
+    int varbit, varp;
+    uint32_t flags;
+    uint32_t param_first;
+    uint16_t param_count;
+    uint8_t supports_items;
+    uint8_t clip_flags;
+    uint8_t loaded;
+} RcObjectDef;
+
+typedef struct {
+    uint32_t obj_id;
+    uint64_t key;
+    uint16_t x, y, mapsquare;
+    uint8_t plane, type, rotation, flags;
+} RcObjectPlacement;
+
+typedef struct {
+    uint32_t flags;
+    int next_loc_stage;
+    uint8_t action_mask;
+    uint8_t skill;
+    uint8_t loaded;
+} RcObjectBehavior;
+
+typedef struct {
+    uint32_t first, count;
+} RcObjectRange;
+
+typedef struct {
+    uint32_t total_rows;
+    uint32_t occupied_pages;
+    uint32_t pages_requested;
+    uint32_t pages_loaded;
+    uint32_t rows_loaded;
+    uint32_t pages_resident;
+    uint32_t rows_resident;
+} RcObjectPlacementLoadStats;
+
+typedef struct {
+    RcObjectDef defs[RC_MAX_OBJECT_ID];
+    RcObjectBehavior behaviors[RC_MAX_OBJECT_ID];
+    int32_t *transforms;
+    RcObjectPlacement *placements;
+    RcObjectPlacementStore *placement_store;
+    RcObjectParam *params;
+    RcObjectRange region_index[RC_MAX_OBJECT_ID];
+    int def_count;
+    int transform_count;
+    int behavior_count;
+    int placement_count;
+    int param_count;
+} RcObjectData;
+
+extern RcObjectDef g_rc_object_defs[RC_MAX_OBJECT_ID];
+extern RcObjectBehavior g_rc_object_behaviors[RC_MAX_OBJECT_ID];
+extern RcObjectPlacement *g_rc_object_placements;
+extern RcObjectParam *g_rc_object_params;
+extern int32_t *g_rc_object_transforms;
+extern int g_rc_object_def_count;
+extern int g_rc_object_behavior_count;
+extern int g_rc_object_placement_count;
+extern int g_rc_object_param_count;
+extern int g_rc_object_transform_count;
+
+int rc_load_object_defs(const char *path);
+int rc_load_object_placements(const char *path);
+int rc_load_object_behaviors(const char *path);
+void rc_object_data_init(RcObjectData *data);
+void rc_object_data_free(RcObjectData *data);
+int rc_object_data_import_globals(RcObjectData *data);
+int rc_load_object_defs_into(const char *path, RcObjectData *data);
+int rc_load_object_placements_into(const char *path, RcObjectData *data);
+int rc_load_object_behaviors_into(const char *path, RcObjectData *data);
+int rc_objects_mirror_to_globals(const RcObjectData *data);
+void rc_objects_use_data(const RcObjectData *data);
+void rc_objects_reset_data_if_active(const RcObjectData *data);
+
+const RcObjectDef *rc_object_def_get(int obj_id);
+int rc_object_def_transform_at(const RcObjectDef *def, int index,
+                               int *out_obj_id);
+int rc_object_def_param_int(int obj_id, int key, int default_value);
+const RcObjectBehavior *rc_object_behavior_get(int obj_id);
+const RcObjectPlacement *rc_object_region_placements(uint16_t mapsquare,
+                                                     int *count);
+int rc_object_placement_count(void);
+int rc_object_has_placements(void);
+int rc_object_placements_at(int x, int y, int plane,
+                            RcObjectPlacement *out, int max_out);
+int rc_object_placement_find_key(uint64_t key, int x, int y, int plane,
+                                 RcObjectPlacement *out);
+int rc_object_placement_find_layer(int x, int y, int plane, int layer,
+                                   RcObjectPlacement *out);
+int rc_object_layer_for_type(int type);
+int rc_object_placements_prefetch_rect(int min_x, int min_y,
+                                       int max_x, int max_y,
+                                       RcObjectPlacementLoadStats *stats);
+int rc_object_placements_set_cache_limit(int max_pages);
+#endif

@@ -1,0 +1,6 @@
+# Local runtime data install and copied OSRS cache (Jagex content; never commit)
+data/
+# Build outputs
+build/
+__pycache__/
+*.pyc
