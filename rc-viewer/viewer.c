@@ -1,6 +1,7 @@
 // RuneC Raylib viewer.
 
 #include "../rc-core/mode.h"
+#include "../rc-core/trade.h"
 #include "../rc-core/api.h"
 #include "../rc-core/assets.h"
 #include "../rc-core/combat.h"
@@ -4427,6 +4428,51 @@ static void viewer_sync_skilling(ViewerState *v) {
                  out ? out->name : recipe ? recipe->name : "?", extra);
         menu->count++;
     }
+}
+
+static void trade_line(char *out, size_t cap, const RcInvSlot *s) {
+    const RcItemDef *def = rc_item_def_get(s->item_id);
+    if (s->quantity > 1) snprintf(out, cap, "%.28s x%d", def ? def->name : "?", s->quantity);
+    else snprintf(out, cap, "%.36s", def ? def->name : "?");
+}
+
+// The open trade's offers and state, for the chatbox trade panel.
+static void viewer_sync_trade(ViewerState *v) {
+    const RcPlayer *p = v->world->player;
+    RuneCUiTrade *t = &v->ui.trade;
+    t->open = p->trade.stage == RC_TRADE_STAGE_OPEN && p->trade.partner >= 0;
+    if (!t->open) return;
+    const RcPlayer *q = &v->world->players[p->trade.partner];
+    snprintf(t->title, sizeof(t->title), "Trading with player %d (revision %u): click items to offer",
+             q->index + 1, p->trade.revision);
+    t->mine_count = t->theirs_count = 0;
+    for (int i = 0; i < p->trade.offer_count && t->mine_count < RUNEC_UI_TRADE_LINES; i++)
+        trade_line(t->mine[t->mine_count++], sizeof(t->mine[0]), &p->trade.offer[i]);
+    for (int i = 0; i < q->trade.offer_count && t->theirs_count < RUNEC_UI_TRADE_LINES; i++)
+        trade_line(t->theirs[t->theirs_count++], sizeof(t->theirs[0]), &q->trade.offer[i]);
+    int mine = p->trade.accepted_revision == p->trade.revision;
+    int theirs = q->trade.accepted_revision == p->trade.revision;
+    snprintf(t->status, sizeof(t->status), "%s", mine && theirs ? "Both accepted."
+             : mine ? "Waiting for the other player..." : theirs ? "The other player has accepted."
+             : "");
+}
+
+// T: ask the nearest other player in range to trade (they must ask back).
+static void viewer_request_trade(ViewerState *v) {
+    const RcPlayer *p = v->world->player;
+    int best = -1, best_d = RC_TRADE_RANGE + 1;
+    for (int i = 0; i < v->world->player_count; i++) {
+        const RcPlayer *o = &v->world->players[i];
+        if (o == p || !o->active || o->is_dead || o->plane != p->plane) continue;
+        int d = abs(o->x - p->x) > abs(o->y - p->y) ? abs(o->x - p->x) : abs(o->y - p->y);
+        if (d < best_d) best = i, best_d = d;
+    }
+    if (best < 0) {
+        runec_ui_add_chat_message(&v->ui, "There is nobody nearby to trade with.");
+        return;
+    }
+    (void)rc_trade_request(v->world, best);
+    runec_ui_add_chat_message(&v->ui, "Sending trade offer...");
 }
 
 static void viewer_report_shop_value(ViewerState *v, int slot, int inventory) {
@@ -9289,6 +9335,7 @@ static void handle_input(ViewerState *v, int ui_capture) {
             viewer_set_npc_tiles(v, !v->show_npc_footprints);
         if (IsKeyPressed(KEY_C)) v->show_collision = !v->show_collision;
         if (IsKeyPressed(KEY_SPACE)) v->paused = !v->paused;
+        if (IsKeyPressed(KEY_T) && !v->replay_env) viewer_request_trade(v);
         if (IsKeyPressed(KEY_R))
             (void)rc_player_set_running(v->world, !p->running);
         if (IsKeyPressed(KEY_P)) pickup_current_tile(v);
@@ -10675,6 +10722,7 @@ int main(int argc, char **argv) {
         char error[256] = {0};
         sync_ui_items(&v);
         sync_ui_player_status(&v);
+        viewer_sync_trade(&v);
         sync_ui_minimap(&v);
         if (!runec_ui_runtime_selftest(&v.ui, error, sizeof(error))) {
             fprintf(stderr, "ui runtime selftest: FAIL: %s\n", error);
@@ -10738,6 +10786,14 @@ int main(int argc, char **argv) {
                                    v.ui.last_intent.secondary);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_MAKE_CLOSE) {
             rc_skilling_close_make(v.world->player);
+        } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_TRADE_ACCEPT) {
+            (void)rc_trade_accept(v.world, p->trade.revision);
+        } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_TRADE_DECLINE) {
+            (void)rc_trade_decline(v.world);
+        } else if (v.ui.trade.open && v.ui.last_intent.kind == RUNEC_UI_INTENT_INVENTORY_SLOT) {
+            int slot = v.ui.last_intent.primary;  // offer the item (a whole stack)
+            if (slot >= 0 && slot < RC_INVENTORY_SIZE && p->inventory[slot].item_id >= 0)
+                (void)rc_trade_offer(v.world, slot, p->inventory[slot].quantity);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_EXAMINE) {
             const RcItemDef *def = rc_item_def_get(v.ui.last_intent.primary);
             if (def) runec_ui_add_chat_message(&v.ui, def->examine[0]

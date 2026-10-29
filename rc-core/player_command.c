@@ -1,5 +1,6 @@
 #include "players.h"
 #include "player_command.h"
+#include "trade.h"
 #include "shops.h"
 #include "skilling.h"
 
@@ -18,7 +19,7 @@
 static int command_args_valid(RcPlayerCommandKind kind,
                               RcActionCategory category) {
     return kind > RC_PLAYER_COMMAND_NONE
-        && kind <= RC_PLAYER_COMMAND_SHOP_SELL
+        && kind <= RC_PLAYER_COMMAND_TRADE_DECLINE
         && category >= RC_ACTION_CATEGORY_SOFT
         && category <= RC_ACTION_CATEGORY_STRONG;
 }
@@ -88,6 +89,7 @@ static void cancel_player_activity(RcWorld *world,
     rc_skilling_close_make(player);
     rc_shop_close(player);
     rc_storage_close(world);
+    rc_trade_cancel(world, RC_TRADE_CANCELLED);
     world->player->action.active = false;
     world->player->action.owner = RC_ACTION_OWNER_NONE;
     world->player->action.category = RC_ACTION_CATEGORY_SOFT;
@@ -234,6 +236,16 @@ static int execute_command(RcWorld *world, const RcPlayerCommand *command) {
     case RC_PLAYER_COMMAND_SHOP_SELL:
         return inventory_reference_matches(world, a[0], (uint32_t)a[1])
             && rc_shop_sell(world, a[0], a[2]) > 0;
+    case RC_PLAYER_COMMAND_TRADE_REQUEST:
+        return rc_trade_request(world, a[0]);
+    case RC_PLAYER_COMMAND_TRADE_OFFER:
+        return rc_trade_offer(world, a[0], a[1]);
+    case RC_PLAYER_COMMAND_TRADE_WITHDRAW:
+        return rc_trade_withdraw(world, a[0], a[1]);
+    case RC_PLAYER_COMMAND_TRADE_ACCEPT:
+        return rc_trade_accept(world, (uint32_t)a[0]);
+    case RC_PLAYER_COMMAND_TRADE_DECLINE:
+        return rc_trade_decline(world);
     case RC_PLAYER_COMMAND_WALK_TO:
         if (!rc_world_coord_valid(a[0]) || !rc_world_coord_valid(a[1]))
             return 0;

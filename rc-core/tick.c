@@ -13,6 +13,7 @@
 #include "prayer.h"
 #include "skills.h"
 #include "skilling.h"
+#include "trade.h"
 #include "death.h"
 #include "shops.h"
 #include "pathfinding.h"
@@ -908,8 +909,14 @@ void rc_world_tick(RcWorld *world) {
     const uint32_t on = world->enabled;
     rc_combat_clear_attack_events(world);
 
-    // Phases 1-2 — per player, in slot order: input then route planning.
-    for (int p = 0; p < world->player_count; p++) {
+    // Players act in an order that rotates every tick, so no slot always wins a contested node,
+    // shop slot or ground item: the k-th to act is slot (first + k) % count.
+    const int count = world->player_count > 0 ? world->player_count : 1;
+    const int first = (int)(world->tick % (RcTick)count);
+
+    // Phases 1-2 — per player, in rotating order: input then route planning.
+    for (int k = 0; k < world->player_count; k++) {
+        int p = (first + k) % count;
         if (!acting_player(world, p)) continue;
         if (on & RC_SUB_CONSUMABLES) rc_consumables_tick(world);
         process_player_input(world);
@@ -948,8 +955,9 @@ void rc_world_tick(RcWorld *world) {
     if (on & RC_SUB_ENCOUNTER) rc_encounter_tick(world);
     if (on & RC_SUB_ENCOUNTER) rc_encounter_tick_effects(world);
 
-    // Phase 4 — per player action resolution (gated per subsystem).
-    for (int p = 0; p < world->player_count; p++) {
+    // Phase 4 — per player action resolution (gated per subsystem), in the same order.
+    for (int k = 0; k < world->player_count; k++) {
+        int p = (first + k) % count;
         if (!acting_player(world, p)) continue;
         refresh_player_face_entity(world->player);
         process_player_action_timers(world);
@@ -992,6 +1000,7 @@ void rc_world_tick(RcWorld *world) {
         if (on & RC_SUB_PRAYER)   rc_prayer_drain_tick(world);
         rc_stat_restore_tick(world->player);
         rc_death_tick(world);
+        rc_trade_tick(world);
     }
     world->player = &world->players[0];
     tick_respawns(world);     // base — NPC wander reset clock

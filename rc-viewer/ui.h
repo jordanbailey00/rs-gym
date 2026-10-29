@@ -85,6 +85,8 @@ typedef enum RuneCUiIntentKind {
     RUNEC_UI_INTENT_DEV_SPELLBOOK,
     RUNEC_UI_INTENT_DEV_NPC_TILES,
     RUNEC_UI_INTENT_MAKE,          // primary: make option, secondary: count (0 = all)
+    RUNEC_UI_INTENT_TRADE_ACCEPT,
+    RUNEC_UI_INTENT_TRADE_DECLINE,
     RUNEC_UI_INTENT_MAKE_CLOSE,
     RUNEC_UI_INTENT_SHOP_VALUE     // primary: slot, secondary: 1 for an inventory item
 } RuneCUiIntentKind;
@@ -220,6 +222,19 @@ typedef struct RuneCUiMakeMenu {
     char label[RUNEC_UI_MAKE_MAX][64];
 } RuneCUiMakeMenu;
 
+#define RUNEC_UI_TRADE_LINES 6
+
+// A direct trade shown in the chatbox: both offers, the revision and Accept / Decline.
+typedef struct RuneCUiTrade {
+    int open;
+    char title[96];
+    char mine[RUNEC_UI_TRADE_LINES][40];
+    int mine_count;
+    char theirs[RUNEC_UI_TRADE_LINES][40];
+    int theirs_count;
+    char status[64];
+} RuneCUiTrade;
+
 typedef struct RuneCUiState {
     RuneCUiTab active_tab;
     RuneCUiIntent last_intent;
@@ -336,6 +351,7 @@ typedef struct RuneCUiState {
     RuneCUiComponentEventMask event_masks[RUNEC_UI_EVENT_MASKS];
     int event_mask_count;
     RuneCUiMakeMenu make;
+    RuneCUiTrade trade;
     int shop_open;        // the bank panel shows a shop: bank[] holds its stock
     char shop_title[48];
 } RuneCUiState;

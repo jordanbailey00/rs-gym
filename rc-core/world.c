@@ -74,6 +74,7 @@ static void init_player_defaults(RcPlayer *p) {
     p->storage_target = -1;
     p->storage_option = -1;
     p->shop_open = -1;
+    p->trade.partner = -1;
     rc_traversal_clear(p);
     rc_interaction_clear(p);
     p->combat_style = COMBAT_MELEE_CRUSH;

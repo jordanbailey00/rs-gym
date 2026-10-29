@@ -557,11 +557,20 @@ void rc_npc_prepare_loot(RcWorld *world, RcNpc *npc) {
     if (!world || !npc || !(world->enabled & RC_SUB_LOOT)
             || !npc->is_dead || npc->loot_prepared) return;
     npc->loot_prepared = true;
-    int owner = -1;
-    for (int i = 0; i < RC_MAX_PLAYERS; i++)
-        if (npc->player_damage[i] && (owner < 0 || npc->player_damage[i] > npc->player_damage[owner]))
-            owner = i;
+    // The top actual (non-overkill) damage dealer owns the drop; an exact tie goes to a seeded pick
+    // among the tied players, never to the lowest slot.
+    int owner = -1, ties = 0;
+    for (int i = 0; i < RC_MAX_PLAYERS; i++) {
+        if (!npc->player_damage[i]) continue;
+        if (owner < 0 || npc->player_damage[i] > npc->player_damage[owner]) owner = i, ties = 1;
+        else if (npc->player_damage[i] == npc->player_damage[owner]) ties++;
+    }
     if (owner < 0) return;
+    if (ties > 1) {
+        int pick = rc_rng_range(&world->rng_state, ties - 1), best = npc->player_damage[owner];
+        for (int i = 0; i < RC_MAX_PLAYERS; i++)
+            if (npc->player_damage[i] == best && pick-- == 0) owner = i;
+    }
     const RcNpcDef *def = rc_npc_def_for_npc(world, npc);
     if (!def) return;
     RcLootReceipt receipt = {.npc_uid = npc->uid, .npc_def_id = def->id,

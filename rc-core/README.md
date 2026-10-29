@@ -38,7 +38,11 @@ For RL use `rc-env`, which wraps all of this.
   rules; rules may rebase a success curve (`level_offset`), gather by hand, or never deplete.
 - `shops.c`: live shops (shared stock, stock-based or fixed prices, restocking) on top of the
   shops.bin loader.
-- `death.c`: keep-3 items, gravestones and wilderness drops, timed respawn.
+- `death.c`: keep-3 items, gravestones and wilderness drops, timed respawn; a mode's gravestone can
+  move its remaining items to the bank when it expires.
+- `trade.c`: atomic direct trades between players (versioned offers, both accept one revision).
+- Turn order: players act starting at slot `tick % count`, so contested items rotate between them;
+  NPC drop ownership ties go to a seeded pick.
 - `rc_world_reset_seeded`: reset as a freshly created world with a new seed.
 - `rc_object_placements_freeze`: makes the shared placement cache read-only for multi-threaded use.
 

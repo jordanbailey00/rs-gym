@@ -2,11 +2,6 @@
 
 v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
 
-## Stage 4: shared world
-- Atomic player trading (engine, viewer, agent actions).
-- Loot ownership by non-overkill damage (100 private, 300 public ticks), seeded tie-breaks.
-- Rotating tick priority for contested resources, stock and ground items; up to 8 players.
-
 ## Stage 5: RL interface
 - Versioned action and observation schema for the mode (local window, hidden-state rules,
   wait versus stop, trade actions), masks, diagnostics for failed actions.

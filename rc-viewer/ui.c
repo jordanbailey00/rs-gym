@@ -3052,6 +3052,7 @@ static int handle_chat_tab_input(RuneCUiState *ui, const RuneCUiLayout *layout,
 
 static int handle_make_input(RuneCUiState *ui, const RuneCUiLayout *layout,
                              Vector2 mouse);
+static int handle_trade_input(RuneCUiState *ui, const RuneCUiLayout *layout, Vector2 mouse);
 
 int runec_ui_handle_input(RuneCUiState *ui, int screen_w, int screen_h) {
     RuneCUiLayout layout;
@@ -3083,6 +3084,7 @@ int runec_ui_handle_input(RuneCUiState *ui, int screen_w, int screen_h) {
     if (handle_bank_amount_input(ui)) return 1;
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && handle_context_click(ui, mouse))
         return 1;
+    if (!ui->context_open && handle_trade_input(ui, &layout, mouse)) return 1;
     if (!ui->context_open && handle_make_input(ui, &layout, mouse)) return 1;
     if (ui->context_open) {
         if (IsKeyPressed(KEY_ESCAPE)) close_context(ui);
@@ -3691,6 +3693,50 @@ static void draw_make_menu(RuneCUiState *ui, const RuneCUiLayout *layout) {
     }
 }
 
+static Rectangle trade_button_rect(const RuneCUiLayout *layout, int i) {
+    float w = 90;
+    return (Rectangle){layout->chat_messages.x + layout->chat_messages.width - 2 * (w + 6) + i * (w + 6),
+                       layout->chat_messages.y + layout->chat_messages.height - 19, w, 16};
+}
+
+static void draw_trade_panel(RuneCUiState *ui, const RuneCUiLayout *layout) {
+    const RuneCUiTrade *t = &ui->trade;
+    Rectangle area = layout->chat_messages;
+    DrawRectangleRec(area, (Color){0, 0, 0, 170});
+    draw_text_shadow(ui, t->title, area.x + 4, area.y + 1, 14, OSRS_YELLOW);
+    float col = area.width / 2;
+    draw_text_shadow(ui, "Your offer", area.x + 4, area.y + 18, 12, OSRS_ORANGE);
+    draw_text_shadow(ui, "Their offer", area.x + col, area.y + 18, 12, OSRS_ORANGE);
+    for (int i = 0; i < t->mine_count; i++)
+        draw_text_shadow(ui, t->mine[i], area.x + 8, area.y + 32 + i * 13.0f, 12, WHITE);
+    for (int i = 0; i < t->theirs_count; i++)
+        draw_text_shadow(ui, t->theirs[i], area.x + col + 4, area.y + 32 + i * 13.0f, 12, WHITE);
+    draw_text_shadow(ui, t->status, area.x + 4, area.y + area.height - 18, 12, OSRS_YELLOW);
+    Vector2 mouse = GetMousePosition();
+    static const char *labels[2] = {"Accept", "Decline"};
+    for (int i = 0; i < 2; i++) {
+        Rectangle r = trade_button_rect(layout, i);
+        int hover = CheckCollisionPointRec(mouse, r);
+        DrawRectangleRec(r, hover ? (Color){90, 76, 58, 230} : (Color){52, 44, 35, 210});
+        draw_text_shadow(ui, labels[i], r.x + 6, r.y + 1, 12, OSRS_ORANGE);
+    }
+}
+
+static int handle_trade_input(RuneCUiState *ui, const RuneCUiLayout *layout, Vector2 mouse) {
+    if (!ui->trade.open) return 0;
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        ui->last_intent.kind = RUNEC_UI_INTENT_TRADE_DECLINE;
+        return 1;
+    }
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return 0;
+    for (int i = 0; i < 2; i++) {
+        if (!CheckCollisionPointRec(mouse, trade_button_rect(layout, i))) continue;
+        ui->last_intent.kind = i ? RUNEC_UI_INTENT_TRADE_DECLINE : RUNEC_UI_INTENT_TRADE_ACCEPT;
+        return 1;
+    }
+    return CheckCollisionPointRec(mouse, layout->chat_messages);
+}
+
 static int handle_make_input(RuneCUiState *ui, const RuneCUiLayout *layout,
                              Vector2 mouse) {
     if (!ui->make.open) return 0;
@@ -3728,7 +3774,7 @@ static void draw_chat(RuneCUiState *ui, const RuneCUiLayout *layout) {
         DrawRectangleRec(layout->chat, (Color){0, 0, 0, 115});
     DrawRectangleRec(layout->chat_messages, (Color){0, 0, 0, 84});
 
-    for (int i = ui->chat_line_count - 1; i >= 0 && !ui->make.open; i--) {
+    for (int i = ui->chat_line_count - 1; i >= 0 && !ui->make.open && !ui->trade.open; i--) {
         int row = ui->chat_line_count - 1 - i;
         draw_text_shadow(ui, ui->chat_lines[i],
                          layout->chat_messages.x + 3,
@@ -3736,7 +3782,8 @@ static void draw_chat(RuneCUiState *ui, const RuneCUiLayout *layout) {
                          OSRS_ORANGE);
     }
 
-    if (ui->make.open) draw_make_menu(ui, layout);
+    if (ui->trade.open) draw_trade_panel(ui, layout);
+    else if (ui->make.open) draw_make_menu(ui, layout);
 
     const char *prompt = ui->chat_focused ? ">" : "Click here to chat";
     char input[160];

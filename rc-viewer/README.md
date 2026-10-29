@@ -22,6 +22,9 @@ RUNEC_DEV_VALIDATION=1 ./build/cmake/rc-viewer   # dev: 99 stats, seeded bank, d
 - Right-drag orbits the camera; the wheel zooms.
 - Furnace/anvil menu (in the chatbox): left-click makes all, right-click makes one, Esc closes.
 - Shop window: left-click buys or sells one (Shift: ten); right-click for Value, 5, 10 and 50.
+- Trading: T asks the nearest player in range to trade (they must ask back); while the trade is
+  open the chatbox shows both offers, a click on an inventory item offers it, and Accept / Decline
+  act on the current revision (any change clears both acceptances; walking away cancels).
 
 **Keys:**
 - R toggles run, G toggles god mode, Space pauses.

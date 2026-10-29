@@ -5,6 +5,7 @@
 #include "interaction.h"
 #include "items.h"
 #include "prayer.h"
+#include "trade.h"
 
 #include <string.h>
 
@@ -45,6 +46,7 @@ void rc_death_begin(RcWorld *world) {
     const RcDeathRules *rules = world ? world->death_rules : NULL;
     if (!rules) return;
     RcPlayer *p = world->player;
+    rc_trade_cancel(world, RC_TRADE_CANCELLED);  // offered items come back before the grave
     p->respawn_tick = world->tick + (rules->respawn_delay ? rules->respawn_delay : 1);
     bool kept[DEATH_SLOTS];
     rc_death_kept_slots(world, kept);

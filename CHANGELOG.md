@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-10-29: trading, loot ownership and contention (Stage 4)
+
+**What.** Players can trade directly (`rc-core/trade.c`), NPC drop ownership breaks ties with the
+seeded generator, and players act in an order that rotates every tick. The viewer has a trade
+panel.
+
+**Why.** Stage 4 of the v1 roadmap: one shared world with atomic trades, fair contention and no
+permanent low-slot advantage, for up to eight players.
+
+**Details.**
+- Trades: mutual requests within 10 tiles open a trade; offered items leave the inventory for the
+  trade, so they cannot be eaten, equipped, dropped or sold; each offer change bumps a shared
+  revision and clears both acceptances; the exchange commits when both accept the same revision,
+  after rechecking both players, the distance and inventory room, as two staged transactions.
+  Moving, any other action, death (before the grave is made), separation or a failed check
+  cancels it and returns both offers; untradeable items cannot be offered. Trade calls are soft
+  player commands (`TRADE_REQUEST/OFFER/WITHDRAW/ACCEPT/DECLINE`).
+- Turn order: input, routes and actions run for players starting at slot `tick % count`, so the
+  last shop item, a ground item or a resource node goes to a different player each tick.
+- Loot: the top non-overkill damage dealer owns an NPC's drop (private, then public, then gone, by
+  the mode's 100/300 ticks); exact ties go to a seeded pick among the tied players.
+- Viewer: T asks the nearest player to trade; the chatbox shows both offers, clicks on inventory
+  items offer them, and Accept / Decline act on the current revision.
+
+**Checked.** `tests/test_compact_trade.c`: a swap that conserves every item, revision
+invalidation, stale accepts, eating and dropping during a trade, death mid-trade, a full
+inventory, separation, a busy partner and an untradeable spine. `tests/test_compact_shared.c`:
+eight players racing for the last hammer and for one ground item; one winner each time, rotating.
+The trade panel has not been used by hand.
+
 ## 2026-10-29: Scurrius, bone weapons and death recovery (Stage 3)
 
 **What.** Scurrius is the mode's shared boss (`rc-content/encounters/scurrius.c`), the three bone

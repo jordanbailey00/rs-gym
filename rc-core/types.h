@@ -81,6 +81,11 @@ typedef enum {
     RC_PLAYER_COMMAND_LIGHT_FIRE,
     RC_PLAYER_COMMAND_SHOP_BUY,
     RC_PLAYER_COMMAND_SHOP_SELL,
+    RC_PLAYER_COMMAND_TRADE_REQUEST,
+    RC_PLAYER_COMMAND_TRADE_OFFER,
+    RC_PLAYER_COMMAND_TRADE_WITHDRAW,
+    RC_PLAYER_COMMAND_TRADE_ACCEPT,
+    RC_PLAYER_COMMAND_TRADE_DECLINE,
 } RcPlayerCommandKind;
 
 typedef enum {
@@ -703,6 +708,22 @@ typedef struct {
     bool withdraw, cannot_note;
 } RcBankResult;
 
+// A player's side of a direct trade (rc-core/trade.h).
+#define RC_TRADE_SLOTS 28
+enum { RC_TRADE_STAGE_NONE = 0, RC_TRADE_STAGE_REQUESTED, RC_TRADE_STAGE_OPEN };
+
+typedef struct {
+    uint8_t stage;
+    int8_t partner;                 // player slot, -1 none
+    uint8_t last_result;            // RcTradeResult of the last trade call
+    uint32_t session;               // shared id of the open trade
+    uint32_t revision;              // shared; bumps on every offer change
+    uint32_t accepted_revision;     // the revision this player accepted, 0 none
+    RcTick requested_tick;
+    RcInvSlot offer[RC_TRADE_SLOTS];  // offered items, out of the inventory
+    int offer_count;
+} RcTradeState;
+
 // Skill state
 typedef struct {
     int xp[SKILL_COUNT];
@@ -987,6 +1008,7 @@ typedef struct {
     uint8_t make_menu;     // RcMakeMenu open at a station
     int32_t make_station;  // loc id of the station the menu was opened at (0: none)
     int8_t shop_open;      // index into RcWorld.shops, -1: none
+    RcTradeState trade;    // a direct trade with another player (rc-core/trade.c)
     // Death (rc-core/death.c): respawn tick while dead, 0 otherwise.
     RcTick respawn_tick;
 
@@ -1402,6 +1424,7 @@ typedef struct RcWorld {
     // A mode's per-tick script (boss encounters), run once deaths and respawns resolve.
     void (*mode_tick)(struct RcWorld *world);
     RcModeBossState mode_boss;
+    uint32_t trade_sessions, trades_completed;  // rc-core/trade.c
     int loot_private_ticks, loot_public_ticks;  // NPC drops: owner-only, then public (0: 100/200)
     RcLootReceipt last_loot;
     struct RcDormantNpcState *dormant_npcs;

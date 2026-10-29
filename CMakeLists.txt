@@ -49,7 +49,7 @@ set_tests_properties(test_gymmap PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR
 
 # Headless checks of the built gym data (skip until tools/build_mode.py has built the mode).
 foreach(GYM_TEST test_gym_world test_gym_multiplayer test_gym_skilling test_gym_rules test_gym_bosses
-        test_compact_mode)
+        test_compact_mode test_compact_trade test_compact_shared)
     add_executable(${GYM_TEST} tests/${GYM_TEST}.c)
     target_link_libraries(${GYM_TEST} rc-core rc-content-link m)
     add_test(NAME ${GYM_TEST} COMMAND ${GYM_TEST})
