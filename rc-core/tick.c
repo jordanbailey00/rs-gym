@@ -995,6 +995,9 @@ void rc_world_tick(RcWorld *world) {
     }
     world->player = &world->players[0];
     tick_respawns(world);     // base — NPC wander reset clock
+    // Phase 9 — the mode's script (boss encounters) sees this tick's damage and deaths.
+    if (world->mode_tick)     world->mode_tick(world);
+    world->player = &world->players[0];
     if (on & RC_SUB_LOOT)     rc_ground_items_tick(world);
     if (world->shop_count)    rc_shops_tick(world);
 

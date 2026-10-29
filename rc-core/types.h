@@ -1188,6 +1188,7 @@ typedef struct {
     int arrival_timer;
     RcTick timer_start_tick;
     uint8_t visibility;
+    bool bank_on_expiry;    // death recovery: the owner's bank takes it when it expires
     bool static_spawn;
     bool active;
 } RcGroundItem;
@@ -1277,6 +1278,39 @@ enum {
     RC_RANGED_RESOURCE_INVALID = -2,
 };
 
+// A gym mode's shared boss encounter (rc-content/encounters/scurrius.c): everything the fight
+// owns, so a reset or a snapshot covers it.
+#define RC_MODE_BOSS_HAZARDS 32
+#define RC_MODE_BOSS_MINIONS 8
+
+typedef struct {
+    int16_t x, y;
+    RcTick land_tick;
+} RcModeHazard;
+
+typedef struct {
+    bool active;                       // a fight is under way (a living player entered)
+    uint8_t phase;                     // 1-3; never regresses within a fight
+    uint16_t participants;             // monotonic set of player slots this fight
+    int boss_uid;                      // the boss NPC, -1 until found
+    int base_hp, max_hp;
+    uint32_t damage[RC_MAX_PLAYERS];   // actual non-overkill damage this fight
+    RcTick empty_since;                // first tick with no living player inside (0: occupied)
+    RcTick next_bricks, next_summon, next_feed;
+    int8_t moving_to;                  // -1, a food pile index, or 3 for the centre
+    int8_t feeding_pile;               // eating at this pile, -1 none
+    uint8_t heals_left;
+    RcTick next_heal;
+    RcModeHazard hazards[RC_MODE_BOSS_HAZARDS];
+    int hazard_count;
+    int minions[RC_MODE_BOSS_MINIONS];
+    int minion_count;
+    uint32_t kills, rotation;          // completed kills; seeded loot rotation counter
+    RcTick last_kill_tick;
+    int last_owner;                    // owner of the last kill's loot, -1 none
+    uint16_t last_qualified;           // players with kill credit for the last kill
+} RcModeBossState;
+
 typedef struct {
     int (*apply_player_damage)(const struct RcWorld *world,
                                const RcNpc *target, int damage);
@@ -1365,6 +1399,9 @@ typedef struct RcWorld {
     int next_ground_item_uid;
     RcNpcLootHook npc_loot_hook;
     void *npc_loot_ctx;
+    // A mode's per-tick script (boss encounters), run once deaths and respawns resolve.
+    void (*mode_tick)(struct RcWorld *world);
+    RcModeBossState mode_boss;
     int loot_private_ticks, loot_public_ticks;  // NPC drops: owner-only, then public (0: 100/200)
     RcLootReceipt last_loot;
     struct RcDormantNpcState *dormant_npcs;

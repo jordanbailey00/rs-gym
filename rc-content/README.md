@@ -7,11 +7,12 @@ OSRS-specific content on top of `rc-core`:
   options, tinderbox on logs, Cook, Smelt, Smith)
 - `gym.c`: the town's shops (stock, prices, Trade handlers), burying bones, and the death rules
 - `compact.c`: a mode's content from its rules (`rc-core/mode.h`): skilling rules and production
-  stations, fixed-price shops, the tanner and Historian Aldo, burying, closed drop tables, death
-  and loot timing, and `rc_content_compact_new_character`. When a mode is active, `skilling.c`
+  stations, fixed-price shops, the tanner and Historian Aldo, burying, closed drop tables, bone
+  weapons and staff charges, death recovery and loot timing, and `rc_content_compact_new_character`. When a mode is active, `skilling.c`
   and `gym.c` stand down.
 - `encounters/`: boss scripts (real-world bosses; the gym's King Black Dragon and Chaos Elemental
-  run from the encounter data without scripts)
+  run from the encounter data without scripts). `scurrius.c` is a mode's shared boss: phases,
+  feeding, falling bricks, rat summons, group scaling, kill credit, loot rotation and reset
 - `combat/`: spells and runes, ammunition, dragonfire, NPC spell-target attributes
 - consumables, and the bank storage policy (which objects and NPCs open the bank)
 

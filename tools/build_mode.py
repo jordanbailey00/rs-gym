@@ -73,7 +73,7 @@ def main() -> None:
     rules = None
     if (mode_dir / "content.toml").is_file():
         from modec import compile_mode  # noqa: E402
-        rules = compile_mode(mode_dir, out, placements)
+        rules = compile_mode(mode_dir, out, placements, gym)
         print(f"mode rules: {out.relative_to(ROOT) / 'mode.rules'}, manifest "
               f"{(mode_dir / 'manifest.json').relative_to(ROOT)}", flush=True)
     nodes_path = out / "defs/gathering_nodes.bin"

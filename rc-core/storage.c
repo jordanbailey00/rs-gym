@@ -139,6 +139,23 @@ int rc_bank_add_item_tab(RcWorld *w, int id, int qty, int tab) {
 
 int rc_bank_add_item(RcWorld *w, int id, int qty) { return rc_bank_add_item_tab(w, id, qty, -1); }
 
+int rc_bank_add_item_state(RcWorld *w, int id, int qty, uint32_t state) {
+    if (!state) return rc_bank_add_item(w, id, qty);
+    const RcItemDef *def = base_item(id);
+    if (!w || !(w->enabled & RC_SUB_STORAGE) || !def || qty <= 0) return -1;
+    RcPlayer *p = w->player;
+    int slot = bank_slot(p->bank, p->bank_tab, def->id, state, -1);
+    if (slot < 0 || p->bank[slot].quantity > INT_MAX - qty) return -1;
+    if (p->bank[slot].item_id < 0) {
+        if (++p->next_bank_generation == 0) ++p->next_bank_generation;
+        p->bank[slot] = (RcInvSlot){def->id, 0, state, p->next_bank_generation};
+        p->bank_tab[slot] = 0;
+    }
+    p->bank[slot].quantity += qty;
+    p->bank_revision++;
+    return slot;
+}
+
 static int finish(RcWorld *w, RcBankResult result, RcBankResultCode code) {
     result.code = code;
     if (w) {

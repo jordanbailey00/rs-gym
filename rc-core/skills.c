@@ -715,7 +715,7 @@ int rc_recipe_commit(RcWorld *world, const RcRecipe *recipe,
     if (with_output && result.code == RC_ITEM_RESULT_OK
             && recipe->output_item > 0 && recipe->output_qty > 0) {
         result = rc_item_tx_add(&tx, (int)recipe->output_item,
-                                recipe->output_qty, 0);
+                                recipe->output_qty, recipe->output_state);
     }
     return result.code == RC_ITEM_RESULT_OK
         && rc_item_tx_commit(&tx).code == RC_ITEM_RESULT_OK;

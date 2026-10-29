@@ -1,7 +1,7 @@
 """Mode compiler: turns a mode's TOML tables (names, as in the b237 cache) into the records the engine
 loads (rc-core/mode.c) and the content manifest.
 
-    rules = compile_mode(mode_dir, out_dir, placements)
+    rules = compile_mode(mode_dir, out_dir, placements, gym)
 
 It resolves every item, NPC and loc against the cache, selects the canonical recipes.bin rows the
 mode enables, checks that the content is closed (every input obtainable, every station placed, every
@@ -184,7 +184,8 @@ def _tenths(xp: float) -> int:
 
 
 class Compiler:
-    def __init__(self, mode_dir: Path, placements: Path | None):
+    def __init__(self, mode_dir: Path, placements: Path | None, gym=None):
+        self.gym = gym
         self.dir = mode_dir
         self.mode = tomllib.loads((mode_dir / "mode.toml").read_text())
         self.content = tomllib.loads((mode_dir / "content.toml").read_text())
@@ -415,7 +416,8 @@ class Compiler:
         return rows[0]
 
     def _recipe(self, key: str, rec: Recipe, station: str, skill: int, level: int, *, inputs=None,
-                tools=None, xp=None, locs=(), batch=False, note: str = "", canonical_level=None) -> None:
+                tools=None, xp=None, locs=(), batch=False, note: str = "", canonical_level=None,
+                state: int = 0) -> None:
         inputs = rec.inputs if inputs is None else inputs
         tools = rec.tools if tools is None else tools
         req_xp = xp if xp is not None else next((x for s, _, x in rec.reqs if s == skill), 0)
@@ -427,7 +429,8 @@ class Compiler:
             self.need(t, f"recipe {key} (tool)")
         self.source(rec.output, f"recipe {key}")
         self.emit("recipe", id=idx, station=station, out=rec.output, qty=rec.qty, ticks=rec.ticks or 4,
-                  canonical=rec.row, reqs=reqs, inputs=inputs, tools=tools, locs=list(locs), batch=batch)
+                  canonical=rec.row, reqs=reqs, inputs=inputs, tools=tools, locs=list(locs), batch=batch,
+                  state=state)
         overrides = []
         canon = next(((s, lv) for s, lv, _ in rec.reqs if s == skill), None)
         if rec.row >= 0 and canon and canon[1] != level:
@@ -495,7 +498,8 @@ class Compiler:
             inputs = [(self.item(n, "ingredient"), q) for n, q in b["inputs"]]
             skill = SKILL[b["skill"]]
             self.check_level(b["output"], b["level"])
-            self._recipe(b["output"], canon, STATIONS[b["station"]], skill, b["level"], inputs=inputs)
+            self._recipe(b["output"], canon, STATIONS[b["station"]], skill, b["level"], inputs=inputs,
+                         state=b.get("charges", 0))
             self.override("item", out, "creation recipe")
 
     def magic_prayer(self) -> None:
@@ -587,7 +591,7 @@ class Compiler:
                 out = self.item(b["output"])
                 inputs = [(self.item(n), q) for n, q in b["inputs"]] + [(coins, aldo["fee"])]
                 rec = Recipe(-1, b["output"], [], inputs, [], "Aldo", out, 1, 4, 0)
-                self._recipe(f"Aldo {b['output']}", rec, "aldo", -1, 0,
+                self._recipe(f"Aldo {b['output']}", rec, "aldo", -1, 0, state=b.get("charges", 0),
                              note=f"paid service: {aldo['fee']} coins, no creation requirement or XP")
             self.manifest["services"]["aldo"] = {"npc": npc, "kind": "bone weapons", "fee": aldo["fee"]}
 
@@ -602,7 +606,14 @@ class Compiler:
         fields = {k: v for k, v in b.items() if k not in ("npc", "minion", "defence_bonus")}
         self.emit("boss", npc=boss, minion=minion, defence_bonus=b["defence_bonus"], **fields)
         a = self.boss["arena"]
-        self.emit("arena", rect=a["rect"], centre=a["centre"], spawn=a["spawn"], food=a["food_piles"])
+        ox = oy = 0
+        if self.gym is not None:  # arena tiles are relative to their map area
+            area = self.gym.areas[a.get("area", "dungeon")]
+            ox, oy = area.rx * 64, area.ry * 64
+        rect = [a["rect"][0] + ox, a["rect"][1] + oy, a["rect"][2] + ox, a["rect"][3] + oy]
+        self.emit("arena", rect=rect, centre=[a["centre"][0] + ox, a["centre"][1] + oy],
+                  spawn=[a["spawn"][0] + ox, a["spawn"][1] + oy],
+                  food=[(x + ox, y + oy) for x, y in a["food_piles"]])
         loot = self.boss["loot"]
         always = []
         for name, lo, hi in loot["always"]:
@@ -676,8 +687,8 @@ class Compiler:
         return self.rules
 
 
-def compile_mode(mode_dir: Path, out: Path, placements: Path | None = None) -> Rules:
-    return Compiler(mode_dir, placements).compile(out)
+def compile_mode(mode_dir: Path, out: Path, placements: Path | None = None, gym=None) -> Rules:
+    return Compiler(mode_dir, placements, gym).compile(out)
 
 
 if __name__ == "__main__":

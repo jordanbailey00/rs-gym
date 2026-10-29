@@ -67,6 +67,7 @@ void rc_death_begin(RcWorld *world) {
     RcGroundPolicy policy = {
         .reveal_ticks = wild ? 0 : ticks, .lifetime_ticks = ticks,
         .delay_ticks = 0, .untradeable_lifetime_ticks = ticks,
+        .bank_on_expiry = !wild && rules->grave_to_bank,
     };
     (void)rc_item_tx_commit_ground(&tx, grants, count, p->x, p->y, p->plane,
                                    wild ? RC_GROUND_OWNER_NONE : p->index,

@@ -426,6 +426,7 @@ inputs = [["Scurrius' spine", 1], ["Staff of air", 1], ["Chaos rune", 100]]
 station = "Chisel"
 skill = "Crafting"
 level = 30
+charges = 100                   # the 100 chaos runes become the staff's charges
 
 # ---- Magic and Prayer ------------------------------------------------------------------------
 

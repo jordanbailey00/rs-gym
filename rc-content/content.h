@@ -35,6 +35,8 @@ int rc_content_gym_register(struct RcWorld *world);
 int rc_content_compact_register(struct RcWorld *world);
 // Gives world->player a fresh mode character: starting levels and the starter kit.
 void rc_content_compact_new_character(struct RcWorld *world);
+// A mode's Scurrius encounter (encounters/scurrius.c); a no-op without a boss in the rules.
+int rc_content_scurrius_register(struct RcWorld *world);
 
 // Aggregate entry point — calls every content module register fn
 // that's linked in. Isolated-sim builds link a subset of content

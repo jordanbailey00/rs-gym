@@ -6,7 +6,7 @@
 [map]
 name = "compact_v1"
 seed = 7
-start = [34, 54]
+start = [33, 72]
 
 [[area]]
 name = "surface"
@@ -424,7 +424,7 @@ wander = 0
 
 [[landmark]]
 name = "start"
-at = [34, 54]
+at = [33, 72]
 
 [[landmark]]
 name = "bank"

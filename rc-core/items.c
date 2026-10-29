@@ -1,5 +1,6 @@
 #include "players.h"
 #include "items.h"
+#include "storage.h"
 #include "assets.h"
 #include "combat.h"
 #include "config.h"
@@ -1172,6 +1173,9 @@ static uint64_t ground_spawn_instance_key(uint64_t base, uint32_t ordinal) {
     return key ? key : 1;
 }
 
+// Set while a grant with RcGroundPolicy.bank_on_expiry spawns its items.
+static bool g_grant_bank_on_expiry;
+
 static int spawn_ground_item_one(RcWorld *world, int item_id, int quantity,
                                  uint32_t state_id,
                                  int x, int y, int plane, int owner_uid,
@@ -1184,6 +1188,7 @@ static int spawn_ground_item_one(RcWorld *world, int item_id, int quantity,
         for (int i = 0; i < world->ground_item_count; i++) {
             RcGroundItem *g = &world->ground_items[i];
             if (!g->active || g->arrival_timer || g->item_id != item_id
+                    || g->bank_on_expiry != g_grant_bank_on_expiry
                     || g->state_id != state_id || g->x != x
                     || g->y != y || g->plane != plane
                     || g->visibility != visibility
@@ -1232,6 +1237,7 @@ static int spawn_ground_item_one(RcWorld *world, int item_id, int quantity,
         .arrival_timer = arrival_timer,
         .timer_start_tick = world->tick + (world->in_tick ? 1u : 0u),
         .visibility = (uint8_t)visibility,
+        .bank_on_expiry = g_grant_bank_on_expiry,
         .static_spawn = static_spawn ? true : false,
         .active = true,
     };
@@ -1306,7 +1312,7 @@ static void ground_granted(RcWorld *world, const RcGroundItem *item) {
     rc_event_fire(world, RC_EVT_DROP_GRANTED, &payload);
 }
 
-static RcGroundGrantResult ground_grant_transaction(RcWorld *world,
+static RcGroundGrantResult ground_grant_transaction_inner(RcWorld *world,
     const RcGroundGrant *grants, int count, int x, int y, int plane,
     int owner_uid, RcGroundPolicy policy, RcItemTransaction *tx) {
     if (!loot_enabled(world)) return RC_GROUND_GRANT_DISABLED;
@@ -1366,6 +1372,16 @@ static RcGroundGrantResult ground_grant_transaction(RcWorld *world,
     return RC_GROUND_GRANT_OK;
 }
 
+static RcGroundGrantResult ground_grant_transaction(RcWorld *world,
+    const RcGroundGrant *grants, int count, int x, int y, int plane,
+    int owner_uid, RcGroundPolicy policy, RcItemTransaction *tx) {
+    g_grant_bank_on_expiry = policy.bank_on_expiry && owner_uid != RC_GROUND_OWNER_NONE;
+    RcGroundGrantResult result = ground_grant_transaction_inner(world, grants, count, x, y,
+                                                                plane, owner_uid, policy, tx);
+    g_grant_bank_on_expiry = false;
+    return result;
+}
+
 RcGroundGrantResult rc_ground_grant(RcWorld *world,
     const RcGroundGrant *grants, int count, int x, int y, int plane,
     int owner_uid, RcGroundPolicy policy) {
@@ -1421,10 +1437,32 @@ void rc_ground_item_advance(RcGroundItem *g, RcTick elapsed) {
     }
 }
 
+// A recovery item about to expire moves into its owner's bank; when the bank has no room it stays,
+// still private, and the move is retried every tick, so nothing is deleted.
+static void bank_expiring_item(RcWorld *world, RcGroundItem *g) {
+    int owner = g->original_owner_uid >= 0 ? g->original_owner_uid : g->owner_uid;
+    if (owner < 0 || owner >= world->player_count || !world->players[owner].active) return;
+    RcPlayer *previous = world->player;
+    world->player = &world->players[owner];
+    int slot = rc_bank_add_item_state(world, g->item_id, g->quantity, g->state_id);
+    world->player = previous;
+    if (slot >= 0) {
+        g->active = false;
+        g->quantity = 0;
+        g->despawn_timer = 0;
+        g->version = g->version == INT_MAX ? 1 : g->version + 1;
+    } else {
+        g->despawn_timer = 2;  // advanced to 1 below: retried next tick
+    }
+}
+
 void rc_ground_items_tick(RcWorld *world) {
     for (int i = 0; i < world->ground_item_count; i++) {
         RcGroundItem *g = &world->ground_items[i];
         if (world->tick < g->timer_start_tick) continue;
+        if (g->active && g->bank_on_expiry && g->despawn_timer == 1 && !g->arrival_timer)
+            bank_expiring_item(world, g);
+        if (!g->active) continue;
         rc_ground_item_advance(g, 1);
     }
 }

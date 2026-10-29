@@ -2,12 +2,6 @@
 
 v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
 
-## Stage 3: encounter and recovery
-- Scurrius: attack styles and cues, falling rocks, rat minions, feeding, group scaling,
-  participants, loot rotation, reset and respawn.
-- Bone mace, bone shortbow and bone staff recipes, Historian Aldo's service, staff charges.
-- Death: private recovery containers moving to the bank on expiry; respawn after 10 ticks.
-
 ## Stage 4: shared world
 - Atomic player trading (engine, viewer, agent actions).
 - Loot ownership by non-overkill damage (100 private, 300 public ticks), seeded tie-breaks.

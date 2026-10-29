@@ -357,6 +357,7 @@ static void apply_record(RcModeRules *m, Record *r) {
         RcRecipe *rec = &x->recipe;
         rec->output_item = (uint32_t)need(r, "out");
         rec->output_qty = (uint16_t)need(r, "qty");
+        rec->output_state = (uint32_t)num(r, "state", 0);
         rec->ticks = (uint16_t)need(r, "ticks");
         int v[RC_RECIPE_MAX_INPUTS * 3];
         int n = tuples(r, "reqs", v, 3, RC_RECIPE_MAX_REQS);
@@ -481,6 +482,8 @@ static void apply_record(RcModeRules *m, Record *r) {
         b->max_minions = need(r, "max_minions");
         b->summon_interval = need(r, "summon_interval");
         b->feed_heal = need(r, "feed_heal");
+        b->feed_heals = need(r, "feed_heals");
+        b->hazard_random_tiles = need(r, "hazard_random_tiles");
         b->feed_ticks = need(r, "feed_ticks");
         b->feed_interval = need(r, "feed_interval");
         b->phase2_pct = need(r, "phase2_pct");
@@ -732,8 +735,8 @@ int rc_mode_patch_npcs(const RcModeRules *m, RcNpcDef *defs, int count, const in
         }
         log_int(ledger, "npc", d->id, d->name, "attack speed", d->attack_speed, b->attack_speed);
         d->attack_speed = b->attack_speed;
-        log_int(ledger, "npc", d->id, d->name, "respawn ticks", d->respawn_ticks, 0);
-        d->respawn_ticks = 0;  // the encounter respawns it (respawn_ticks after a kill)
+        log_int(ledger, "npc", d->id, d->name, "respawn ticks", d->respawn_ticks, b->respawn_ticks);
+        d->respawn_ticks = b->respawn_ticks;
         patch_npc(rat, b->minion_hp, b->minion_max_hit, NULL, ledger);
         log_int(ledger, "npc", rat->id, rat->name, "attack speed", rat->attack_speed,
                 b->minion_attack_speed);

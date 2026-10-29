@@ -10015,6 +10015,17 @@ static void draw_scene(ViewerState *v, int ui_capture) {
         rlEnableBackfaceCulling();
     }
 
+    // A mode boss's falling-brick shadows, darkening as they land.
+    for (int i = 0; i < v->world->mode_boss.hazard_count && scene_plane == 0; i++) {
+        const RcModeHazard *h = &v->world->mode_boss.hazards[i];
+        int ticks = (int)(h->land_tick - v->world->tick);
+        unsigned char alpha = (unsigned char)(ticks <= 0 ? 200 : ticks == 1 ? 160 : 110);
+        float tx = (float)LOCAL_X(h->x) + 0.5f;
+        float tz = -((float)LOCAL_Y(h->y) + 0.5f);
+        float ty = ground_y_plane(v, 0, h->x, h->y) + 0.06f;
+        DrawCube((Vector3){tx, ty, tz}, 0.95f, 0.03f, 0.95f, (Color){20, 16, 12, alpha});
+    }
+
     // Grid
     if (v->show_grid) {
         Color gc = {80, 80, 80, 60};

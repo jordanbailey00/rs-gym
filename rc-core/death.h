@@ -15,6 +15,7 @@ typedef struct RcDeathRules {
     uint16_t respawn_delay;
     uint16_t grave_ticks;
     uint16_t wild_drop_ticks;
+    bool grave_to_bank;  // a gravestone's remaining items move to the bank instead of vanishing
 } RcDeathRules;
 
 // Acting player: rc_death_begin right after they die; rc_death_tick each tick

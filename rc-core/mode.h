@@ -143,7 +143,7 @@ typedef struct {
     int16_t defence_bonus[5];
     int hazard_max_hit, hazard_warning_ticks, hazard_interval;
     int minion_hp, minion_max_hit, minion_attack_speed, minions_per_summon, max_minions;
-    int summon_interval, feed_heal, feed_ticks, feed_interval;
+    int summon_interval, feed_heal, feed_heals, feed_ticks, feed_interval, hazard_random_tiles;
     int phase2_pct, phase3_pct, respawn_ticks, reset_ticks, qualify_pct;
     int rect[4], centre[2], spawn[2];  // dungeon-area tiles
     int food[RC_MODE_MAX_FOOD_PILES][2];

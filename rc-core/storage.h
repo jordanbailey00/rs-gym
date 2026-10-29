@@ -26,6 +26,8 @@ int rc_player_close_storage(RcWorld *world);
 // Privileged setup APIs: validate definitions, but do not grant player access.
 int rc_bank_add_item(RcWorld *world, int item_id, int quantity);
 int rc_bank_add_item_tab(RcWorld *world, int item_id, int quantity, int tab);
+// Adds a stack with an item state (charges), for safe transfers such as expiring recovery items.
+int rc_bank_add_item_state(RcWorld *world, int item_id, int quantity, uint32_t state);
 int rc_bank_deposit_slot(RcWorld *world, int inv_slot, int quantity);
 int rc_bank_deposit_all(RcWorld *world, bool equipment);
 int rc_bank_withdraw_slot(RcWorld *world, int bank_slot, int quantity);

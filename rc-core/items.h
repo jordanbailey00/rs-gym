@@ -159,6 +159,7 @@ int rc_ground_item_spawn(RcWorld *world, int item_id, int quantity,
 typedef struct {
     int reveal_ticks, lifetime_ticks, delay_ticks;
     int untradeable_lifetime_ticks;
+    bool bank_on_expiry;  // owned items move to the owner's bank instead of vanishing
 } RcGroundPolicy;
 
 typedef enum {

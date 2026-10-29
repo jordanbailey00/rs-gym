@@ -27,6 +27,7 @@ typedef struct {
     uint32_t output_item;
     uint16_t output_qty, ticks;
     uint8_t req_count, input_count, tool_count, flags;
+    uint32_t output_state;  // item state of the output (charges); 0 for ordinary items
 } RcRecipe;
 
 typedef struct {

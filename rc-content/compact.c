@@ -3,6 +3,7 @@
 // bones, the closed drop tables, death and loot timing, and the fresh-character kit. Installed only
 // when the loaded game data has mode rules; the island mode uses skilling.c and gym.c instead.
 #include "content.h"
+#include "combat.h"
 #include "config.h"
 #include "death.h"
 #include "drops.h"
@@ -18,6 +19,7 @@
 #include "storage.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define COUNT(a) ((int)(sizeof(a) / sizeof((a)[0])))
@@ -287,6 +289,159 @@ static RcLootPolicy mode_loot(RcWorld *world, const RcNpc *npc, RcGroundGrant *o
     return RC_LOOT_REPLACE;
 }
 
+// ---- Bone weapons --------------------------------------------------------------------------------
+// The mace and bow add their rat bonus to the ordinary max hit against rat-type NPCs. The staff's
+// powered attack has a fixed base max hit (plus the rat bonus), before the ordinary magic damage
+// modifiers, a set attack speed, and one charge per cast; charges are chaos runes put into it.
+
+enum { BONE_STAFF_CAPACITY = 1000 };
+
+static int (*base_prepare_hits)(RcWorld *, const RcNpc *, RcCombatCalc *, bool, RcPendingHit *,
+                                int, const char **);
+static int (*base_prepare_magic)(RcWorld *, const RcNpc *, const RcSpellDef *, RcCombatCalc *, int *,
+                                 const char **);
+static int (*base_consume_charge)(RcWorld *, int);
+
+static int is_rat(const RcWorld *w, const RcNpc *npc, const RcModeBoneWeapon *bw) {
+    const RcNpcDef *d = npc ? rc_npc_def_for_npc(w, npc) : NULL;
+    for (int i = 0; d && i < bw->rat_count; i++)
+        if (bw->rats[i] == d->id) return 1;
+    return 0;
+}
+
+static int bone_prepare_hits(RcWorld *w, const RcNpc *target, RcCombatCalc *calc, bool special,
+                             RcPendingHit *hits, int capacity, const char **failure) {
+    const RcPlayer *p = w->player;
+    const RcModeBoneWeapon *bw = rc_mode_bone_weapon(rc_mode_active(),
+                                                     p->equipment[EQUIP_WEAPON].item_id);
+    if (bw && !bw->powered_max && p->combat_style != COMBAT_MAGIC && is_rat(w, target, bw))
+        calc->max_hit += bw->rat_bonus;
+    return base_prepare_hits ? base_prepare_hits(w, target, calc, special, hits, capacity, failure)
+                             : 0;
+}
+
+static int bone_prepare_magic(RcWorld *w, const RcNpc *target, const RcSpellDef *spell,
+                              RcCombatCalc *calc, int *speed, const char **failure) {
+    const RcPlayer *p = w->player;
+    const RcInvSlot *held = &p->equipment[EQUIP_WEAPON];
+    const RcModeBoneWeapon *bw = rc_mode_bone_weapon(rc_mode_active(), held->item_id);
+    if (!bw || !bw->powered_max || spell)
+        return base_prepare_magic ? base_prepare_magic(w, target, spell, calc, speed, failure) : 0;
+    if (!held->state_id) {
+        *failure = "Your bone staff has no charges left.";
+        return 0;
+    }
+    *calc = rc_calc_magic(p, target, bw->powered_max + (is_rat(w, target, bw) ? bw->rat_bonus : 0));
+    if (bw->speed) *speed = bw->speed;
+    return 1;
+}
+
+static int bone_consume_charge(RcWorld *w, int weapon_id) {
+    const RcModeBoneWeapon *bw = rc_mode_bone_weapon(rc_mode_active(), weapon_id);
+    if (!bw || !bw->powered_max)
+        return base_consume_charge ? base_consume_charge(w, weapon_id) : 1;
+    RcInvSlot *held = &w->player->equipment[EQUIP_WEAPON];
+    if (held->item_id != weapon_id || !held->state_id) return 0;
+    held->state_id--;
+    w->player->equipment_revision++;
+    return 1;
+}
+
+// Replaces the staff in `slot` with one holding `charges`, and moves `runes` chaos runes the other
+// way (positive: into the staff), as one transaction.
+static int set_staff_charges(RcWorld *w, int slot, uint32_t charges, int rune, int runes) {
+    RcPlayer *p = w->player;
+    RcItemTransaction tx;
+    RcItemActionResult r = rc_item_tx_begin(&tx, w);
+    int staff = p->inventory[slot].item_id;
+    if (r.code == RC_ITEM_RESULT_OK)
+        r = rc_item_tx_remove_slot(&tx, slot, 1, p->inventory[slot].generation);
+    if (r.code == RC_ITEM_RESULT_OK && runes > 0) r = rc_item_tx_remove_item(&tx, rune, runes);
+    if (r.code == RC_ITEM_RESULT_OK && runes < 0) r = rc_item_tx_add(&tx, rune, -runes, 0);
+    if (r.code == RC_ITEM_RESULT_OK) r = rc_item_tx_add(&tx, staff, 1, charges);
+    return r.code == RC_ITEM_RESULT_OK && rc_item_tx_commit(&tx).code == RC_ITEM_RESULT_OK;
+}
+
+static RcInteractionHandlerResult staff_charge(RcWorld *w, RcPlayer *p,
+                                               const RcPendingInteraction *pending, void *ctx) {
+    const RcModeBoneWeapon *bw = ctx;
+    int staff_slot = p->inventory[pending->target.inventory_slot].item_id == bw->item
+                   ? pending->target.inventory_slot : pending->source_inventory_slot;
+    if (staff_slot < 0 || staff_slot >= RC_INVENTORY_SIZE || p->inventory[staff_slot].item_id != bw->item)
+        return rc_interaction_result_cancel(RC_INTERACTION_FAIL_TARGET_MISSING);
+    uint32_t charges = p->inventory[staff_slot].state_id;
+    int runes = 0;
+    for (int i = 0; i < RC_INVENTORY_SIZE; i++)
+        if (p->inventory[i].item_id == bw->charge_item) runes += p->inventory[i].quantity;
+    int add = BONE_STAFF_CAPACITY - (int)charges;
+    if (add > runes) add = runes;
+    if (add <= 0)
+        return rc_interaction_result_message(runes ? "Your bone staff can't hold any more charges."
+                                                   : "You need chaos runes to charge the staff.");
+    if (!set_staff_charges(w, staff_slot, charges + (uint32_t)add, bw->charge_item, add))
+        return rc_interaction_result_cancel(RC_INTERACTION_FAIL_TARGET_MISSING);
+    return rc_interaction_result_message("You charge the bone staff.");
+}
+
+static RcInteractionHandlerResult staff_check(RcWorld *w, RcPlayer *p,
+                                              const RcPendingInteraction *pending, void *ctx) {
+    (void)w;
+    (void)ctx;
+    int slot = pending->target.inventory_slot;
+    char buf[RC_INTERACTION_RESULT_MESSAGE_LEN];
+    snprintf(buf, sizeof(buf), "Your bone staff has %u charges.",
+             slot >= 0 && slot < RC_INVENTORY_SIZE ? p->inventory[slot].state_id : 0u);
+    return rc_interaction_result_message(buf);
+}
+
+static RcInteractionHandlerResult staff_uncharge(RcWorld *w, RcPlayer *p,
+                                                 const RcPendingInteraction *pending, void *ctx) {
+    const RcModeBoneWeapon *bw = ctx;
+    int slot = pending->target.inventory_slot;
+    if (slot < 0 || slot >= RC_INVENTORY_SIZE || p->inventory[slot].item_id != bw->item)
+        return rc_interaction_result_cancel(RC_INTERACTION_FAIL_TARGET_MISSING);
+    uint32_t charges = p->inventory[slot].state_id;
+    if (!charges) return rc_interaction_result_message("Your bone staff has no charges.");
+    if (!set_staff_charges(w, slot, 0, bw->charge_item, -(int)charges))
+        return rc_interaction_result_message("You don't have room for the runes.");
+    return rc_interaction_result_message("You take the chaos runes out of the staff.");
+}
+
+static int register_bone_weapons(RcWorld *world, const RcModeRules *m) {
+    if (world->combat_hooks.prepare_player_hits != bone_prepare_hits) {
+        base_prepare_hits = world->combat_hooks.prepare_player_hits;
+        world->combat_hooks.prepare_player_hits = bone_prepare_hits;
+    }
+    if (world->combat_hooks.prepare_player_magic != bone_prepare_magic) {
+        base_prepare_magic = world->combat_hooks.prepare_player_magic;
+        world->combat_hooks.prepare_player_magic = bone_prepare_magic;
+    }
+    if (world->combat_hooks.consume_weapon_charge != bone_consume_charge) {
+        base_consume_charge = world->combat_hooks.consume_weapon_charge;
+        world->combat_hooks.consume_weapon_charge = bone_consume_charge;
+    }
+    int ok = 1;
+    for (int i = 0; i < m->bone_count; i++) {
+        const RcModeBoneWeapon *bw = &m->bone[i];
+        if (!bw->powered_max || !bw->charge_item) continue;
+        void *ctx = (void *)bw;
+        ok &= handle(world, RC_INTERACTION_INVENTORY_ITEM, RC_INTERACTION_USE_ON, bw->item,
+                     bw->charge_item, staff_charge, ctx);
+        ok &= handle(world, RC_INTERACTION_INVENTORY_ITEM, RC_INTERACTION_USE_ON, bw->charge_item,
+                     bw->item, staff_charge, ctx);
+        const RcItemDef *d = rc_item_def_get(bw->item);
+        for (int o = 0; d && o < RC_ITEM_ACTION_COUNT; o++) {
+            if (!strcmp(d->inventory_actions[o], "Check"))
+                ok &= handle(world, RC_INTERACTION_INVENTORY_ITEM, rc_interaction_op_from_option(o),
+                             bw->item, RC_INTERACTION_KEY_ANY, staff_check, ctx);
+            if (!strcmp(d->inventory_actions[o], "Uncharge"))
+                ok &= handle(world, RC_INTERACTION_INVENTORY_ITEM, rc_interaction_op_from_option(o),
+                             bw->item, RC_INTERACTION_KEY_ANY, staff_uncharge, ctx);
+        }
+    }
+    return ok;
+}
+
 // ---- Fresh character -----------------------------------------------------------------------------
 
 void rc_content_compact_new_character(RcWorld *world) {
@@ -337,7 +492,7 @@ int rc_content_compact_register(RcWorld *world) {
     static RcDeathRules death;
     death = (RcDeathRules){.keep_items = 0, .respawn_delay = (uint16_t)m->respawn_ticks,
                            .grave_ticks = (uint16_t)m->recovery_ticks,
-                           .wild_drop_ticks = (uint16_t)m->recovery_ticks};
+                           .wild_drop_ticks = (uint16_t)m->recovery_ticks, .grave_to_bank = true};
     world->death_rules = &death;
     world->loot_private_ticks = m->private_ticks;
     world->loot_public_ticks = m->public_ticks;
@@ -378,5 +533,7 @@ int rc_content_compact_register(RcWorld *world) {
                          RC_INTERACTION_KEY_ANY, bury_handler, (void *)(intptr_t)m->bury[i].xp_tenths);
         ok &= install_shops(world, m);
     }
+    if (world->enabled & RC_SUB_COMBAT) ok &= register_bone_weapons(world, m);
+    ok &= rc_content_scurrius_register(world);
     return ok;
 }

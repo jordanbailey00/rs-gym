@@ -1,5 +1,50 @@
 # Changelog
 
+## 2026-10-29: Scurrius, bone weapons and death recovery (Stage 3)
+
+**What.** Scurrius is the mode's shared boss (`rc-content/encounters/scurrius.c`), the three bone
+weapons work in combat with the staff's charges, and death now leaves a private recovery stack
+that moves to the bank when it expires.
+
+**Why.** Stage 3 of the v1 roadmap: the advanced encounter with its recognizable mechanics and
+the post-boss improvement loop, and the mode's mild death rules.
+
+**Scurrius.** RuneC_v4 has a Scurrius encounter design (`content/encounters/scurrius.toml`) but
+its runtime is a single-player pilot (bricks hit by radius, a fixed ring of rats, healing without
+walking) and the data snapshot carries no Scurrius encounter rows, so the fight is a mode script
+built on RuneC's attack and phase design and the wiki's description:
+- Tail swipes in melee (weights 10:1:1 with bolts and fur balls) above 80%; at 80%, and every 50
+  ticks after, it walks to a food pile and eats five times (3 HP per living player inside each),
+  attacking only with magic and ranged while it eats; below 30% it moves to the centre and uses
+  only magic and ranged at speed 4 instead of 5. Phases never regress.
+- Falling bricks land 3 ticks after their shadows appear, on each living player's tile and on
+  random tiles (twice as many, twice as often in the final phase), for up to 6 typeless damage.
+  The viewer draws the shadows.
+- From phase 2, screeches summon up to six giant rats every 30 ticks, at most eight alive; they
+  outlive the boss, as in OSRS.
+- Group scaling over a monotonic participant set: every living player who enters adds 75% of the
+  base 240 HP to the maximum and the current; leaving and re-entering adds nothing.
+- A kill resolves once, after the tick's deaths: players alive inside with at least 5% of the
+  actual damage get kill credit, and the one bundle (150 coins, one of 3 mithril ore, 12 chaos
+  runes or 40 feathers, 1-in-3 spine, 1-in-5 prayer potion) goes to the next of them in a seeded
+  rotation; with nobody qualified, the top contributor owns it without credit. It respawns 100
+  ticks later; with nobody inside for 50 ticks a fight resets boss, rats and bricks.
+- The engine gained a mode tick (after deaths and respawns) and the boss state lives on the world.
+
+**Bone weapons.** The mace and bow add 2 max hit against rats (Scurrius, its rats, giant rats);
+the staff's powered attack has a fixed base max hit of 14 (+2 on rats) before ordinary magic damage
+bonuses, attacks every 4 ticks, and spends one charge per cast. It is made with 100 charges (recipe
+output state), gains one per chaos rune used on it up to 1000, and Uncharge returns them all.
+
+**Death.** Nothing is kept: carried and worn items become private ground items at the death tile
+for 1500 ticks, then move to the bank (retried each tick if the bank is full, never deleted).
+Respawn after 10 ticks at the bank, with no new kit.
+
+**Checked.** `tests/test_compact_boss.c`: a solo kill by a level-40 mithril fighter (875 ticks;
+balance comes in Stage 6) sees every mechanic, gets the bundle and the respawn; scaling for two
+and three players with a late join and a re-entry; the abandoned reset; the rat bonus; staff
+charges through use and uncharge; a death's items banked on expiry. All 11 suites pass.
+
 ## 2026-10-29: compact_osrs_v1 playable economy (Stage 2)
 
 **What.** Every production chain of the mode works through real player interactions, checked by
