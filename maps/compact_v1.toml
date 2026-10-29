@@ -1,4 +1,4 @@
-# compact_osrs_v1 reference map: a 128x128 island overworld and a 64x64 dungeon, built from b237
+# compact_osrs_v1 reference map: a 128x128 island overworld and a 128x64 dungeon, built from b237
 # cache content (SPEC.md, "World layout and renewable resources"). Coordinates are tiles relative
 # to the named area's south-west corner (area defaults to "surface"); [[stamp]] sources are
 # real-world b237 tiles. Spawn counts follow the spec's shared budgets.
@@ -18,8 +18,8 @@ ocean_ring = 1
 [[area]]
 name = "dungeon"
 kind = "void"
-origin = [8, 2]    # world tiles 512..575 x 128..191
-size = [1, 1]
+origin = [8, 2]    # world tiles 512..639 x 128..191
+size = [2, 1]
 
 [materials]
 grass = { underlay = 48 }
@@ -155,7 +155,7 @@ at = [80, 22]
 
 [[loc]]
 id = 34769                         # Chaos altar, on the way east
-at = [104, 44]
+at = [107, 41]
 
 [[loc]]
 id = 34770                         # Death altar, by the outer area
@@ -175,7 +175,60 @@ option = "Climb-down"
 to_area = "dungeon"
 to = [26, 32]
 
-# ---- Dungeon: the Edgeville hill giant cave, an obstacle pipe, and Scurrius' lair -----------------
+# ---- Dungeon: the sewers (rats, goblins), the Edgeville hill giant cave (skeletons, dark wizards,
+# hill giants), and Scurrius' lair beyond the cave. The sewers and the cave each have their own way
+# down; a pipe joins them, so the boss can be reached through either.
+
+[[stamp]]
+name = "Varrock sewers"
+area = "dungeon"
+source = [3216, 9857]
+size = [40, 20]
+at = [66, 4]
+
+[[loc]]
+id = 882                           # Manhole (Climb-down), between the town and the farm
+at = [46, 44]
+type = 10
+
+[[link]]
+loc = 882
+at = [46, 44]
+option = "Climb-down"
+to_area = "dungeon"
+to = [86, 5]
+
+[[link]]
+loc = 11806                        # the sewers' ladder
+area = "dungeon"
+at = [87, 5]
+option = "Climb-up"
+to_area = "surface"
+to = [46, 43]
+
+[[loc]]
+id = 16511                         # Obstacle pipe: the sewers' east end to the cave's north corridor
+area = "dungeon"
+at = [103, 18]
+
+[[link]]
+loc = 16511
+area = "dungeon"
+at = [103, 18]
+option = "Squeeze-through"
+to = [27, 36]
+
+[[loc]]
+id = 16511
+area = "dungeon"
+at = [27, 38]
+
+[[link]]
+loc = 16511
+area = "dungeon"
+at = [27, 38]
+option = "Squeeze-through"
+to = [102, 16]
 
 [[stamp]]
 name = "Edgeville hill giant cave"
@@ -386,32 +439,32 @@ count = 2
 
 [[npc]]
 area = "dungeon"
-ids = [2856]                       # Giant rat: by the ladder
-rect = [16, 20, 30, 31]
+ids = [2856]                       # Giant rat: the sewers' west room
+rect = [67, 6, 78, 22]
 count = 6
 
 [[npc]]
 area = "dungeon"
-ids = [3029]                       # Goblin: the cave's centre
-rect = [10, 12, 24, 22]
+ids = [3029]                       # Goblin: the sewers' middle tunnels
+rect = [80, 11, 102, 19]
 count = 6
 
 [[npc]]
 area = "dungeon"
-ids = [70]                         # Skeleton: the west branch
-rect = [5, 6, 12, 20]
+ids = [70]                         # Skeleton: the cave's west side
+rect = [5, 10, 14, 20]
 count = 4
 
 [[npc]]
 area = "dungeon"
-ids = [510]                        # Dark wizard: the south branch
-rect = [12, 4, 22, 10]
+ids = [510]                        # Dark wizard: the cave's south end, by the lair pipe
+rect = [14, 4, 24, 12]
 count = 4
 
 [[npc]]
 area = "dungeon"
-ids = [2098]                       # Hill Giant: the east side, by the pipe
-rect = [24, 10, 33, 26]
+ids = [2098]                       # Hill Giant: the cave's north end, below the ladder
+rect = [20, 22, 33, 30]
 count = 2
 
 [[npc]]
@@ -504,7 +557,7 @@ at = [81, 26]
 
 [[landmark]]
 name = "chaos_altar"
-at = [105, 48]
+at = [108, 45]
 
 [[landmark]]
 name = "death_altar"
@@ -513,6 +566,30 @@ at = [107, 68]
 [[landmark]]
 name = "dungeon_entrance"
 at = [100, 57]
+
+[[landmark]]
+name = "sewers"
+at = [46, 44]
+
+[[landmark]]
+name = "goblins"
+area = "dungeon"
+at = [90, 13]
+
+[[landmark]]
+name = "dark_wizards"
+area = "dungeon"
+at = [19, 8]
+
+[[landmark]]
+name = "skeletons"
+area = "dungeon"
+at = [9, 15]
+
+[[landmark]]
+name = "hill_giants"
+area = "dungeon"
+at = [27, 26]
 
 [[landmark]]
 name = "lair_bars"

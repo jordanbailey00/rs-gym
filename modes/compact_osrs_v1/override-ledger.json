@@ -9,7 +9,8 @@
   {"rule": "NPC drop ownership", "from": "60 s private, then public", "to": "100 ticks private, then 300 public", "why": "SPEC.md, Loot ownership"},
   {"rule": "drop tables", "from": "inherited tables", "to": "7 closed mode tables", "why": "SPEC.md, Ordinary encounters and drop tables"},
   {"rule": "shops", "from": "stock-based OSRS prices; sales restock the shop", "to": "2 fixed-price shops; sales remove items", "why": "SPEC.md, Shops, prices and economic invariants"},
-  {"rule": "gathering, fishing and cooking", "from": "canonical unlock levels", "to": "19 gather, 3 fishing, 5 cooking rules", "why": "band rebase; success curves read at level + offset"}
+  {"rule": "gathering, fishing and cooking", "from": "canonical unlock levels", "to": "19 gather, 3 fishing, 5 cooking rules", "why": "band rebase; success curves read at level + offset"},
+  {"rule": "Scurrius encounter", "from": "5 HP per feeding heal; one 500 HP fight", "to": "2 HP per heal per player, 5 heals per feeding; HP +75% per extra player; 6 rats per summon, at most 8", "why": "SPEC.md, Scurrius; feeding heal pinned by the Stage 6 routes"}
  ],
  "overrides": [
   {"kind": "gather", "id": 11366, "name": "Coal", "field": "level", "from": "30", "to": "15 (success curve read at level + 15)", "why": "band rebase of an unlock level (SPEC.md, Closed production chains)"},
@@ -138,7 +139,6 @@
   {"kind": "npc", "id": 2098, "name": "Hill Giant", "field": "respawn ticks", "from": "25", "to": "50", "why": "ordinary enemy respawn default (SPEC.md, World layout)"},
   {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "hitpoints", "from": "500", "to": "240", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},
   {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "max hit", "from": "22", "to": "8", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},
-  {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "defence bonuses (stab/slash/crush/range", "from": "0/0/0/0/0", "to": "20/20/20/20/20", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},
   {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "attack level", "from": "300", "to": "40", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},
   {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "defence level", "from": "60", "to": "40", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},
   {"kind": "npc", "id": 7222, "name": "Scurrius", "field": "strength level", "from": "100", "to": "40", "why": "Scurrius mode tuning (SPEC.md, Initial mode tuning)"},

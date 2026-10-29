@@ -78,6 +78,8 @@ add_executable(rs-gym-rollout rc-env/tools/rollout.c)
 target_link_libraries(rs-gym-rollout rc-env)
 add_executable(rs-gym-validate rc-env/tools/validate.c)
 target_link_libraries(rs-gym-validate rc-env)
+add_executable(rs-gym-acceptance rc-env/tools/acceptance.c)
+target_link_libraries(rs-gym-acceptance rc-env)
 
 # PufferLib 5.0 binding: rs_gym_puffer bundles rc-env with puf_* for a PufferLib checkout
 # (tools/puffer_overlay.sh); the test builds it against a stand-in pufferenv.h.

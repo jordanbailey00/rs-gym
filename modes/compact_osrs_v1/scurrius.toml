@@ -12,7 +12,8 @@ final_attack_speed = 4          # below the final phase threshold (canonical spe
 attack = 40                     # attack, ranged and magic levels
 defence = 40
 magic = 40
-defence_bonus = [20, 20, 20, 20, 20]   # stab, slash, crush, ranged, magic
+defence_bonus = [0, 0, 0, 0, 0]        # stab, slash, crush, ranged, magic; was 20 each (Stage 6:
+                                       # 3 of 15 scripted fresh-start routes won at 20, 13 of 15 at 0)
 hazard_max_hit = 6              # falling bricks
 hazard_warning_ticks = 3        # shadow shown before the bricks land
 hazard_interval = 12            # ticks between falling-brick volleys (half that below phase 3)
@@ -23,7 +24,8 @@ minion_attack_speed = 4
 minions_per_summon = 6         # canonical six giant rats per screech
 max_minions = 8                 # bound on rats alive at once
 summon_interval = 30            # ticks between rat summons (phase 2 and later)
-feed_heal = 3                   # HP per heal per living player in the arena (5 x 240/500 HP)
+feed_heal = 2                   # HP per heal per living player in the arena; was 3 (Stage 6: 13
+                                # of 15 routes won at 3, 15 of 15 at 2)
 feed_heals = 5                  # heals per feeding (the eating animation shows ten)
 feed_ticks = 6                  # ticks between heals while eating
 feed_interval = 50              # ticks between feedings in phase 2

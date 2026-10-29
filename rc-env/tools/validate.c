@@ -315,7 +315,7 @@ static void walk_field(const RcWorld *w, Field *f, int sx, int sy) {
 static void check_distances(const RcGymLayout *layout, const RcWorld *w) {
     static const struct { const char *names; int lo, hi; const char *what; } groups[] = {
         {"general_store ellis smithy range spinning_wheel church", 10, 25, "town services"},
-        {"chickens cows flax trees oaks quarry", 25, 60, "basic resources"},
+        {"chickens cows flax trees oaks quarry goblins", 25, 60, "basic resources and goblins"},
         {"outer_area lobster chaos_altar death_altar scurrius", 70, 140, "advanced resources and boss"},
         {"essence air_altar water_altar mind_altar", 0, 1 << 30, "rune sites"},
     };
@@ -412,8 +412,8 @@ static void write_ledger(const char *path, const RcModeRules *m, const RcModeLed
     json_string(f, m->name);
     fprintf(f, ",\n \"version\": %d,\n \"rules\": [\n", m->version);
     // Mode-wide rules that are not definition fields.
-    char buf[96];
-    struct { const char *rule, *from; char to[96]; const char *why; } rules[8];
+    char buf[128];
+    struct { const char *rule, *from; char to[128]; const char *why; } rules[9];
     int n = 0;
     rules[n] = (typeof(rules[0])){"level cap", "99", "", "SPEC.md, Initial numerical defaults"};
     snprintf(rules[n++].to, sizeof(buf), "%d", m->level_cap);
@@ -438,6 +438,11 @@ static void write_ledger(const char *path, const RcModeRules *m, const RcModeLed
                                   "band rebase; success curves read at level + offset"};
     snprintf(rules[n++].to, sizeof(buf), "%d gather, %d fishing, %d cooking rules", m->gather_count,
              m->fish_count, m->cook_count);
+    rules[n] = (typeof(rules[0])){"Scurrius encounter", "5 HP per feeding heal; one 500 HP fight",
+                                  "", "SPEC.md, Scurrius; feeding heal pinned by the Stage 6 routes"};
+    snprintf(rules[n++].to, sizeof(buf), "%d HP per heal per player, %d heals per feeding; HP +%d%% per "
+             "extra player; %d rats per summon, at most %d", m->boss.feed_heal, m->boss.feed_heals,
+             m->boss.group_scale_pct, m->boss.minions_per_summon, m->boss.max_minions);
     for (int i = 0; i < n; i++) {
         fprintf(f, "  {\"rule\": ");
         json_string(f, rules[i].rule);
