@@ -18,6 +18,7 @@
 #include "../rc-core/spells.h"
 #include "../rc-core/storage.h"
 #include "../rc-content/content.h"
+#include "../rc-env/compact_env.h"
 #include "raylib.h"
 #include "raymath.h"
 #include "rlgl.h"
@@ -558,8 +559,10 @@ typedef struct {
     char active_scene_prefix[1024];
     // Replay of a recorded rc-env episode (rc-viewer --replay FILE).
     RcEnv *replay_env;
+    RcCompactEnv *replay_cenv;        // a compact-v2 recording (RGC2) instead
     FILE *replay_file;
     RcReplayHeader replay_header;
+    RcCenvReplayHeader creplay_header;
     uint32_t replay_tick;
     int follow_agent;
 } ViewerState;
@@ -9335,7 +9338,7 @@ static void handle_input(ViewerState *v, int ui_capture) {
             viewer_set_npc_tiles(v, !v->show_npc_footprints);
         if (IsKeyPressed(KEY_C)) v->show_collision = !v->show_collision;
         if (IsKeyPressed(KEY_SPACE)) v->paused = !v->paused;
-        if (IsKeyPressed(KEY_T) && !v->replay_env) viewer_request_trade(v);
+        if (IsKeyPressed(KEY_T) && !v->replay_env && !v->replay_cenv) viewer_request_trade(v);
         if (IsKeyPressed(KEY_R))
             (void)rc_player_set_running(v->world, !p->running);
         if (IsKeyPressed(KEY_P)) pickup_current_tile(v);
@@ -10218,11 +10221,21 @@ static RcWorldConfig viewer_world_config(
 // Commands queued by clicks are dropped first so the replay stays exact.
 static int viewer_replay_step(ViewerState *v) {
     int actions[RC_ENV_MAX_AGENTS];
-    if (!rc_env_replay_next(v->replay_file, &v->replay_header, actions)) return 0;
+    if (v->replay_cenv) {
+        if (!rc_cenv_replay_next(v->replay_file, &v->creplay_header, actions)) return 0;
+    } else if (!rc_env_replay_next(v->replay_file, &v->replay_header, actions)) {
+        return 0;
+    }
     for (int i = 0; i < v->world->player_count; i++) v->world->players[i].commands.count = 0;
-    for (int i = 0; i < v->replay_header.num_agents; i++)
-        rc_env_set_action(v->replay_env, i, actions[i]);
-    rc_env_step(v->replay_env);
+    if (v->replay_cenv) {
+        for (int i = 0; i < v->creplay_header.num_agents; i++)
+            rc_cenv_set_action(v->replay_cenv, i, actions[i]);
+        rc_cenv_step(v->replay_cenv);
+    } else {
+        for (int i = 0; i < v->replay_header.num_agents; i++)
+            rc_env_set_action(v->replay_env, i, actions[i]);
+        rc_env_step(v->replay_env);
+    }
     (void)rc_world_select_player(v->world, v->follow_agent);
     v->replay_tick++;
     return 1;
@@ -10230,13 +10243,15 @@ static int viewer_replay_step(ViewerState *v) {
 
 // Keys 1-9 follow another agent during a replay.
 static void viewer_replay_keys(ViewerState *v) {
-    for (int k = 0; k < 9 && k < v->replay_header.num_agents; k++) {
+    int agents = v->replay_cenv ? v->creplay_header.num_agents : v->replay_header.num_agents;
+    uint32_t ticks = v->replay_cenv ? v->creplay_header.ticks : v->replay_header.ticks;
+    for (int k = 0; k < 9 && k < agents; k++) {
         if (!IsKeyPressed(KEY_ONE + k) || v->ui.chat_focused) continue;
         v->follow_agent = k;
         (void)rc_world_select_player(v->world, k);
         char line[96];
         snprintf(line, sizeof(line), "Replay: following agent %d of %d (tick %u/%u).", k + 1,
-                 v->replay_header.num_agents, v->replay_tick, v->replay_header.ticks);
+                 agents, v->replay_tick, ticks);
         runec_ui_add_chat_message(&v->ui, line);
     }
 }
@@ -10285,14 +10300,18 @@ int main(int argc, char **argv) {
     g_world_origin_x = env_int("RUNEC_WORLD_ORIGIN_X", DEFAULT_WORLD_ORIGIN_X);
     g_world_origin_y = env_int("RUNEC_WORLD_ORIGIN_Y", DEFAULT_WORLD_ORIGIN_Y);
     static RcReplayHeader replay_header;  // a replay names its mode
+    static RcCenvReplayHeader creplay_header;
+    int compact_replay = 0;
     if (replay_path) {
         FILE *rf = rc_env_replay_open(replay_path, &replay_header);
+        if (!rf && (rf = rc_cenv_replay_open(replay_path, &creplay_header)) != NULL)
+            compact_replay = 1;
         if (!rf) {
             fprintf(stderr, "viewer: %s is not an rc-env replay\n", replay_path);
             return 1;
         }
         fclose(rf);
-        mode_arg = replay_header.mode;
+        mode_arg = compact_replay ? creplay_header.mode : replay_header.mode;
     }
     if (!rc_gym_layout_load_mode(mode_arg, &g_gym_layout)) return 1;
     fprintf(stderr, "viewer: mode %s (map %s)\n", g_gym_layout.mode, g_gym_layout.name);
@@ -10366,7 +10385,24 @@ int main(int argc, char **argv) {
             v.streaming.preload_radius_regions,
             v.streaming.max_cpu_chunks, v.streaming.max_gpu_chunks,
             v.streaming.upload_budget_mb_per_frame);
-    if (replay_path) {
+    if (replay_path && compact_replay) {
+        v.replay_file = rc_cenv_replay_open(replay_path, &v.creplay_header);
+        RcCenvConfig replay_cfg = {
+            .mode = v.creplay_header.mode, .num_agents = v.creplay_header.num_agents,
+            .profile = v.creplay_header.profile, .horizon = v.creplay_header.horizon,
+            .seed = v.creplay_header.seed, .public_map = true,
+        };
+        v.replay_cenv = v.replay_file ? rc_cenv_create(&replay_cfg) : NULL;
+        v.world = v.replay_cenv ? rc_cenv_world(v.replay_cenv) : NULL;
+        if (v.world) {
+            g_player_start_x = v.world->player->x;
+            g_player_start_y = v.world->player->y;
+            g_player_start_plane = v.world->player->plane;
+        }
+        fprintf(stderr, "viewer: replaying %s (%s): %d agents, profile %d, %u ticks\n", replay_path,
+                v.creplay_header.schema, v.creplay_header.num_agents, v.creplay_header.profile,
+                v.creplay_header.ticks);
+    } else if (replay_path) {
         v.replay_file = rc_env_replay_open(replay_path, &v.replay_header);
         if (!v.replay_file) {
             fprintf(stderr, "viewer: %s is not an rc-env replay\n", replay_path);
@@ -10413,10 +10449,10 @@ int main(int argc, char **argv) {
                                      cfg.object_behaviors_path);
     // Register all OSRS content modules (boss scripts, etc.). See
     // rc-content/README.md for the engine/content split.
-    if (!v.replay_env && !rc_world_install_content(v.world, rc_content_register_all))
+    if (!v.replay_env && !v.replay_cenv && !rc_world_install_content(v.world, rc_content_register_all))
         fprintf(stderr, "content: registration failed; see messages above\n");
 
-    if (!v.replay_env && !rc_world_relocate_player(v.world, g_player_start_x,
+    if (!v.replay_env && !v.replay_cenv && !rc_world_relocate_player(v.world, g_player_start_x,
                                                    g_player_start_y, g_player_start_plane)) {
         fprintf(stderr, "viewer: cannot place the player at start %d,%d,%d; "
                 "check the gym's collision and spawn files\n",
@@ -10433,7 +10469,7 @@ int main(int argc, char **argv) {
     v.primary_anim_id = -1;
     // A fresh gym player with the starter kit; dev validation mode starts at 99
     // with the dev bank instead. A replay keeps the recorded agents as they are.
-    if (v.replay_env) {
+    if (v.replay_env || v.replay_cenv) {
         // agents were placed and equipped by rc-env
     } else if (runec_dev_validation_enabled()) {
         set_viewer_demo_stats(v.world->player);
@@ -10449,7 +10485,7 @@ int main(int argc, char **argv) {
         rc_world_destroy(v.world);
         return 1;
     }
-    if (!v.replay_env) runec_dev_validation_seed_bank(v.world);
+    if (!v.replay_env && !v.replay_cenv) runec_dev_validation_seed_bank(v.world);
 
     if (viewer_smoke) {
         int combat_visual_count = rc_load_combat_visuals(combat_visuals_path);
@@ -10958,7 +10994,7 @@ int main(int argc, char **argv) {
         if (v.ui.context_dismissed)
             reset_viewer_context(&v);
         handle_input(&v, ui_capture);
-        if (v.replay_env) viewer_replay_keys(&v);
+        if (v.replay_env || v.replay_cenv) viewer_replay_keys(&v);
         viewer_update_movement_prefetch(&v);
 
         // Animation (runs every frame, independent of ticks)
@@ -10972,7 +11008,7 @@ int main(int argc, char **argv) {
                 int old_x = v.world->player->x;
                 int old_y = v.world->player->y;
                 int old_plane = v.world->player->plane;
-                if (!v.replay_env) {
+                if (!v.replay_env && !v.replay_cenv) {
                     rc_world_tick(v.world);
                 } else if (!viewer_replay_step(&v)) {
                     v.paused = 1;
@@ -11070,7 +11106,10 @@ cleanup:
         anim_model_state_free(v.npc_anim_state[i]);
     anim_cache_free(v.anims);
     anim_cache_free(v.object_anim_cache);
-    if (v.replay_env) {
+    if (v.replay_cenv) {
+        rc_cenv_destroy(v.replay_cenv);  // owns the world
+        fclose(v.replay_file);
+    } else if (v.replay_env) {
         rc_env_destroy(v.replay_env);  // owns the world
         fclose(v.replay_file);
     } else {

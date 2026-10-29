@@ -5,7 +5,7 @@
 **What.** `rc-env/compact_env.h` is the mode's RL interface, schema `compact-v2`: per-agent
 observations of own state, a 25x25 window (tiles, NPCs, locs, ground items, players, brick
 shadows, incoming hits by style), open interfaces only (bank, shop, menu, trade), and optional
-public-map landmark bearings; one flat masked action space (1,215 actions) with distinct Wait and
+public-map landmark bearings; one flat masked action space (1,255 actions) with distinct Wait and
 Stop; profiles free play, solo boss, development and cooperative boss with sparse +1 rewards and
 termination kept apart from truncation; per-agent metrics and an event log; snapshots
 (`rc-core/snapshot.c`), canonical state hashes, replays, and a PufferLib 5.0 binding
