@@ -64,3 +64,33 @@ colon-separated (`inputs=436:1,438:1`).
 | Enemy profiles, closed drop tables | `rc_mode_patch_npcs`, `mode_loot` in `compact.c` |
 | Starter kit | `rc_content_compact_new_character` |
 | Map | `maps/compact_v1.toml` |
+| Scurrius encounter | `rc-content/encounters/scurrius.c`, `modes/compact_osrs_v1/scurrius.toml` |
+| Trading, contention, loot ownership | `rc-core/trade.c`, rotating player order in `rc-core/tick.c`, `rc-core/drops.c` |
+| RL interface (compact-v2) | `rc-env/compact_env.h`, `rc-env/puffer/compact/` |
+| Acceptance runs | `rc-env/tools/acceptance.c` (`rs-gym-acceptance`) |
+
+## Acceptance (compact_osrs_v1)
+
+```bash
+./build/cmake/rs-gym-acceptance all --seeds 5 --report modes/compact_osrs_v1/acceptance-report.md
+./build/cmake/rs-gym-acceptance routes --seeds 1 --style magic     # one run; logs in build/acceptance/
+```
+
+Scripted controllers (`rc-env/script.h`) play everything through player commands; they know the
+reference map but never set levels, grant items, teleport or read the RNG. Sections:
+
+- `routes`: a fresh character per style (melee, ranged, magic) and seed plays to a credited
+  Scurrius kill inside the 12,000-tick horizon: cows (beef cooked for food), goblins, hill giants,
+  town trips for gear, food, arrows and runes, grave recovery, then the boss with prayer flicked on
+  its attack timer and rats cleared while it feeds. Also reports activity throughput.
+- `coop`: a melee fighter and a mage, a cook and a runecrafter who sell them food and runes through
+  trades; the fighters kill Scurrius together.
+- `contention`: eight players on shared rocks, one shop stock, one dropped item and the boss.
+- `economy`: buy/sell-back and dose arbitrage, conservation through ordinary actions, death from
+  zero cash twice with the grave among aggressive monsters, arrow production from the kit.
+- `perf`: compact-v2 ticks per second for 1, 4 and 8 agents and for parallel worlds.
+
+The report (`modes/compact_osrs_v1/acceptance-report.md`) lists every run with its seed and end-state
+hash; rerunning the command reproduces them exactly. ctest runs the same sections at two seeds.
+Tuning changes found by these runs are noted where the value lives (`scurrius.toml`) and in the
+override ledger.

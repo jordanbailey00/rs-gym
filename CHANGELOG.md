@@ -1,6 +1,34 @@
 # Changelog
 
-## 2026-10-29: compact-v2 RL interface (Stage 5, in progress)
+## 2026-10-29: balance and acceptance (Stage 6)
+
+**What.** `rs-gym-acceptance` (`rc-env/tools/acceptance.c`) runs the mode's acceptance evidence
+with scripted controllers: fresh-start routes to a credited Scurrius kill for melee, ranged and
+magic over any number of seeds, a four-player co-op team (two fighters, a cook and a runecrafter
+trading supplies), eight-player contention, economy and recovery checks, activity throughput and
+compact-v2 performance; it writes `modes/compact_osrs_v1/acceptance-report.md`, and ctest runs it
+at two seeds. Map: the dungeon grew to 128x64 with a Varrock sewers branch reached by a manhole,
+which now holds the giant rats and goblins; hill giants moved to the cave's north end; a pipe
+joins the branches; the chaos altar moved three tiles east. Scurrius: defence bonuses 20 -> 0 (the
+cache value) and feeding heal 3 -> 2 per heal; the ledger records the encounter tuning. A full
+bank no longer turns waiting recovery items public. `rs-gym-rollout --mode compact_osrs_v1`
+records compact-v2 episodes for the viewer.
+
+**Why.** Stage 6. The routes found three problems. Goblin-level characters died on nearly every
+cave trip, because the cave held the basic tier in one room with skeletons, dark wizards and hill
+giants that hunt within 8 tiles up to combat 40-56. With the provisional boss values only 3 of 15
+routes won (13 with the defence bonuses at the cache's 0, 15 with the lower heal). And expiring
+grave items waiting on a full bank became visible to everyone at the same tick.
+
+**Checked.** Report: 15 of 15 routes kill Scurrius with credit (first kill about tick 10,200-11,900;
+28 of 30 over ten seeds); the co-op team kills it at two participants (420 HP) after three supplier
+trades; contention passes (fair rock shares, stock never negative, coins exact, one winner of a
+ground race, scaling to 1,500 HP checked at every join); economy passes (no buy/sell-back or dose
+gain, conservation through bank, equip, drop, shop and trade, recovery from zero twice with both
+graves banked, arrows made from the kit). Runs are deterministic: the same command reproduces the
+same end-state hashes. `tests/test_compact_boss.c` covers the full-bank expiry. ctest: 19 of 19.
+
+## 2026-10-29: compact-v2 RL interface (Stage 5)
 
 **What.** `rc-env/compact_env.h` is the mode's RL interface, schema `compact-v2`: per-agent
 observations of own state, a 25x25 window (tiles, NPCs, locs, ground items, players, brick
@@ -8,8 +36,8 @@ shadows, incoming hits by style), open interfaces only (bank, shop, menu, trade)
 public-map landmark bearings; one flat masked action space (1,255 actions) with distinct Wait and
 Stop; profiles free play, solo boss, development and cooperative boss with sparse +1 rewards and
 termination kept apart from truncation; per-agent metrics and an event log; snapshots
-(`rc-core/snapshot.c`), canonical state hashes, replays, and a PufferLib 5.0 binding
-(`rc-env/puffer/compact`, env `rs_gym_compact`).
+(`rc-core/snapshot.c`), canonical state hashes, replays (rc-viewer plays them), and a PufferLib 5.0
+binding (`rc-env/puffer/compact`, env `rs_gym_compact`; `tools/puffer_overlay.sh` links both envs).
 
 **Why.** Stage 5 of the v1 roadmap.
 

@@ -1,19 +1,25 @@
 # TODO
 
-v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
+v1 is `compact_osrs_v1` (see `SPEC.md`). Stages 1-6 are done; the acceptance evidence is
+`modes/compact_osrs_v1/acceptance-report.md` (`rs-gym-acceptance all --seeds 5`). Open work:
 
-## Stage 5: RL interface (remaining)
-- Viewer: replay compact-v2 recordings (`RGC2` files); today it replays v1 only.
-- `tools/puffer_overlay.sh`: link `rs_gym_compact` too and check `data/modes/<mode>/gym.cfg`.
-- `rc-env/README.md`: document the compact-v2 observation and action layouts field by field.
-- Throughput: measure ticks/second for 1, 4 and 8 agents with observations and masks.
+## Balance (found by the Stage 6 runs)
+- Arrow production pays poorly: a fresh character makes about 120 bronze arrows in 4,000 ticks
+  from the kit, while the shop sells them for 1 coin; the ranged routes buy theirs. Consider more
+  arrows per action or dearer shop arrows.
+- Magic loses money on hill giants (runes and food cost about what they drop), so the magic route
+  earns on goblins. Rune production (about 100 mind runes per 1,000 ticks from level 1) is the
+  mage's real supply.
+- Dark-wizard hunting is slow: about 3 kills per 1,000 ticks for a level-40 ranger.
+- Protection prayers count when an NPC attacks (the engine's rule), so Scurrius' even-odds bolts
+  and fur in its final phase and while feeding cannot be answered after the cue. The routes pray
+  ahead and flick on its attack timer. Decide whether its projectiles should check on landing.
 
-## Stage 6: balance and acceptance
-- Balance: a level-40 mithril fighter without prayer loses to Scurrius (it deals about 0.8 HP a
-  tick against 0.3); tune defence, max hits and feeding before the acceptance runs.
-- Scripted fresh-start runs to a Scurrius kill for melee, ranged and magic over five seeds.
-- Four-player cooperative run with a real trade; eight-player contention.
-- Economy conservation and exploit tests, recovery tests, throughput, balance report.
+## Evidence still missing
+- Human playtesting: none. All acceptance runs are scripted.
+- Trained agents: only the binding smoke test and random rollouts; no training results.
+- The post-boss spine weapons and their paid alternative are covered by `tests/test_compact_boss.c`
+  and `tests/test_compact_economy.c` with test setup, not by a scripted route.
 
 ## Other
 - Make `data/` reproducible inside RS-gym. Non-spatial data was seeded by copying RuneC_v4's

@@ -185,11 +185,14 @@ exactly; `rc_env_replay_open` / `rc_env_replay_next` read it.
 ## Tools
 
 - `rs-gym-rollout [--task T] [--agents N] [--ticks T] [--seed S] [--policy random|scripted] [--record F]`
-  (island v1)
+  (island v1); with `--mode compact_osrs_v1` it plays compact-v2 with random masked actions
+  (development profile), prints each agent's metrics and the end-state hash, and `--record` writes
+  a file `rc-viewer --replay` plays.
 - `rs-gym-bench [--envs N] [--agents M] [--threads T] [--steps S] [--task T]`: agent steps per second,
   including observations and masks (island v1).
 - `rs-gym-validate [mode]`: content checks, override ledger and walking distances.
-- `rs-gym-acceptance`: the compact mode's acceptance runs and throughput (see `modes/README.md`).
+- `rs-gym-acceptance [all|routes|coop|contention|economy|perf] [--seeds N] [--style S] [--report F]`:
+  the compact mode's acceptance runs and throughput (see `modes/README.md`).
 
 ## Island PufferLib 5.0 (`puffer/`)
 
@@ -203,4 +206,5 @@ checkout with `tools/puffer_overlay.sh /path/to/PufferLib` and set `RUNEC_DATA_R
 
 `script.h` runs agent plans as coroutines over one world: each plan is blocking C that acts only
 through player commands (walk, interact, bank, shop, make, gather, fish, fight, pick up, bury) and
-waits on the world clock. `tests/test_compact_economy.c` uses it to drive every production chain.
+waits on the world clock. `tests/test_compact_economy.c` uses it to drive every production chain;
+`tools/acceptance.c` builds whole fresh-start routes, a co-op team and contention runs on it.

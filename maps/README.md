@@ -3,6 +3,12 @@
 Map specs (TOML), compiled by `tools/build_mode.py` for the mode that names them:
 `compact_v1.toml` (compact_osrs_v1, the v1 benchmark) and `island.toml` (the island draft).
 
+`compact_v1` is a 128x128 island and a 128x64 dungeon. The dungeon has two ways down: a manhole
+between the town and the farm into a Varrock sewers stamp (giant rats, goblins) and a trapdoor in
+the east into the Edgeville hill giant cave (hill giants at the north end, skeletons west, dark
+wizards south). A pipe joins the two; the cave's far pipe leads to Scurrius' lair. The cave's
+families hunt players within 8 tiles, so the low tier lives in the sewers, out of their reach.
+
 Coordinates are tiles relative to an area's south-west corner: world tile = area origin × 64 + value.
 Tables take an optional `area` (default `surface`). `[[stamp]] source` coordinates are real-world
 b237 tiles. Rects are `[x0, y0, x1, y1]`.
@@ -25,7 +31,7 @@ b237 tiles. Rects are `[x0, y0, x1, y1]`.
 | `[[item]]` | static ground item: `id`, `quantity`, `at`, `respawn` ticks |
 | `[[drops]]` | drop table for `npcs`: `always`, `main` and `tertiary` rows `[item, min, max(, 1-in-N)]` |
 | `[[spawn_objects]]` | locs the engine spawns at runtime (`id`, expected `name`, `type`) that need render templates |
-| `[[landmark]]` | named places agents can travel to; order is the travel-action order (at most 24) |
+| `[[landmark]]` | named places agents can travel to; order is the travel-action order (at most 32) |
 
 Find ids and building bounds with `rc_cache` (`tools/cache_pipeline/rc_cache`), and check a stamp in
 the exported minimaps under `data/regions/`.

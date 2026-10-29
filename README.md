@@ -38,14 +38,19 @@ cmake --build build/cmake --parallel
 python3 tools/build_mode.py                 # compact_osrs_v1; add "island" for the first draft
 ctest --test-dir build/cmake --output-on-failure
 ./build/cmake/rc-viewer --mode compact_osrs_v1
+./build/cmake/rs-gym-acceptance all --seeds 5 --report modes/compact_osrs_v1/acceptance-report.md
 ```
 
 `build_mode.py` compiles the mode's map and rules into `data/modes/<mode>/` in under a minute and
-runs `rs-gym-validate` (see `modes/README.md`).
+runs `rs-gym-validate`. `rs-gym-acceptance` plays scripted fresh-start routes to a Scurrius kill,
+a four-player co-op team, eight-player contention and the economy checks, and measures throughput
+(see `modes/README.md`).
 
 RL side:
 
 ```bash
+./build/cmake/rs-gym-rollout --mode compact_osrs_v1 --agents 4 --ticks 3000 --record build/replays/compact.rgc
+./build/cmake/rc-viewer --replay build/replays/compact.rgc
 ./build/cmake/rs-gym-rollout --task woodcutting --agents 4 --ticks 3000 --record build/replays/wc.rgr
 ./build/cmake/rc-viewer --replay build/replays/wc.rgr
 ./build/cmake/rs-gym-bench --envs 16 --agents 4 --threads 16

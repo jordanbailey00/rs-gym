@@ -3,10 +3,14 @@
 //
 //   rs-gym-rollout [--task NAME] [--agents N] [--ticks T] [--seed S]
 //                  [--policy random|scripted] [--record FILE]
+//   rs-gym-rollout --mode compact_osrs_v1 [--agents N] [--ticks T] [--seed S] [--record FILE]
 //
+// --mode plays the compact-v2 interface (rc-env/compact_env.h) with random masked actions in the
+// development profile and prints each agent's metrics.
 // The scripted policy power-skills for woodcutting, mining and fishing: it walks
 // to the resource, gathers until the inventory is full, drops what it gathered
 // and goes again. Other tasks fall back to random play.
+#include "../compact_env.h"
 #include "../env.h"
 
 #include <stdio.h>
@@ -70,8 +74,43 @@ static int scripted_action(int task, uint32_t *rng) {
     return mask[RC_ACT_TRAVEL + landmark] ? RC_ACT_TRAVEL + landmark : random_action(rng);
 }
 
+static int compact_rollout(const char *mode, int agents, int ticks, uint32_t seed, const char *record) {
+    static float cobs[RC_CENV_OBS_SIZE];
+    static uint8_t cmask[RC_CENV_NUM_ACTIONS];
+    RcCenvConfig cfg = {.mode = mode, .num_agents = agents, .profile = RC_CENV_DEVELOPMENT,
+                        .horizon = ticks, .seed = seed, .public_map = true, .record_path = record};
+    RcCompactEnv *env = rc_cenv_create(&cfg);
+    if (!env) return 1;
+    uint32_t rng = seed * 2654435761u + 7;
+    int done = 0;
+    while (!done) {
+        for (int i = 0; i < agents; i++) {
+            rc_cenv_observe(env, i, cobs);
+            rc_cenv_action_mask(env, i, cmask);
+            int valid[RC_CENV_NUM_ACTIONS], n = 0;
+            for (int k = 0; k < RC_CENV_NUM_ACTIONS; k++) if (cmask[k]) valid[n++] = k;
+            rc_cenv_set_action(env, i, n ? valid[next(&rng) % (uint32_t)n] : 0);
+        }
+        rc_cenv_step(env);
+        done = 1;
+        for (int i = 0; i < agents; i++) done &= rc_cenv_terminated(env, i) || rc_cenv_truncated(env, i);
+    }
+    for (int i = 0; i < agents; i++) {
+        const RcCenvMetrics *m = rc_cenv_metrics(env, i);
+        int xp = 0;
+        for (int k = 0; k < 32; k++) xp += m->xp_gained[k];
+        printf("agent %d: xp %d kills %d deaths %d produced %d consumed %d loot %lld spent %lld\n", i, xp,
+               m->kills, m->deaths, m->produced, m->consumed, (long long)m->coins_from_loot,
+               (long long)m->coins_spent_shops);
+    }
+    printf("ticks %d hash %016llx\n", rc_cenv_episode_ticks(env), (unsigned long long)rc_cenv_state_hash(env));
+    rc_cenv_destroy(env);
+    if (record) printf("recorded %s (view: ./build/cmake/rc-viewer --replay %s)\n", record, record);
+    return 0;
+}
+
 int main(int argc, char **argv) {
-    const char *task_name = "woodcutting", *policy = "scripted", *record = NULL;
+    const char *task_name = "woodcutting", *policy = "scripted", *record = NULL, *mode = NULL;
     int agents = 1, ticks = 0;
     uint32_t seed = 1;
     for (int i = 1; i + 1 < argc; i += 2) {
@@ -81,6 +120,11 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--seed")) seed = (uint32_t)strtoul(argv[i + 1], NULL, 10);
         else if (!strcmp(argv[i], "--policy")) policy = argv[i + 1];
         else if (!strcmp(argv[i], "--record")) record = argv[i + 1];
+        else if (!strcmp(argv[i], "--mode")) mode = argv[i + 1];
+    }
+    if (mode) {
+        if (agents < 1 || agents > RC_CENV_MAX_AGENTS) return 2;
+        return compact_rollout(mode, agents, ticks ? ticks : 3000, seed, record);
     }
     int task = rc_env_task_find(task_name);
     if (task < 0 || agents < 1 || agents > RC_ENV_MAX_AGENTS) {
