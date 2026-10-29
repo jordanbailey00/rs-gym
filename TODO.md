@@ -2,20 +2,15 @@
 
 v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
 
-## Stage 1: mode registration and map
-- Per-mode data directories (`data/modes/<mode>/`) so the `island` draft and `compact_osrs_v1`
-  build and run side by side.
-- Mode configuration (`modes/compact_osrs_v1/`), the mode compiler and content validator, the
-  machine-readable content manifest and the override ledger.
-- The compact reference map: about 128×128 overworld and a 64×64 dungeon with town, farm and
-  river, woods and quarry, outer resources, rune sites and the Scurrius arena.
-- Headless reset/step smoke test for the mode.
-
 ## Stage 2: playable economy
-- Level cap 40, ×8 XP, band-rebased requirements (equipment, tools, recipes, spells, prayers).
-- Fletching, Crafting and Runecraft; tanner, spinning wheel, rune altars and pure essence.
-- Mode NPC stats and closed drop tables for the seven enemy families; elemental weaknesses.
-- Fixed-price shops (general store, Aubury, Ellis) and sale values; starter kit in the bank.
+- Apply elemental weakness (accuracy and damage) and within-tier spell scaling over the mode's
+  spells in combat; give the mode's NPC defence profiles their matchups.
+- Viewer: menus for the new stations (knife, combine, spinning wheel, needle, chisel, altars,
+  tanner, Aldo) and the fixed-price shop values.
+- Scripted checks that each chain works through real interactions: smelting and smithing,
+  fletching (shafts, headless arrows, arrows, bows), spinning, tanning and leather, runecraft,
+  fishing and cooking, burying, shops buying and selling.
+- Measure walking distances on the map against the spec's targets; adjust placements.
 
 ## Stage 3: encounter and recovery
 - Scurrius: attack styles and cues, falling rocks, rat minions, feeding, group scaling,

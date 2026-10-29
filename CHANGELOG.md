@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-10-29: compact_osrs_v1 mode, rules pipeline and reference map (Stage 1)
+
+**What.** The `compact_osrs_v1` mode exists end to end: configuration in `modes/compact_osrs_v1/`,
+a mode compiler (`tools/modec`), a rules loader that patches the definitions and logs every
+override (`rc-core/mode.c`), the mode's world content (`rc-content/compact.c`), a validator
+(`rs-gym-validate`) writing the override ledger, the reference map `maps/compact_v1.toml`, and a
+headless smoke test (`tests/test_compact_mode.c`).
+
+**Why.** Stage 1 of the v1 roadmap: register the mode, establish the manifest, ledger and validator
+formats, build the map, and prove reset and step work headless while the island mode keeps running.
+
+**How it fits.**
+- Names live in TOML; `modec` resolves them against the cache, selects canonical `recipes.bin` rows
+  by output and inputs, and refuses content that is not closed (an input nothing supplies, a station
+  not placed, a reachable item without a sale value). Two unstrung bows have no creation row in the
+  data snapshot and are authored from the OSRS Wiki, marked as such in the manifest and ledger.
+- The engine reads one rules file per process (it is part of the game-data identity). Definition
+  overrides happen at load, so every world shares the patched data; world rules (stations, shops,
+  drops, death, loot timing, kit) install per world.
+- Engine extensions, all inert without a mode: XP multiplier, enabled skills and level cap in
+  `rc_add_xp_hundredths`; `level_offset` on gathering, fishing and cooking rules so a rebased unlock
+  keeps the canonical success curve; hand-picked and never-depleting nodes; eight new production
+  menus with per-loc options and batch altars; fixed-price shops whose sales remove items; NPC
+  defence bonuses and elemental weakness fields on definitions; configurable NPC loot timing.
+- The map is a 128×128 island (town with bank, general store, smithy, church, house with a range,
+  spinning wheel and well; farm and river; woods and quarry; an outer resource area with two
+  skeletons and two hill giants; essence and five altars) and a 64×64 dungeon made of the Edgeville
+  hill giant cave and Scurrius' lair from the Varrock Sewers, joined by an obstacle pipe.
+
+**Checked.** All nine ctest suites pass, including the island tests and the new compact smoke test
+(rules active, kit, XP ×8 and the cap, fixed shop prices and sales, a chicken's closed drop owned by
+its killer, a tree yielding logs). `rs-gym-validate` passes 676 checks and writes 217 overrides. The
+viewer starts on the mode (`RUNEC_VIEWER_SMOKE=1`); it has not been played by hand.
+
 ## 2026-10-28: v1 becomes compact_osrs_v1
 
 **What.** `SPEC.md` now defines v1 as the `compact_osrs_v1` mode from the design baseline 1.0

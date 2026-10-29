@@ -1,0 +1,517 @@
+# compact_osrs_v1 reference map: a 128x128 island overworld and a 64x64 dungeon, built from b237
+# cache content (SPEC.md, "World layout and renewable resources"). Coordinates are tiles relative
+# to the named area's south-west corner (area defaults to "surface"); [[stamp]] sources are
+# real-world b237 tiles. Spawn counts follow the spec's shared budgets.
+
+[map]
+name = "compact_v1"
+seed = 7
+start = [66, 52]
+
+[[area]]
+name = "surface"
+kind = "island"
+origin = [2, 2]    # world tiles 128..255
+size = [2, 2]
+ocean_ring = 1
+
+[[area]]
+name = "dungeon"
+kind = "void"
+origin = [8, 2]    # world tiles 512..575 x 128..191
+size = [1, 1]
+
+[materials]
+grass = { underlay = 48 }
+grass_alt = { underlay = 50 }
+sand = { underlay = 48, overlay = 22 }
+path = { overlay = 10 }
+dirt = { underlay = 64 }
+river = { underlay = 48, overlay = 6, settings = 1 }
+shallow = { underlay = 48, overlay = 442, settings = 1 }
+water_mid = { underlay = 48, overlay = 445, settings = 1 }
+water_deep = { underlay = 48, overlay = 448, settings = 1 }
+ocean = { underlay = 48, overlay = 451, settings = 1 }
+void = { settings = 1 }
+
+[island]
+radius = 58
+wobble = 0.07
+beach_width = 3
+sea_height = 0
+ramp_tiles = 10
+height_scale = 0.35
+water_depths = [[2, "shallow"], [4, "water_mid"], [8, "water_deep"], [999, "ocean"]]
+
+# Quarry and outer-area ground.
+[[paint]]
+rect = [78, 84, 96, 102]
+material = "dirt"
+alt = "grass"
+
+[[paint]]
+rect = [94, 88, 116, 114]
+material = "dirt"
+alt = "grass_alt"
+
+# A river from an inland spring west to the coast, between the farm and the willows.
+[[river]]
+points = [[42, 104], [30, 98], [16, 92], [0, 90]]
+width = 5
+material = "river"
+
+# Paths: the town street, then out to every region.
+[[path]]
+points = [[14, 52], [100, 52]]
+width = 3
+
+[[path]]
+points = [[66, 14], [66, 100]]
+width = 3
+
+[[path]]
+points = [[66, 78], [86, 92], [104, 104]]
+width = 2
+
+[[path]]
+points = [[66, 26], [88, 22]]
+width = 2
+
+[[path]]
+points = [[86, 52], [102, 42]]
+width = 2
+
+[[path]]
+points = [[34, 52], [24, 32]]
+width = 2
+
+# ---- Town -----------------------------------------------------------------------------------------
+
+[[stamp]]
+name = "Draynor bank"
+source = [3086, 3236]
+size = [14, 13]
+at = [58, 56]
+
+[[stamp]]
+name = "Lumbridge general store"   # shopkeeper, Aubury
+source = [3206, 3240]
+size = [11, 14]
+at = [42, 58]
+rotation = 1
+
+[[stamp]]
+name = "Lumbridge smithy"          # furnace and anvil
+source = [3219, 3248]
+size = [13, 13]
+at = [74, 56]
+rotation = 3
+
+[[stamp]]
+name = "Lumbridge church"          # prayer altar
+source = [3237, 3203]
+size = [13, 14]
+at = [40, 34]
+
+[[stamp]]
+name = "Varrock house"             # kitchen range
+source = [3147, 3426]
+size = [19, 17]
+at = [58, 30]
+
+[[loc]]
+id = 14889                         # Spinning wheel
+at = [56, 54]
+
+[[loc]]
+id = 884                           # Well (the town's water source)
+at = [62, 47]
+
+# ---- Rune sites: pure essence and five altars, spread so travel and inventory space set the cost.
+
+[[loc]]
+id = 34773                         # Rune Essence (5x5)
+at = [84, 16]
+
+[[loc]]
+id = 34773
+at = [92, 22]
+
+[[loc]]
+id = 34760                         # Air altar
+at = [64, 10]
+
+[[loc]]
+id = 34762                         # Water altar
+at = [22, 28]
+
+[[loc]]
+id = 34761                         # Mind altar
+at = [104, 38]
+
+[[loc]]
+id = 34769                         # Chaos altar
+at = [112, 66]
+
+[[loc]]
+id = 34770                         # Death altar
+at = [110, 112]
+
+# ---- Dungeon entrance -----------------------------------------------------------------------------
+
+[[loc]]
+id = 14880                         # Trapdoor (Climb-down)
+at = [96, 56]
+type = 22
+
+[[link]]
+loc = 14880
+at = [96, 56]
+option = "Climb-down"
+to_area = "dungeon"
+to = [26, 32]
+
+# ---- Dungeon: the Edgeville hill giant cave, an obstacle pipe, and Scurrius' lair -----------------
+
+[[stamp]]
+name = "Edgeville hill giant cave"
+area = "dungeon"
+source = [3090, 9819]
+size = [42, 40]
+at = [0, 0]
+
+[[stamp]]
+name = "Scurrius' lair"            # Varrock Sewers: the broken bars and the arena
+area = "dungeon"
+source = [3276, 9856]
+size = [35, 23]
+at = [29, 41]
+
+[[link]]
+loc = 17385                        # the cave's ladder
+area = "dungeon"
+at = [26, 33]
+option = "Climb-up"
+to_area = "surface"
+to = [96, 55]
+
+[[loc]]
+id = 16511                         # Obstacle pipe by the cave's east wall
+area = "dungeon"
+at = [33, 26]
+
+[[link]]
+loc = 16511
+area = "dungeon"
+at = [33, 26]
+option = "Squeeze-through"
+to = [33, 51]
+
+[[loc]]
+id = 16511                         # ... and its far end in the sewer corridor
+area = "dungeon"
+at = [32, 55]
+
+[[link]]
+loc = 16511
+area = "dungeon"
+at = [32, 55]
+option = "Squeeze-through"
+to = [32, 25]
+
+[[link]]
+loc = 14203                        # Broken bars into the arena
+area = "dungeon"
+at = [35, 52]
+option = "Climb-through (normal)"
+stand = [34, 52]
+to = [44, 52]
+
+[[link]]
+loc = 14204                        # Sewage water: leave the arena
+area = "dungeon"
+at = [41, 52]
+option = "Cross"
+stand = [43, 52]
+to = [34, 51]
+
+[[link]]
+loc = 14204
+area = "dungeon"
+at = [41, 52]
+option = "Quick-escape"
+stand = [43, 52]
+to = [34, 51]
+
+[[zone]]
+area = "dungeon"
+rect = [43, 44, 60, 61]            # Scurrius' arena
+multi = true
+planes = [0]
+
+# ---- Resources ------------------------------------------------------------------------------------
+
+[[scatter]]
+ids = [1276, 1278]                 # Tree
+rect = [40, 78, 58, 92]
+count = 8
+spacing = 1
+
+[[scatter]]
+ids = [10820]                      # Oak tree
+rect = [60, 82, 76, 96]
+count = 6
+spacing = 1
+
+[[loc]]
+id = 10829                         # Willow trees by the river
+at = [30, 102]
+
+[[loc]]
+id = 10831
+at = [36, 105]
+
+[[loc]]
+id = 10833                         # ... and in the outer area
+at = [96, 108]
+
+[[loc]]
+id = 10829
+at = [100, 111]
+
+[[scatter]]
+ids = [10943, 11161]               # Copper rocks
+rect = [78, 86, 94, 100]
+count = 4
+spacing = 0
+
+[[scatter]]
+ids = [11360, 11361]               # Tin rocks
+rect = [78, 86, 94, 100]
+count = 4
+spacing = 0
+
+[[scatter]]
+ids = [11364, 11365]               # Iron rocks
+rect = [78, 86, 94, 100]
+count = 4
+spacing = 0
+
+[[scatter]]
+ids = [11366, 11367]               # Coal rocks: two in the quarry ...
+rect = [78, 86, 94, 100]
+count = 2
+spacing = 0
+
+[[scatter]]
+ids = [11366, 11367]               # ... four in the outer area
+rect = [96, 90, 110, 100]
+count = 4
+spacing = 0
+
+[[scatter]]
+ids = [11372, 11373]               # Mithril rocks
+rect = [100, 100, 114, 110]
+count = 4
+spacing = 0
+
+[[scatter]]
+ids = [14896]                      # Flax
+rect = [14, 68, 24, 80]
+count = 8
+spacing = 0
+
+# ---- NPCs -----------------------------------------------------------------------------------------
+
+[[npc]]
+ids = [2813]                       # Shop keeper (general store)
+at = [48, 63]
+
+[[npc]]
+ids = [11434]                      # Aubury (runes, staff, wizard clothing)
+at = [50, 56]
+
+[[npc]]
+ids = [3231]                       # Ellis (tanner)
+at = [72, 54]
+
+[[npc]]
+ids = [7615]                       # Historian Aldo, by the dungeon entrance
+at = [98, 54]
+
+[[npc]]
+ids = [1173]                       # Chicken
+rect = [26, 66, 38, 76]
+count = 8
+
+[[npc]]
+ids = [2790]                       # Cow
+rect = [12, 50, 30, 64]
+count = 6
+
+[[npc]]
+ids = [1525]                       # Fishing spot: small net (shrimps)
+rect = [0, 40, 20, 70]
+placement = "shore"
+wander = 0
+count = 3
+
+[[npc]]
+ids = [1526]                       # Rod fishing spot: lure (trout)
+rect = [14, 86, 40, 106]
+placement = "shore"
+wander = 0
+count = 2
+
+[[npc]]
+ids = [1519]                       # Fishing spot: cage (lobster)
+rect = [108, 60, 128, 92]
+placement = "shore"
+wander = 0
+count = 2
+
+[[npc]]
+ids = [70]                         # Skeleton: two on the outer-resource route
+rect = [92, 86, 116, 112]
+count = 2
+
+[[npc]]
+ids = [2098]                       # Hill Giant: two on the outer-resource route
+rect = [92, 86, 116, 112]
+count = 2
+
+[[npc]]
+area = "dungeon"
+ids = [2856]                       # Giant rat: by the ladder
+rect = [16, 20, 30, 31]
+count = 6
+
+[[npc]]
+area = "dungeon"
+ids = [3029]                       # Goblin: the cave's centre
+rect = [10, 12, 24, 22]
+count = 6
+
+[[npc]]
+area = "dungeon"
+ids = [70]                         # Skeleton: the west branch
+rect = [5, 6, 12, 20]
+count = 4
+
+[[npc]]
+area = "dungeon"
+ids = [510]                        # Dark wizard: the south branch
+rect = [12, 4, 22, 10]
+count = 4
+
+[[npc]]
+area = "dungeon"
+ids = [2098]                       # Hill Giant: the east side, by the pipe
+rect = [24, 10, 33, 26]
+count = 2
+
+[[npc]]
+area = "dungeon"
+ids = [7222]                       # Scurrius
+at = [51, 52]
+wander = 0
+
+# ---- Landmarks (named tiles for scripted controllers and travel) ----------------------------------
+
+[[landmark]]
+name = "start"
+at = [66, 52]
+
+[[landmark]]
+name = "bank"
+at = [65, 57]
+
+[[landmark]]
+name = "general_store"
+at = [48, 62]
+
+[[landmark]]
+name = "ellis"
+at = [72, 53]
+
+[[landmark]]
+name = "smithy"
+at = [79, 60]
+
+[[landmark]]
+name = "range"
+at = [72, 32]
+
+[[landmark]]
+name = "spinning_wheel"
+at = [56, 53]
+
+[[landmark]]
+name = "church"
+at = [46, 40]
+
+[[landmark]]
+name = "chickens"
+at = [32, 71]
+
+[[landmark]]
+name = "cows"
+at = [21, 57]
+
+[[landmark]]
+name = "flax"
+at = [19, 74]
+
+[[landmark]]
+name = "trees"
+at = [49, 85]
+
+[[landmark]]
+name = "oaks"
+at = [68, 89]
+
+[[landmark]]
+name = "quarry"
+at = [86, 93]
+
+[[landmark]]
+name = "outer_area"
+at = [104, 102]
+
+[[landmark]]
+name = "essence"
+at = [86, 21]
+
+[[landmark]]
+name = "air_altar"
+at = [65, 14]
+
+[[landmark]]
+name = "water_altar"
+at = [23, 32]
+
+[[landmark]]
+name = "mind_altar"
+at = [105, 42]
+
+[[landmark]]
+name = "chaos_altar"
+at = [111, 70]
+
+[[landmark]]
+name = "death_altar"
+at = [111, 110]
+
+[[landmark]]
+name = "dungeon_entrance"
+at = [96, 55]
+
+[[landmark]]
+name = "lair_bars"
+area = "dungeon"
+at = [34, 52]
+
+[[landmark]]
+name = "scurrius"
+area = "dungeon"
+at = [47, 52]

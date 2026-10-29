@@ -19,17 +19,23 @@ typedef struct {
     uint16_t scale;  // axes: success multiplier in hundredths
 } RcSkillTool;
 
+enum { RC_GATHER_NO_TOOL = 1u << 0 };  // picked by hand (flax)
+
 typedef struct {
     uint32_t obj_id, product;
     uint8_t skill, level;
     uint16_t xp_tenths, low, high;
-    uint8_t deplete_one_in;  // a success depletes the node with chance 1/N
+    uint8_t deplete_one_in;  // a success depletes the node with chance 1/N (0: never)
+    int8_t level_offset;     // added to the level for the success roll (a rebased requirement)
+    uint8_t flags;           // RC_GATHER_*
+    uint8_t ticks;           // ticks per attempt without a tool
 } RcGatherRule;
 
 typedef struct {
     uint32_t product;
     uint8_t level;
     uint16_t xp_tenths, low, high;
+    int8_t level_offset;
 } RcFishCatch;
 
 #define RC_FISH_MAX_CATCHES 2
@@ -52,6 +58,7 @@ typedef struct {
     uint32_t raw, cooked, burnt;
     uint8_t level;
     uint16_t xp_tenths, low, high;
+    int8_t level_offset;
 } RcCookRule;
 
 typedef struct RcSkillingRules {
@@ -81,6 +88,10 @@ int rc_skill_chance_256(int level, int low_tenths, int high_tenths,
 void rc_skilling_install(RcWorld *world, const RcSkillingRules *rules);
 int  rc_skilling_add_make_option(RcWorld *world, int recipe,
                                  RcMakeMenu facility, int success_pct);
+// A product offered by one menu; batch converts every carried input in one action, and a
+// station loc limits it to that station (one rune per altar).
+int  rc_skilling_add_station_option(RcWorld *world, int recipe, RcMakeMenu facility,
+                                    int success_pct, int batch, int station_loc);
 
 // Job starts act for world->player. Each checks tool, level, inventory and
 // target, publishes the OSRS message and returns 0 when one fails, or starts
@@ -92,6 +103,7 @@ int rc_skilling_start_firemaking(RcWorld *world, int inv_slot);
 int rc_skilling_start_cook(RcWorld *world, int obj_id, int x, int y,
                            int plane, uint64_t placement_key, int raw_item);
 int rc_skilling_open_make(RcWorld *world, RcMakeMenu menu);
+int rc_skilling_open_station(RcWorld *world, RcMakeMenu menu, int station_loc);
 int rc_skilling_make(RcWorld *world, int option, int count);
 void rc_skilling_close_make(RcPlayer *player);
 void rc_skilling_stop(RcPlayer *player);

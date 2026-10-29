@@ -48,7 +48,8 @@ add_test(NAME test_gymmap
 set_tests_properties(test_gymmap PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # Headless checks of the built gym data (skip until tools/build_mode.py has built the mode).
-foreach(GYM_TEST test_gym_world test_gym_multiplayer test_gym_skilling test_gym_rules test_gym_bosses)
+foreach(GYM_TEST test_gym_world test_gym_multiplayer test_gym_skilling test_gym_rules test_gym_bosses
+        test_compact_mode)
     add_executable(${GYM_TEST} tests/${GYM_TEST}.c)
     target_link_libraries(${GYM_TEST} rc-core rc-content-link m)
     add_test(NAME ${GYM_TEST} COMMAND ${GYM_TEST})
@@ -66,6 +67,8 @@ add_executable(rs-gym-bench rc-env/bench/bench.c)
 target_link_libraries(rs-gym-bench rc-env)
 add_executable(rs-gym-rollout rc-env/tools/rollout.c)
 target_link_libraries(rs-gym-rollout rc-env)
+add_executable(rs-gym-validate rc-env/tools/validate.c)
+target_link_libraries(rs-gym-validate rc-env)
 
 # PufferLib 5.0 binding: rs_gym_puffer bundles rc-env with puf_* for a PufferLib checkout
 # (tools/puffer_overlay.sh); the test builds it against a stand-in pufferenv.h.

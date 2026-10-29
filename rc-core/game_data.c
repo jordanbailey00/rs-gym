@@ -12,6 +12,7 @@
 #include "drops.h"
 #include "encounter.h"
 #include "items.h"
+#include "mode.h"
 #include "normalization.h"
 #include "npc.h"
 #include "monster_mechanics.h"
@@ -83,6 +84,8 @@ struct RcGameData {
     RcShopData shop_data;
     RcQuestData quest_data;
     RcDialogueData dialogue_data;
+    RcModeRules *mode;        // the gym mode's rules (cfg->mode_rules_path), or NULL
+    RcModeLedger mode_ledger; // every definition override the rules applied
 };
 
 static atomic_flag g_runtime_data_lock = ATOMIC_FLAG_INIT;
@@ -1060,6 +1063,58 @@ static const char *game_data_object_name(const void *ctx, uint32_t loc_id) {
     return data->object_data.defs[loc_id].name;
 }
 
+// Loads the mode's rules, applies its definition overrides (logged in the ledger) and
+// republishes the patched definitions.
+static int rc_game_data_apply_mode(const RcWorldConfig *cfg, RcGameData *data,
+                                   RcGameDataLoadReport *report) {
+    char error[256];
+    data->mode = calloc(1, sizeof(*data->mode));
+    if (!data->mode || !rc_mode_rules_load(cfg->mode_rules_path, data->mode,
+                                           error, sizeof(error))) {
+        snprintf(report->message, sizeof(report->message),
+                 "mode rules %.200s: %.200s", cfg->mode_rules_path,
+                 data->mode ? error : "out of memory");
+        return 0;
+    }
+    RcModeLedger *ledger = &data->mode_ledger;
+    const char *failed =
+        !rc_mode_patch_items(data->mode, data->item_defs, RC_MAX_ITEM_DEFS, ledger)
+            ? "an item override names an unknown item"
+        : !rc_mode_patch_npcs(data->mode, data->npc_defs, data->npc_def_count,
+                              data->npc_def_by_id, RC_MAX_NPC_ID, ledger)
+            ? "an npc override names an unknown npc"
+        : !rc_mode_patch_spells(data->mode, data->spell_defs, data->spell_count, ledger)
+            ? "a whitelisted spell is missing from the spell table"
+        : !rc_mode_patch_prayers(data->mode, data->prayer_defs, data->prayer_count, ledger)
+            ? "a whitelisted prayer is missing from the prayer table"
+        : !rc_mode_build_recipes(data->mode, &data->skill_data, ledger)
+            ? "a mode recipe does not match its canonical recipes.bin row"
+        : NULL;
+    if (failed) {
+        snprintf(report->message, sizeof(report->message), "mode %s: %s",
+                 data->mode->name, failed);
+        return 0;
+    }
+    rc_mirror_item_defs_to_globals(data);
+    rc_item_use_defs(data->item_defs, data->item_def_count);
+    if (!rc_npc_mirror_defs_to_globals(
+            data->npc_defs, data->npc_def_count, data->npc_def_by_id,
+            data->npc_transforms, data->npc_transform_count)
+            || !rc_skills_mirror_to_globals(&data->skill_data)) {
+        rc_load_report_message(report, "failed to republish mode definitions");
+        return 0;
+    }
+    rc_npc_use_defs(data->npc_defs, data->npc_def_count, data->npc_def_by_id,
+                    data->npc_transforms, data->npc_transform_count);
+    memcpy(g_rc_prayer_defs, data->prayer_defs, sizeof(g_rc_prayer_defs));
+    rc_prayer_use_defs(data->prayer_defs, data->prayer_count);
+    memcpy(g_rc_spell_defs, data->spell_defs, sizeof(g_rc_spell_defs));
+    rc_spell_use_defs(data->spell_defs, data->spell_count);
+    rc_skills_use_data(&data->skill_data);
+    rc_mode_set_active(data->mode, &data->mode_ledger);
+    return 1;
+}
+
 RcGameData *rc_game_data_load(const RcWorldConfig *cfg,
                               RcGameDataLoadReport *out) {
     RcGameDataLoadReport local;
@@ -1615,6 +1670,10 @@ RcGameData *rc_game_data_load(const RcWorldConfig *cfg,
         rc_game_data_release(data);
         return NULL;
     }
+    if (cfg->mode_rules_path && !rc_game_data_apply_mode(cfg, data, report)) {
+        rc_game_data_release(data);
+        return NULL;
+    }
     data->stats = rc_collect_game_data_stats(cfg, data);
     data->stats.subsystems = rc_loaded_capabilities(cfg->subsystems, data);
     if (data->stats.subsystems != cfg->subsystems) {
@@ -1700,6 +1759,9 @@ void rc_game_data_release(RcGameData *data) {
         rc_shop_data_free(&data->shop_data);
         rc_quest_data_free(&data->quest_data);
         rc_dialogue_data_free(&data->dialogue_data);
+        if (data->mode && rc_mode_active() == data->mode) rc_mode_set_active(NULL, NULL);
+        free(data->mode);
+        rc_mode_ledger_free(&data->mode_ledger);
         free(data->npc_transforms);
         free(data->identity);
         free(data);

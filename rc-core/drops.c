@@ -585,8 +585,12 @@ void rc_npc_prepare_loot(RcWorld *world, RcNpc *npc) {
                 .item_id = rolls[i].item_id, .quantity = rolls[i].quantity};
     }
     if (!receipt.result && receipt.count) {
-        RcGroundPolicy ground = {.reveal_ticks = 100, .lifetime_ticks = 200,
-            .delay_ticks = npc->death_timer, .untradeable_lifetime_ticks = 300};
+        int private_ticks = world->loot_private_ticks ? world->loot_private_ticks : 100;
+        int public_ticks = world->loot_public_ticks ? world->loot_public_ticks : 100;
+        RcGroundPolicy ground = {.reveal_ticks = private_ticks,
+            .lifetime_ticks = private_ticks + public_ticks,
+            .delay_ticks = npc->death_timer,
+            .untradeable_lifetime_ticks = private_ticks + public_ticks};
         RcGroundGrantResult result = rc_ground_grant(world, receipt.grants,
             receipt.count, receipt.x, receipt.y, receipt.plane,
             owner, ground);

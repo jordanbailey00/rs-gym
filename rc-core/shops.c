@@ -283,13 +283,20 @@ int rc_shop_install(RcWorld *world, const RcShopDef *def) {
     shop->sell_mult = def->sell_mult;
     shop->delta = def->delta;
     shop->general = def->general;
+    shop->fixed = def->fixed;
+    shop->buys_valued = def->buys_valued;
+    shop->sale_value = def->sale_value;
+    if (shop->fixed && !shop->sale_value) return -1;
     for (int i = 0; i < def->item_count; i++) {
         shop->slots[i] = (RcShopSlot){
             .item_id = def->items[i].item_id, .base_stock = def->items[i].stock,
             .stock = def->items[i].stock,
             .restock_ticks = def->items[i].restock_ticks
                 ? def->items[i].restock_ticks : 100,
+            .price = def->items[i].price,
+            .restock_qty = def->items[i].restock_qty ? def->items[i].restock_qty : 1,
         };
+        if (shop->fixed && shop->slots[i].price <= 0) return -1;
     }
     shop->slot_count = def->item_count;
     return world->shop_count++;
@@ -332,6 +339,7 @@ static int item_value(int item_id) {
 }
 
 static int slot_buy_price(const RcShopState *shop, const RcShopSlot *slot) {
+    if (shop->fixed) return slot->price;
     int mult = clamp_int(shop->sell_mult - shop->delta * stock_steps(slot),
                          shop->sell_mult / 2, shop->sell_mult * 2);
     int price = (int)((int64_t)item_value(slot->item_id) * mult / 1000);
@@ -357,9 +365,19 @@ int rc_shop_buy_price(const RcWorld *world, int shop, int slot) {
                                              : -1;
 }
 
+static int fixed_sale_value(const RcShopState *shop, int item_id) {
+    int value = shop->sale_value(item_id);
+    if (value <= 0) return 0;
+    if (shop->buys_valued) return value;
+    for (int i = 0; i < shop->slot_count; i++)
+        if (shop->slots[i].item_id == item_id) return value;
+    return 0;
+}
+
 static int shop_accepts(const RcShopState *shop, int item_id) {
     const RcItemDef *def = rc_item_def_get(item_id);
     if (!def || item_id == COINS || !def->tradeable) return 0;
+    if (shop->fixed) return fixed_sale_value(shop, item_id) > 0;
     for (int i = 0; i < shop->slot_count; i++)
         if (shop->slots[i].item_id == item_id) return 1;
     return shop->general;
@@ -369,6 +387,7 @@ int rc_shop_sell_price(const RcWorld *world, int shop, int item_id) {
     if (!world || shop < 0 || shop >= world->shop_count) return -1;
     const RcShopState *s = &world->shops[shop];
     if (!shop_accepts(s, item_id)) return -1;
+    if (s->fixed) return fixed_sale_value(s, item_id);
     for (int i = 0; i < s->slot_count; i++)
         if (s->slots[i].item_id == item_id)
             return slot_sell_price(s, &s->slots[i]);
@@ -430,6 +449,30 @@ int rc_shop_buy_expected(RcWorld *world, int slot_idx, int quantity,
     return bought;
 }
 
+// A fixed-price sale pays the item's sale value and removes the item; stock is untouched.
+static int sell_fixed(RcWorld *world, RcShopState *shop, int inv_slot, int item_id,
+                      int quantity) {
+    RcPlayer *p = world->player;
+    int price = fixed_sale_value(shop, item_id), sold = 0;
+    while (sold < quantity) {
+        int from = p->inventory[inv_slot].item_id == item_id
+                 ? inv_slot : rc_inv_find(p->inventory, item_id);
+        if (from < 0) break;
+        RcItemTransaction tx;
+        RcItemActionResult r = rc_item_tx_begin(&tx, world);
+        if (r.code == RC_ITEM_RESULT_OK)
+            r = rc_item_tx_remove_slot(&tx, from, 1, p->inventory[from].generation);
+        if (r.code == RC_ITEM_RESULT_OK) r = rc_item_tx_add(&tx, COINS, price, 0);
+        if (r.code != RC_ITEM_RESULT_OK
+                || rc_item_tx_commit(&tx).code != RC_ITEM_RESULT_OK) {
+            rc_interaction_publish_message(p, "You don't have enough inventory space.");
+            break;
+        }
+        sold++;
+    }
+    return sold;
+}
+
 int rc_shop_sell(RcWorld *world, int inv_slot, int quantity) {
     if (rc_player_command_should_queue(world)) {
         if (!world || inv_slot < 0 || inv_slot >= RC_INVENTORY_SIZE) return 0;
@@ -448,6 +491,7 @@ int rc_shop_sell(RcWorld *world, int inv_slot, int quantity) {
         rc_interaction_publish_message(p, "You can't sell this item to this shop.");
         return 0;
     }
+    if (shop->fixed) return sell_fixed(world, shop, inv_slot, item_id, quantity);
     RcShopSlot *slot = find_slot(shop, item_id);
     if (!slot) {
         if (shop->slot_count >= RC_SHOP_MAX_ITEMS) {
@@ -488,8 +532,10 @@ void rc_shops_tick(RcWorld *world) {
         for (int i = 0; i < shop->slot_count; i++) {
             RcShopSlot *slot = &shop->slots[i];
             if (slot->next_restock && world->tick >= slot->next_restock) {
-                // Big stacks restock a hundredth of base per step.
-                int step = slot->base_stock > 100 ? slot->base_stock / 100 : 1;
+                // Big stacks restock a hundredth of base per step; fixed-price shops their
+                // listed quantity.
+                int step = shop->fixed ? slot->restock_qty
+                         : slot->base_stock > 100 ? slot->base_stock / 100 : 1;
                 if (slot->stock < slot->base_stock)
                     slot->stock = slot->stock + step < slot->base_stock
                                 ? slot->stock + step : slot->base_stock;

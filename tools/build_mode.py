@@ -73,11 +73,14 @@ def main() -> None:
     rules = None
     if (mode_dir / "content.toml").is_file():
         from modec import compile_mode  # noqa: E402
-        rules = compile_mode(mode_dir, out, gym)
+        rules = compile_mode(mode_dir, out, placements)
+        print(f"mode rules: {out.relative_to(ROOT) / 'mode.rules'}, manifest "
+              f"{(mode_dir / 'manifest.json').relative_to(ROOT)}", flush=True)
     nodes_path = out / "defs/gathering_nodes.bin"
     nodes = write_gathering_nodes(placements, DATA / "defs/object_behaviors.bin", nodes_path,
                                   rules.node_respawn if rules else None,
-                                  rules.node_depleted if rules else None)
+                                  rules.node_depleted if rules else None,
+                                  rules.extra_nodes if rules else None)
     print(f"gathering nodes: {nodes}", flush=True)
 
     squares = " ".join(f"{x},{y}" for x, y in sorted(gym.mapsquares))

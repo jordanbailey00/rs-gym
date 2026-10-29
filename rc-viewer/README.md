@@ -8,10 +8,11 @@ Copied from RuneC_v4 at `338f2e6` and changed for the gym (see `CHANGELOG.md`).
 
 ## Run
 
-From the repo root, after `tools/build_gym.py`:
+From the repo root, after `tools/build_mode.py`:
 
 ```bash
-./build/cmake/rc-viewer                          # play: a fresh player with the starter kit
+./build/cmake/rc-viewer                          # play compact_osrs_v1: a fresh character
+./build/cmake/rc-viewer --mode island            # play another mode
 RUNEC_DEV_VALIDATION=1 ./build/cmake/rc-viewer   # dev: 99 stats, seeded bank, dev teleports
 ./build/cmake/rc-viewer --replay FILE            # watch a recorded episode
 ```
@@ -34,6 +35,6 @@ RUNEC_DEV_VALIDATION=1 ./build/cmake/rc-viewer   # dev: 99 stats, seeded bank, d
 
 ## Data
 
-The viewer streams `data/regions/{rx}_{ry}.p{plane}.*` for the mapsquares listed in
-`data/regions/mapsquare.catalog`, plus models, sprites, fonts and animations under `data/`.
-Fires players light are drawn from `data/models/spawn_objects.*`.
+The viewer streams `data/modes/<mode>/regions/{rx}_{ry}.p{plane}.*` for the mapsquares listed in
+the mode's `regions/mapsquare.catalog`, plus models, sprites, fonts and animations under `data/`.
+Locs the engine spawns (fires) are drawn from the mode's `models/spawn_objects.*`.

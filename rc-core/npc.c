@@ -812,6 +812,7 @@ void rc_npc_reset_life(RcWorld *world, RcNpc *npc) {
     npc->spawn_hp = def && def->hitpoints > 0 ? def->hitpoints : 1;
     npc->current_hp = npc->spawn_hp;
     for (int i = 0; i < 6; i++) npc->stats[i] = def ? def->stats[i] : 1;
+    for (int i = 0; i < 5; i++) npc->defence_bonus[i] = def ? def->defence_bonus[i] : 0;
     rc_npc_face_spawn_direction(npc);
     rc_combat_init_npc_state(npc);
 }

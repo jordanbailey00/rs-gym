@@ -5,6 +5,7 @@
 #include "death.h"
 #include "interaction.h"
 #include "items.h"
+#include "mode.h"
 #include "shops.h"
 #include "skills.h"
 
@@ -89,6 +90,7 @@ static RcInteractionHandlerResult trade_handler(
 
 int rc_content_gym_register(RcWorld *world) {
     if (!world) return 0;
+    if (rc_mode_active()) return 1;  // a gym mode brings its own rules (compact.c)
     world->death_rules = &death_rules;
     if (!(world->enabled & RC_SUB_INVENTORY)) return 1;
     world->shop_count = 0;

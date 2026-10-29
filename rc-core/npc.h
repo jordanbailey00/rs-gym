@@ -65,6 +65,10 @@ typedef struct {
                             //           0x10 stab 0x20 slash 0x40 crush 0x80 ranged/magic
     bool poison_immune;
     bool venom_immune;
+    // Mode profile fields (rc-core/mode.c); zero for canonical definitions.
+    int16_t defence_bonus[5];   // stab, slash, crush, ranged, magic
+    uint8_t weakness_element;   // RC_ELEMENT_* (mode.h)
+    uint8_t weakness_pct;
 } RcNpcDef;
 
 typedef struct {

@@ -31,6 +31,10 @@ int rc_content_storage_register(struct RcWorld *world);
 int rc_content_skilling_register(struct RcWorld *world);
 // Gym world rules: town shops and death rules (rc-content/gym.c).
 int rc_content_gym_register(struct RcWorld *world);
+// A gym mode's content from its rules (rc-core/mode.h); a no-op without mode rules.
+int rc_content_compact_register(struct RcWorld *world);
+// Gives world->player a fresh mode character: starting levels and the starter kit.
+void rc_content_compact_new_character(struct RcWorld *world);
 
 // Aggregate entry point — calls every content module register fn
 // that's linked in. Isolated-sim builds link a subset of content

@@ -60,8 +60,13 @@ int rc_shop_has_item(int shop_idx, int item_id);
 typedef struct {
     int item_id, stock;
     uint16_t restock_ticks;
+    int price;             // fixed-price shops
+    uint16_t restock_qty;  // fixed-price shops: items per restock (default 1)
 } RcShopItemDef;
 
+// A fixed-price shop (a gym mode's economy) sells at each item's price, restocks restock_qty
+// every restock_ticks up to the starting stock, and buys an item for sale_value(item) coins
+// (refusing values of zero or less); bought items leave the world rather than restocking it.
 typedef struct {
     const char *name;
     int npc_id;
@@ -69,6 +74,9 @@ typedef struct {
     bool general;
     const RcShopItemDef *items;
     int item_count;
+    bool fixed;
+    bool buys_valued;
+    int (*sale_value)(int item_id);
 } RcShopDef;
 
 int  rc_shop_install(RcWorld *world, const RcShopDef *def);

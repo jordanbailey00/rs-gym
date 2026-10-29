@@ -66,19 +66,26 @@ def _placements(path: Path):
 
 def write_gathering_nodes(placements: Path, behaviors: Path, out: Path,
                           respawn: dict[int, int] | None = None,
-                          depleted: dict[int, int] | None = None) -> int:
-    """Node rows for every placed tree and rock. A mode passes its own respawn times (and may
-    leave a resource out of `respawn` to keep it out of the table)."""
+                          depleted: dict[int, int] | None = None,
+                          extra: dict[int, int] | None = None) -> int:
+    """Node rows for every placed tree and rock. A mode passes its own respawn times: only the
+    resources it lists become nodes, plus `extra` locs (loc -> behaviour skill) that have no
+    resource behaviour of their own, gathered through their first option."""
+    mode = respawn is not None
     respawn = RESPAWN_TICKS if respawn is None else respawn
-    depleted = DEPLETED if depleted is None else depleted
+    depleted = {**DEPLETED, **(depleted or {})}
     resources = _behaviors(behaviors)
+    for obj, skill in (extra or {}).items():
+        resources[obj] = (OBHV_RESOURCE, 1, skill)
     rows = []
     for obj, key, x, y, mapsquare, plane, loc_type, rotation, _flags in _placements(placements):
         if obj not in resources:
             continue
         flags, mask, skill = resources[obj]
-        if skill not in (SKILL_WOODCUTTING, SKILL_MINING):
+        if obj not in (extra or {}) and skill not in (SKILL_WOODCUTTING, SKILL_MINING):
             continue
+        if mode and obj not in respawn:
+            continue  # not a resource in this mode
         if obj not in respawn:
             raise SystemExit(f"gathering node {obj} at {x},{y} has no respawn time")
         rows.append((obj, key, depleted.get(obj, -1), x, y, mapsquare, plane, skill, mask, loc_type,

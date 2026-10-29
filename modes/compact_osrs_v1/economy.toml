@@ -1,0 +1,75 @@
+# compact_osrs_v1 economy: fixed-price shops, services and sale values (SPEC.md, "Shops, prices and
+# economic invariants"). Prices are mode defaults, unrelated to Grand Exchange prices.
+#
+# Shop rows: [item, price, stock cap, restock quantity, restock ticks]. Stock starts at the cap and
+# regenerates on world ticks. Player sales pay the item's sale value and remove the item; they never
+# add stock.
+
+[[shop]]
+name = "General Store"
+npc = 2813                      # Shop keeper
+buys = "valued"                 # any item with a sale value above zero
+items = [
+  ["Hammer", 1, 16, 1, 10], ["Knife", 1, 16, 1, 10], ["Chisel", 1, 16, 1, 10], ["Needle", 1, 16, 1, 10],
+  ["Small fishing net", 1, 16, 1, 10], ["Fly fishing rod", 1, 16, 1, 10], ["Lobster pot", 1, 16, 1, 10],
+  ["Thread", 1, 500, 25, 20], ["Feather", 1, 500, 25, 20],
+  ["Bronze axe", 10, 8, 1, 100], ["Steel axe", 50, 8, 1, 100], ["Mithril axe", 150, 8, 1, 100],
+  ["Bronze pickaxe", 10, 8, 1, 100], ["Steel pickaxe", 50, 8, 1, 100], ["Mithril pickaxe", 150, 8, 1, 100],
+  ["Bronze scimitar", 30, 4, 1, 200], ["Steel scimitar", 150, 4, 1, 200], ["Mithril scimitar", 450, 4, 1, 200],
+  ["Bronze mace", 30, 4, 1, 200], ["Steel mace", 150, 4, 1, 200], ["Mithril mace", 450, 4, 1, 200],
+  ["Bronze full helm", 20, 4, 1, 200], ["Steel full helm", 100, 4, 1, 200], ["Mithril full helm", 300, 4, 1, 200],
+  ["Bronze platebody", 60, 4, 1, 200], ["Steel platebody", 300, 4, 1, 200], ["Mithril platebody", 900, 4, 1, 200],
+  ["Bronze platelegs", 40, 4, 1, 200], ["Steel platelegs", 200, 4, 1, 200], ["Mithril platelegs", 600, 4, 1, 200],
+  ["Bronze kiteshield", 40, 4, 1, 200], ["Steel kiteshield", 200, 4, 1, 200], ["Mithril kiteshield", 600, 4, 1, 200],
+  ["Shortbow", 30, 4, 1, 200], ["Oak shortbow", 150, 4, 1, 200], ["Willow shortbow", 450, 4, 1, 200],
+  ["Leather body", 50, 4, 1, 200], ["Hardleather body", 200, 4, 1, 200], ["Studded body", 600, 4, 1, 200],
+  ["Leather chaps", 40, 4, 1, 200], ["Studded chaps", 400, 4, 1, 200], ["Leather cowl", 20, 4, 1, 200],
+  ["Bronze arrow", 1, 500, 25, 20], ["Steel arrow", 2, 300, 15, 20], ["Mithril arrow", 4, 200, 10, 20],
+  ["Shrimps", 3, 50, 5, 30], ["Trout", 8, 30, 3, 30], ["Lobster", 20, 20, 2, 30],
+  ["Prayer potion(4)", 240, 8, 1, 160],
+]
+
+[[shop]]
+name = "Aubury's Rune Shop"
+npc = 11434                     # Aubury (Talk-to, Trade)
+buys = "stock"                  # only what it sells
+items = [
+  ["Air rune", 1, 500, 25, 20], ["Water rune", 1, 500, 25, 20], ["Mind rune", 1, 500, 25, 20],
+  ["Chaos rune", 4, 200, 10, 20], ["Death rune", 8, 100, 5, 20],
+  ["Staff of air", 150, 8, 1, 100], ["Blue wizard hat", 50, 8, 1, 100], ["Blue wizard robe", 100, 8, 1, 100],
+]
+
+# Ellis tans one cowhide per item for a coin fee (Trade opens the tanning menu).
+[tanner]
+npc = 3231
+rows = [["Cowhide", "Leather", 1], ["Cowhide", "Hard leather", 3]]
+
+# Historian Aldo makes the bone weapons from the same consumed ingredients plus a fee, without the
+# creation-skill requirement and without creation XP; he supplies the tools and station.
+[aldo]
+npc = 7615                      # Historian Aldo (Talk-to, Trade)
+fee = 100
+outputs = ["Bone mace", "Bone shortbow", "Bone staff"]
+
+[sale]
+buyback_pct = 40                # shop goods sell back at 40% of the purchase price, rounded down
+# Explicit unit values for raw materials and products the shops do not sell.
+values = [
+  ["Copper ore", 2], ["Tin ore", 2], ["Iron ore", 4], ["Coal", 3], ["Mithril ore", 10],
+  ["Bronze bar", 8], ["Steel bar", 20], ["Mithril bar", 50],
+  ["Logs", 2], ["Oak logs", 5], ["Willow logs", 10],
+  ["Flax", 1], ["Bow string", 3], ["Cowhide", 3], ["Leather", 4], ["Hard leather", 6], ["Pure essence", 1],
+  ["Bronze dagger", 4],
+  ["Shortbow (u)", 6], ["Oak shortbow (u)", 30], ["Willow shortbow (u)", 100], ["Steel studs", 10],
+  ["Raw shrimps", 1], ["Raw trout", 3], ["Raw lobster", 8], ["Raw beef", 1], ["Raw chicken", 1],
+  ["Cooked meat", 1], ["Cooked chicken", 1], ["Bones", 1], ["Big bones", 4],
+  ["Prayer potion(3)", 72], ["Prayer potion(2)", 48], ["Prayer potion(1)", 24],
+]
+# Explicitly worthless (shops refuse them; players may drop them).
+zero = [
+  "Vial", "Burnt shrimp", "Burnt meat", "Burnt chicken", 343, "Burnt lobster", "Arrow shaft", "Headless arrow",
+  "Bronze arrowtips", "Steel arrowtips", "Mithril arrowtips", "Scurrius' spine", "Bone mace", "Bone shortbow",
+  "Bone staff", "Coins",
+]
+# The bronze dagger's mode purchase value (it has no permanent shop stock).
+purchase_values = [["Bronze dagger", 10]]

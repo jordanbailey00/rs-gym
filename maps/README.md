@@ -1,6 +1,7 @@
 # maps
 
-Gym map specs (TOML), compiled by `tools/build_gym.py`. `gym_v1.toml` is the v1 gym.
+Map specs (TOML), compiled by `tools/build_mode.py` for the mode that names them:
+`compact_v1.toml` (compact_osrs_v1, the v1 benchmark) and `island.toml` (the island draft).
 
 Coordinates are tiles relative to an area's south-west corner: world tile = area origin × 64 + value.
 Tables take an optional `area` (default `surface`). `[[stamp]] source` coordinates are real-world

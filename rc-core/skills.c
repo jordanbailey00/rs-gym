@@ -1,4 +1,6 @@
 #include "skills.h"
+
+#include "mode.h"
 #include "prayer.h"
 #include "player_command.h"
 #include "config.h"
@@ -782,8 +784,15 @@ void rc_add_xp(RcSkills *skills, RcSkill skill, int xp) {
     rc_add_xp_hundredths(skills, skill, (int64_t)xp * 100);
 }
 
+// A gym mode (rc-core/mode.h) multiplies awarded XP, awards none in skills it leaves out, and caps
+// levels; XP past the cap keeps accumulating up to the usual 200M.
 void rc_add_xp_hundredths(RcSkills *skills, RcSkill skill, int64_t xp) {
     if (!skills || skill < 0 || skill >= SKILL_COUNT || xp <= 0) return;
+    const RcModeRules *mode = rc_mode_active();
+    if (mode) {
+        if (!rc_mode_skill_enabled(mode, skill)) return;
+        xp *= mode->xp_multiplier;
+    }
     int64_t current = (int64_t)skills->xp[skill] * 100 + skills->xp_hundredths[skill];
     int64_t cap = 20000000000LL;
     current = xp >= cap - current ? cap : current + xp;
@@ -791,6 +800,7 @@ void rc_add_xp_hundredths(RcSkills *skills, RcSkill skill, int64_t xp) {
     skills->xp_hundredths[skill] = (uint8_t)(current % 100);
 
     int new_level = rc_level_for_xp(skills->xp[skill]);
+    if (mode && new_level > mode->level_cap) new_level = mode->level_cap;
     if (new_level > skills->base_level[skill]) {
         int diff = new_level - skills->base_level[skill];
         skills->base_level[skill] = new_level;

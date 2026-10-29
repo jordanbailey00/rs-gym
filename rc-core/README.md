@@ -10,7 +10,7 @@ Copied from RuneC_v4 at `338f2e6`; RS-gym keeps its own copy (changes in `CHANGE
 
 ```c
 RcGymLayout layout;
-rc_gym_layout_load(RC_GYM_LAYOUT_PATH, &layout);          // data/regions/gym.cfg
+rc_gym_layout_load_mode("compact_osrs_v1", &layout);      // data/modes/<mode>/gym.cfg
 RcWorldConfig cfg = rc_gym_world_config(&layout, 4);      // the gym, 4 players
 RcWorld *w = rc_world_create_config(&cfg);
 rc_world_install_content(w, rc_content_register_all);
@@ -30,9 +30,14 @@ For RL use `rc-env`, which wraps all of this.
 - Several players: `players[RC_MAX_PLAYERS]`, with `world->player` the acting player (the selected
   one outside a tick, each in turn during per-player phases, an NPC's target while it runs).
   `players.h` has the helpers.
-- `layout.c`: the gym layout file and `rc_gym_world_config`.
-- `skilling.c`: skilling jobs (gather, fish, firemaking, cook, furnace/anvil make) using content rules.
-- `shops.c`: live shops (shared stock, stock-based prices, restocking) on top of the shops.bin loader.
+- `layout.c`: a mode's layout file (`data/modes/<mode>/gym.cfg`) and `rc_gym_world_config`.
+- `mode.c`: a mode's compiled rules (`mode.rules`): definition overrides with a ledger, applied by
+  `rc_game_data_load`, and the active rules for content (`modes/README.md`). With rules active, XP
+  follows the mode's multiplier, enabled skills and level cap.
+- `skilling.c`: skilling jobs (gather, fish, firemaking, cook, station production) using content
+  rules; rules may rebase a success curve (`level_offset`), gather by hand, or never deplete.
+- `shops.c`: live shops (shared stock, stock-based or fixed prices, restocking) on top of the
+  shops.bin loader.
 - `death.c`: keep-3 items, gravestones and wilderness drops, timed respawn.
 - `rc_world_reset_seeded`: reset as a freshly created world with a new seed.
 - `rc_object_placements_freeze`: makes the shared placement cache read-only for multi-threaded use.
@@ -40,8 +45,7 @@ For RL use `rc-env`, which wraps all of this.
 ## Data
 
 Paths resolve under `RUNEC_DATA_ROOT` (default `data`). Definitions come from `data/defs`;
-`tools/build_gym.py` generates the gym's spatial files (collision, placements, spawns, zones,
-traversals, gathering nodes, drops, `regions/gym.cfg`). Startup checks `data/manifest.json` for
+`tools/build_mode.py` generates each mode's spatial files and rules under `data/modes/<mode>/`. Startup checks `data/manifest.json` for
 `"format": "runec-data-manifest-v1"` and `"data_version": "v1"`.
 
 ## Limits

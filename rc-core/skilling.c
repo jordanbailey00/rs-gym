@@ -90,14 +90,21 @@ void rc_skilling_install(RcWorld *world, const RcSkillingRules *rules) {
 
 int rc_skilling_add_make_option(RcWorld *world, int recipe,
                                 RcMakeMenu facility, int success_pct) {
+    return rc_skilling_add_station_option(world, recipe, facility, success_pct, 0, 0);
+}
+
+int rc_skilling_add_station_option(RcWorld *world, int recipe, RcMakeMenu facility,
+                                   int success_pct, int batch, int station_loc) {
     if (!world || !rc_recipe_get(recipe)
             || world->make_option_count >= RC_MAKE_MAX_OPTIONS
+            || facility <= RC_MAKE_MENU_NONE || facility >= RC_MAKE_MENU_COUNT
             || success_pct <= 0 || success_pct > 100) {
         return -1;
     }
     world->make_options[world->make_option_count] = (RcMakeOption){
         .recipe = (int16_t)recipe, .facility = (uint8_t)facility,
-        .success_pct = (uint8_t)success_pct,
+        .success_pct = (uint8_t)success_pct, .batch = (uint8_t)(batch != 0),
+        .station_loc = station_loc,
     };
     return world->make_option_count++;
 }
@@ -178,7 +185,9 @@ void rc_skilling_stop(RcPlayer *p) {
 }
 
 void rc_skilling_close_make(RcPlayer *p) {
-    if (p) p->make_menu = RC_MAKE_MENU_NONE;
+    if (!p) return;
+    p->make_menu = RC_MAKE_MENU_NONE;
+    p->make_station = 0;
 }
 
 // ---- Woodcutting and mining ----------------------------------------------
@@ -189,6 +198,23 @@ static const char *gather_tool_missing(int skill) {
         : "You need a pickaxe to mine this rock.";
 }
 
+static const char *const skill_name[SKILL_COUNT] = {
+    "Attack", "Defence", "Strength", "Hitpoints", "Ranged", "Prayer", "Magic", "Cooking",
+    "Woodcutting", "Fletching", "Fishing", "Firemaking", "Crafting", "Smithing", "Mining",
+    "Herblore", "Agility", "Thieving", "Slayer", "Farming", "Runecraft", "Hunter", "Construction",
+};
+
+// The level the success curve is read at: a rebased requirement shifts it by the offset.
+static int curve_level(const RcPlayer *p, int skill, int offset) {
+    return level_of(p, skill) + offset;
+}
+
+static int gather_ticks(const RcSkillingRules *r, const RcGatherRule *rule,
+                        const RcSkillTool *tool) {
+    if (rule->flags & RC_GATHER_NO_TOOL) return rule->ticks ? rule->ticks : 3;
+    return rule->skill == SKILL_WOODCUTTING ? r->woodcut_ticks : tool->ticks;
+}
+
 int rc_skilling_start_gather(RcWorld *world, int obj_id, int x, int y,
                              int plane) {
     const RcGatherRule *rule = rc_skilling_gather_rule(world, obj_id);
@@ -196,17 +222,25 @@ int rc_skilling_start_gather(RcWorld *world, int obj_id, int x, int y,
         ? rc_gathering_node_find(obj_id, x, y, plane) : NULL;
     if (!node) return 0;
     RcPlayer *p = world->player;
-    const RcSkillTool *tool = rc_skilling_best_tool(world, p, rule->skill);
+    int by_hand = (rule->flags & RC_GATHER_NO_TOOL) != 0;
+    const RcSkillTool *tool = by_hand ? NULL : rc_skilling_best_tool(world, p, rule->skill);
     char noun[48];
-    if (!tool) {
+    if (!tool && !by_hand) {
         say(p, gather_tool_missing(rule->skill));
         return 0;
     }
     if (level_of(p, rule->skill) < rule->level) {
-        sayf(p, rule->skill == SKILL_WOODCUTTING
-                ? "You need a Woodcutting level of %d to chop down this tree."
-                : "You need a Mining level of %d to mine this rock.",
-             NULL, rule->level);
+        char buf[RC_INTERACTION_RESULT_MESSAGE_LEN];
+        if (rule->skill == SKILL_WOODCUTTING)
+            snprintf(buf, sizeof(buf), "You need a Woodcutting level of %d to chop down this tree.",
+                     rule->level);
+        else if (rule->skill == SKILL_MINING)
+            snprintf(buf, sizeof(buf), "You need a Mining level of %d to mine this rock.",
+                     rule->level);
+        else
+            snprintf(buf, sizeof(buf), "You need a %s level of %d to do that.",
+                     skill_name[rule->skill], rule->level);
+        say(p, buf);
         return 0;
     }
     if (inventory_full(p)) {
@@ -214,8 +248,7 @@ int rc_skilling_start_gather(RcWorld *world, int obj_id, int x, int y,
              item_noun((int)rule->product, noun, sizeof(noun)), 0);
         return 0;
     }
-    int ticks = rule->skill == SKILL_WOODCUTTING
-              ? world->skilling->woodcut_ticks : tool->ticks;
+    int ticks = gather_ticks(world->skilling, rule, tool);
     begin_job(world, RC_SKILL_JOB_GATHER, (int)(rule - world->skilling->gather),
               ticks);
     p->skill_job.target = obj_id;
@@ -223,8 +256,9 @@ int rc_skilling_start_gather(RcWorld *world, int obj_id, int x, int y,
     p->skill_job.x = (int16_t)x;
     p->skill_job.y = (int16_t)y;
     p->skill_job.plane = (int8_t)plane;
-    say(p, rule->skill == SKILL_WOODCUTTING ? "You swing your axe at the tree."
-                                            : "You swing your pick at the rock.");
+    if (!by_hand)
+        say(p, rule->skill == SKILL_WOODCUTTING ? "You swing your axe at the tree."
+                                                : "You swing your pick at the rock.");
     return 1;
 }
 
@@ -258,17 +292,18 @@ static void gather_attempt(RcWorld *world, RcPlayer *p) {
         rc_skilling_stop(p);  // depleted, maybe by another player
         return;
     }
-    const RcSkillTool *tool = rc_skilling_best_tool(world, p, rule->skill);
-    if (!tool) {
+    int by_hand = (rule->flags & RC_GATHER_NO_TOOL) != 0;
+    const RcSkillTool *tool = by_hand ? NULL : rc_skilling_best_tool(world, p, rule->skill);
+    if (!tool && !by_hand) {
         say(p, gather_tool_missing(rule->skill));
         rc_skilling_stop(p);
         return;
     }
     int woodcutting = rule->skill == SKILL_WOODCUTTING;
-    p->skill_ready_tick = world->tick + (woodcutting ? r->woodcut_ticks
-                                                     : tool->ticks);
-    int chance = rc_skill_chance_256(level_of(p, rule->skill), rule->low,
-                                     rule->high, woodcutting ? tool->scale : 100);
+    p->skill_ready_tick = world->tick + gather_ticks(r, rule, tool);
+    int chance = rc_skill_chance_256(curve_level(p, rule->skill, rule->level_offset),
+                                     rule->low, rule->high,
+                                     woodcutting && tool ? tool->scale : 100);
     if (!roll(world, chance)) return;
     char noun[48];
     item_noun((int)rule->product, noun, sizeof(noun));
@@ -279,10 +314,12 @@ static void gather_attempt(RcWorld *world, RcPlayer *p) {
         return;
     }
     award_xp(p, rule->skill, rule->xp_tenths);
-    sayf(p, woodcutting ? "You get some %s." : "You manage to mine some %s.",
+    sayf(p, by_hand ? "You pick some %s." : woodcutting ? "You get some %s."
+                                                         : "You manage to mine some %s.",
          noun, 0);
-    if (rule->deplete_one_in <= 1
-            || rc_rng_bounded(&world->rng_state, rule->deplete_one_in) == 0) {
+    if (rule->deplete_one_in == 1
+            || (rule->deplete_one_in > 1
+                && rc_rng_bounded(&world->rng_state, rule->deplete_one_in) == 0)) {
         deplete_node(world, node);
         rc_skilling_stop(p);
     } else if (inventory_full(p)) {
@@ -354,7 +391,8 @@ static void fish_attempt(RcWorld *world, RcPlayer *p) {
     for (int i = 0; i < rule->catch_count; i++) {
         const RcFishCatch *c = &rule->catches[i];
         if (level < c->level
-                || !roll(world, rc_skill_chance_256(level, c->low, c->high, 100)))
+                || !roll(world, rc_skill_chance_256(level + c->level_offset, c->low,
+                                                    c->high, 100)))
             continue;
         if (!rc_item_result_accepted(
                 rc_player_inventory_add(world, (int)c->product, 1, 0))) {
@@ -526,8 +564,8 @@ static void cook_attempt(RcWorld *world, RcPlayer *p) {
         return;
     }
     p->skill_ready_tick = world->tick + r->cook_ticks;
-    int cooked = roll(world, rc_skill_chance_256(level_of(p, SKILL_COOKING),
-                                                 rule->low, rule->high, 100));
+    int cooked = roll(world, rc_skill_chance_256(
+        curve_level(p, SKILL_COOKING, rule->level_offset), rule->low, rule->high, 100));
     if (!replace_slot_item(world, slot, (int)(cooked ? rule->cooked
                                                      : rule->burnt))) {
         rc_skilling_stop(p);
@@ -550,24 +588,41 @@ int rc_skilling_make_option_ready(const RcWorld *world, int option) {
         return 0;
     const RcMakeOption *o = &world->make_options[option];
     if (world->player->make_menu != o->facility) return 0;
+    if (o->station_loc && world->player->make_station != o->station_loc) return 0;
     return rc_recipe_player_can_make(world, rc_recipe_get(o->recipe));
 }
 
+static const char *nothing_to_make(RcMakeMenu menu) {
+    switch (menu) {
+    case RC_MAKE_MENU_FURNACE: return "You don't have the ores to smelt anything.";
+    case RC_MAKE_MENU_ANVIL:   return "You don't have enough bars to make anything.";
+    case RC_MAKE_MENU_ALTAR:   return "You don't have any essence to bind.";
+    case RC_MAKE_MENU_SPIN:    return "You don't have anything to spin.";
+    case RC_MAKE_MENU_TANNER:  return "You don't have any hides to tan, or the coins to pay.";
+    case RC_MAKE_MENU_ALDO:    return "You don't have the spine, base item and fee for that.";
+    default:                   return "Nothing interesting happens.";
+    }
+}
+
 int rc_skilling_open_make(RcWorld *world, RcMakeMenu menu) {
+    return rc_skilling_open_station(world, menu, 0);
+}
+
+int rc_skilling_open_station(RcWorld *world, RcMakeMenu menu, int station_loc) {
     const RcSkillingRules *r = rules_of(world);
-    if (!r || menu == RC_MAKE_MENU_NONE) return 0;
+    if (!r || menu <= RC_MAKE_MENU_NONE || menu >= RC_MAKE_MENU_COUNT) return 0;
     RcPlayer *p = world->player;
     if (menu == RC_MAKE_MENU_ANVIL && !has_item(p, (int)r->hammer)) {
         say(p, "You need a hammer to work the metal with.");
         return 0;
     }
     p->make_menu = (uint8_t)menu;
+    p->make_station = station_loc;
     for (int i = 0; i < world->make_option_count; i++)
         if (rc_skilling_make_option_ready(world, i)) return 1;
     p->make_menu = RC_MAKE_MENU_NONE;
-    say(p, menu == RC_MAKE_MENU_FURNACE
-        ? "You don't have the ores to smelt anything."
-        : "You don't have enough bars to make anything.");
+    p->make_station = 0;
+    say(p, nothing_to_make(menu));
     return 0;
 }
 
@@ -583,6 +638,16 @@ int rc_skilling_make(RcWorld *world, int option, int count) {
     return 1;
 }
 
+static const char *made_message(RcMakeMenu menu) {
+    switch (menu) {
+    case RC_MAKE_MENU_FURNACE: return "You retrieve a %s.";
+    case RC_MAKE_MENU_ALTAR:   return "You bind the temple's power into %s.";
+    case RC_MAKE_MENU_TANNER:  return "The hide is tanned into %s.";
+    case RC_MAKE_MENU_ALDO:    return "Historian Aldo hands you a %s.";
+    default:                   return "You make a %s.";
+    }
+}
+
 static void make_attempt(RcWorld *world, RcPlayer *p) {
     RcSkillJob *job = &p->skill_job;
     const RcMakeOption *o = &world->make_options[job->rule];
@@ -592,24 +657,33 @@ static void make_attempt(RcWorld *world, RcPlayer *p) {
         return;
     }
     p->skill_ready_tick = world->tick + (recipe->ticks ? recipe->ticks : 4);
-    int made = o->success_pct >= 100
-            || (int)rc_rng_bounded(&world->rng_state, 100) < o->success_pct;
-    if (!rc_recipe_commit(world, recipe, made)) {
-        rc_skilling_stop(p);
-        return;
-    }
+    // A batch recipe (rune altars) repeats within the one action while its inputs last.
+    int made_any = 0;
+    do {
+        int made = o->success_pct >= 100
+                || (int)rc_rng_bounded(&world->rng_state, 100) < o->success_pct;
+        if (!rc_recipe_commit(world, recipe, made)) {
+            if (!made_any) {
+                rc_skilling_stop(p);
+                return;
+            }
+            break;
+        }
+        made_any = 1;
+        if (made) {
+            for (int i = 0; i < recipe->req_count; i++)
+                if (recipe->reqs[i].skill < SKILL_COUNT)
+                    award_xp(p, recipe->reqs[i].skill, recipe->reqs[i].xp_q1);
+        } else {
+            say(p, "The ore is too impure and you fail to refine it.");
+        }
+        if (!made || !o->batch) break;
+    } while (rc_recipe_player_can_make(world, recipe));
     char noun[48];
-    if (made) {
-        for (int i = 0; i < recipe->req_count; i++)
-            if (recipe->reqs[i].skill < SKILL_COUNT)
-                award_xp(p, recipe->reqs[i].skill, recipe->reqs[i].xp_q1);
-        sayf(p, o->facility == RC_MAKE_MENU_FURNACE
-                ? "You retrieve a %s." : "You make a %s.",
+    if (made_any)
+        sayf(p, made_message((RcMakeMenu)o->facility),
              item_noun((int)recipe->output_item, noun, sizeof(noun)), 0);
-    } else {
-        say(p, "The ore is too impure and you fail to refine it.");
-    }
-    if (job->remaining > 0 && --job->remaining == 0) rc_skilling_stop(p);
+    if (o->batch || (job->remaining > 0 && --job->remaining == 0)) rc_skilling_stop(p);
 }
 
 // ---- Tick --------------------------------------------------------------------

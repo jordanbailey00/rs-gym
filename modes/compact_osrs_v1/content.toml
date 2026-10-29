@@ -1,0 +1,516 @@
+# compact_osrs_v1 content: everything the mode enables and every value it changes.
+# Requirements are rebased to the bands 1 / 15 / 30 (mode.toml); `canonical` notes the inherited
+# value where the rule needs it (success curves are shifted by canonical - mode level).
+
+# Names that map to several cache ids.
+[ids]
+"Coins" = 995
+"Knife" = 946
+"Chisel" = 1755
+"Small fishing net" = 303
+"Feather" = 314
+"Bronze arrow" = 882
+"Steel arrow" = 886
+"Mithril arrow" = 888
+"Air rune" = 556
+"Water rune" = 555
+"Mind rune" = 558
+"Chaos rune" = 562
+"Death rune" = 560
+"Logs" = 1511
+"Raw shrimps" = 317
+"Raw beef" = 2132
+"Cooked meat" = 2142
+"Raw chicken" = 2138
+"Cooked chicken" = 2140
+"Bones" = 526
+"Studded body" = 1133
+"Prayer potion(4)" = 2434
+"Prayer potion(3)" = 139
+"Prayer potion(2)" = 141
+"Prayer potion(1)" = 143
+"Vial" = 229
+"Steel kiteshield" = 1193
+"Yew shortbow" = 857
+
+# ---- Equipment use requirements (replace the inherited ones) ----------------------------------
+
+[[equip]]
+band = 1
+attack = ["Bronze dagger", "Bronze scimitar", "Bronze mace", "Bronze axe", "Bronze pickaxe"]
+defence = ["Bronze full helm", "Bronze platebody", "Bronze platelegs", "Bronze kiteshield"]
+ranged = ["Shortbow", "Bronze arrow", "Leather body", "Leather chaps", "Leather cowl"]
+magic = ["Staff of air", "Blue wizard hat", "Blue wizard robe"]
+
+[[equip]]
+band = 15
+attack = ["Steel scimitar", "Steel mace", "Steel axe", "Steel pickaxe"]
+defence = ["Steel full helm", "Steel platebody", "Steel platelegs", "Steel kiteshield", "Hardleather body"]
+ranged = ["Oak shortbow", "Steel arrow", "Hardleather body"]
+
+[[equip]]
+band = 30
+attack = ["Mithril scimitar", "Mithril mace", "Mithril axe", "Mithril pickaxe", "Bone mace"]
+defence = ["Mithril full helm", "Mithril platebody", "Mithril platelegs", "Mithril kiteshield", "Studded body"]
+ranged = ["Willow shortbow", "Mithril arrow", "Studded body", "Studded chaps", "Bone shortbow"]
+magic = ["Bone staff"]
+
+# Bone weapons start from their mode precursor's bonuses, with +2 max hit against rats.
+[[bone_weapon]]
+item = "Bone mace"
+bonuses_from = "Mithril mace"
+rat_max_hit = 2
+
+[[bone_weapon]]
+item = "Bone shortbow"
+bonuses_from = "Willow shortbow"
+rat_max_hit = 2
+
+[[bone_weapon]]
+item = "Bone staff"
+bonuses_from = "Staff of air"
+rat_max_hit = 2
+powered_max_hit = 14        # fixed base max hit of its powered spell, independent of Magic level
+attack_speed = 4
+charge = "Chaos rune"       # one charge per rune; the recipe's 100 runes become 100 charges
+# rat-type enemies: the mode's giant rats, Scurrius and its minions
+
+# ---- Gathering ----------------------------------------------------------------------------------
+
+[[tool]]
+kind = "axe"
+items = [["Bronze axe", 1, 100], ["Steel axe", 15, 200], ["Mithril axe", 30, 250]]   # level, success scale %
+
+[[tool]]
+kind = "pickaxe"
+items = [["Bronze pickaxe", 1, 8], ["Steel pickaxe", 15, 6], ["Mithril pickaxe", 30, 5]]  # level, ticks/swing
+
+# Trees and rocks: level, canonical level, xp, success low/high out of 256 (OSRS curves).
+[[gather]]
+locs = [1276, 1278]
+name = "Tree"
+product = "Logs"
+skill = "Woodcutting"
+level = 1
+canonical = 1
+xp = 25.0
+low = 64
+high = 200
+deplete_one_in = 1
+
+[[gather]]
+locs = [10820]
+name = "Oak tree"
+product = "Oak logs"
+skill = "Woodcutting"
+level = 15
+canonical = 15
+xp = 37.5
+low = 32
+high = 100
+deplete_one_in = 8
+
+[[gather]]
+locs = [10819, 10829, 10831, 10833]
+name = "Willow tree"
+product = "Willow logs"
+skill = "Woodcutting"
+level = 30
+canonical = 30
+xp = 67.5
+low = 16
+high = 50
+deplete_one_in = 8
+
+[[gather]]
+locs = [10943, 11161]
+name = "Copper rocks"
+product = "Copper ore"
+skill = "Mining"
+level = 1
+canonical = 1
+xp = 17.5
+low = 100
+high = 350
+deplete_one_in = 1
+
+[[gather]]
+locs = [11360, 11361]
+name = "Tin rocks"
+product = "Tin ore"
+skill = "Mining"
+level = 1
+canonical = 1
+xp = 17.5
+low = 100
+high = 350
+deplete_one_in = 1
+
+[[gather]]
+locs = [11364, 11365]
+name = "Iron rocks"
+product = "Iron ore"
+skill = "Mining"
+level = 15
+canonical = 15
+xp = 35.0
+low = 96
+high = 350
+deplete_one_in = 1
+
+[[gather]]
+locs = [11366, 11367]
+name = "Coal rocks"
+product = "Coal"
+skill = "Mining"
+level = 15
+canonical = 30
+xp = 50.0
+low = 16
+high = 100
+deplete_one_in = 1
+
+[[gather]]
+locs = [11372, 11373]
+name = "Mithril rocks"
+product = "Mithril ore"
+skill = "Mining"
+level = 30
+canonical = 55
+xp = 80.0
+low = 8
+high = 50
+deplete_one_in = 1
+
+# Pure essence: never depletes; every swing yields an essence.
+[[gather]]
+locs = [34773]
+name = "Rune Essence"
+product = "Pure essence"
+skill = "Mining"
+level = 1
+canonical = 30
+xp = 5.0
+low = 256
+high = 256
+deplete_one_in = 0
+
+# Flax: picked without a tool or XP; a pick empties the plant with chance 1 in 5.
+[[gather]]
+locs = [14896]
+name = "Flax"
+product = "Flax"
+skill = "Crafting"
+level = 1
+canonical = 1
+xp = 0.0
+low = 256
+high = 256
+deplete_one_in = 5
+no_tool = true
+ticks = 2
+
+# Fishing spots: option index, tool, bait, catches (level, canonical, xp, low, high).
+[[fish]]
+npc = 1525
+option = 0
+tool = "Small fishing net"
+catches = [["Raw shrimps", 1, 1, 10.0, 48, 256]]
+
+[[fish]]
+npc = 1526
+option = 0
+tool = "Fly fishing rod"
+bait = "Feather"
+catches = [["Raw trout", 15, 20, 50.0, 32, 192]]
+
+[[fish]]
+npc = 1519
+option = 0
+tool = "Lobster pot"
+catches = [["Raw lobster", 30, 40, 90.0, 6, 95]]
+
+# ---- Stations -------------------------------------------------------------------------------------
+# Loc ids that open each production menu (they must be placed in the map).
+
+[stations]
+furnace = [24009]
+anvil = [2097, 39620]           # anvil, rusted anvil (Lumbridge smithy)
+spinning_wheel = [14889]
+
+# ---- Cooking (town range) -------------------------------------------------------------------------
+
+[cooking]
+ranges = [114, 9682, 26181, 21792, 7183, 7184, 12269]
+foods = [
+  # raw, cooked, burnt, level, canonical, xp, low, high
+  ["Raw shrimps", "Shrimps", "Burnt shrimp", 1, 1, 30.0, 128, 512],
+  ["Raw beef", "Cooked meat", "Burnt meat", 1, 1, 30.0, 128, 512],
+  ["Raw chicken", "Cooked chicken", "Burnt chicken", 1, 1, 30.0, 128, 512],
+  ["Raw trout", "Trout", 343, 15, 15, 70.0, 88, 432],
+  ["Raw lobster", "Lobster", "Burnt lobster", 30, 40, 120.0, 38, 332],
+]
+
+# ---- Production recipes (recipes.bin rows, selected by output and inputs) -----------------------
+
+[[recipe]]
+skill = "Smithing"
+station = "Furnace"
+level = 1
+rows = [["Bronze bar", ["Copper ore", "Tin ore"]]]
+
+[[recipe]]
+skill = "Smithing"
+station = "Furnace"
+level = 15
+rows = [["Steel bar", ["Iron ore", "Coal"]]]
+
+[[recipe]]
+skill = "Smithing"
+station = "Furnace"
+level = 30
+rows = [["Mithril bar", ["Mithril ore", "Coal"]]]
+
+[[recipe]]
+skill = "Smithing"
+station = "Anvil"
+level = 1
+rows = [["Bronze dagger", ["Bronze bar"]], ["Bronze scimitar", ["Bronze bar"]], ["Bronze mace", ["Bronze bar"]],
+        ["Bronze full helm", ["Bronze bar"]], ["Bronze platebody", ["Bronze bar"]],
+        ["Bronze platelegs", ["Bronze bar"]], ["Bronze kiteshield", ["Bronze bar"]],
+        ["Bronze axe", ["Bronze bar"]], ["Bronze arrowtips", ["Bronze bar"]]]
+
+[[recipe]]
+skill = "Smithing"
+station = "Anvil"
+level = 15
+rows = [["Steel scimitar", ["Steel bar"]], ["Steel mace", ["Steel bar"]], ["Steel full helm", ["Steel bar"]],
+        ["Steel platebody", ["Steel bar"]], ["Steel platelegs", ["Steel bar"]],
+        ["Steel kiteshield", ["Steel bar"]], ["Steel axe", ["Steel bar"]],
+        ["Steel arrowtips", ["Steel bar"]], ["Steel studs", ["Steel bar"]]]
+
+[[recipe]]
+skill = "Smithing"
+station = "Anvil"
+level = 30
+rows = [["Mithril scimitar", ["Mithril bar"]], ["Mithril mace", ["Mithril bar"]],
+        ["Mithril full helm", ["Mithril bar"]], ["Mithril platebody", ["Mithril bar"]],
+        ["Mithril platelegs", ["Mithril bar"]], ["Mithril kiteshield", ["Mithril bar"]],
+        ["Mithril axe", ["Mithril bar"]], ["Mithril arrowtips", ["Mithril bar"]]]
+
+[[recipe]]
+skill = "Fletching"
+station = "Knife"
+level = 1
+rows = [["Arrow shaft", ["Logs"]]]
+
+[[recipe]]
+skill = "Fletching"
+station = "Knife"
+level = 15
+rows = [["Oak shortbow (u)", ["Oak logs"]]]
+
+# The data snapshot has no creation rows for these two unstrung bows; values from the OSRS Wiki [S4].
+[[authored]]
+output = "Shortbow (u)"
+skill = "Fletching"
+station = "Knife"
+level = 1
+canonical_level = 5
+xp = 5.0
+ticks = 3
+inputs = [["Logs", 1]]
+tools = ["Knife"]
+source = "OSRS Wiki, Fletching: Shortbow (u), level 5, 5 XP"
+
+[[authored]]
+output = "Willow shortbow (u)"
+skill = "Fletching"
+station = "Knife"
+level = 30
+canonical_level = 35
+xp = 33.3
+ticks = 3
+inputs = [["Willow logs", 1]]
+tools = ["Knife"]
+source = "OSRS Wiki, Fletching: Willow shortbow (u), level 35, 33.3 XP"
+
+[[recipe]]
+skill = "Fletching"
+station = "Hands"
+level = 1
+rows = [["Headless arrow", ["Arrow shaft", "Feather"]], ["Bronze arrow", ["Headless arrow", "Bronze arrowtips"]],
+        ["Shortbow", ["Shortbow (u)", "Bow string"]]]
+
+[[recipe]]
+skill = "Fletching"
+station = "Hands"
+level = 15
+rows = [["Steel arrow", ["Headless arrow", "Steel arrowtips"]], ["Oak shortbow", ["Oak shortbow (u)", "Bow string"]]]
+
+[[recipe]]
+skill = "Fletching"
+station = "Hands"
+level = 30
+rows = [["Mithril arrow", ["Headless arrow", "Mithril arrowtips"]],
+        ["Willow shortbow", ["Willow shortbow (u)", "Bow string"]]]
+
+[[recipe]]
+skill = "Crafting"
+station = "Spinning wheel"
+level = 1
+rows = [["Bow string", ["Flax"]]]
+
+[[recipe]]
+skill = "Crafting"
+station = "Needle"
+level = 1
+rows = [["Leather body", ["Leather", "Thread"]], ["Leather chaps", ["Leather", "Thread"]],
+        ["Leather cowl", ["Leather", "Thread"]]]
+
+[[recipe]]
+skill = "Crafting"
+station = "Needle"
+level = 15
+rows = [["Hardleather body", ["Hard leather", "Thread"]]]
+
+[[recipe]]
+skill = "Crafting"
+station = "Hands"
+level = 30
+rows = [["Studded body", ["Leather body", "Steel studs"]], ["Studded chaps", ["Leather chaps", "Steel studs"]]]
+
+# Runes: one per essence (simplified from level-based multiples); altars need no talisman.
+[[recipe]]
+skill = "Runecraft"
+station = "Altar"
+level = 1
+rows = [["Air rune", ["Pure essence"]], ["Water rune", ["Pure essence"]], ["Mind rune", ["Pure essence"]]]
+altars = [34760, 34762, 34761]
+
+[[recipe]]
+skill = "Runecraft"
+station = "Altar"
+level = 15
+rows = [["Chaos rune", ["Pure essence"]]]
+altars = [34769]
+
+[[recipe]]
+skill = "Runecraft"
+station = "Altar"
+level = 30
+rows = [["Death rune", ["Pure essence"]]]
+altars = [34770]
+
+# Bone weapons replace the canonical rows' bases (rune mace, yew shortbow, battlestaff).
+[[bone_recipe]]
+output = "Bone mace"
+canonical_inputs = ["Rune mace", "Scurrius' spine"]
+inputs = [["Scurrius' spine", 1], ["Mithril mace", 1]]
+station = "Anvil"
+skill = "Smithing"
+level = 30
+
+[[bone_recipe]]
+output = "Bone shortbow"
+canonical_inputs = ["Yew shortbow", "Scurrius' spine"]
+inputs = [["Scurrius' spine", 1], ["Willow shortbow", 1]]
+station = "Knife"
+skill = "Fletching"
+level = 30
+
+[[bone_recipe]]
+output = "Bone staff"
+canonical_inputs = ["Battlestaff", "Chaos rune", "Scurrius' spine"]
+inputs = [["Scurrius' spine", 1], ["Staff of air", 1], ["Chaos rune", 100]]
+station = "Chisel"
+skill = "Crafting"
+level = 30
+
+# ---- Magic and Prayer ------------------------------------------------------------------------
+
+[magic]
+# The six enabled combat spells: level and base max hit (within-tier elemental scaling).
+spells = [
+  ["Wind Strike", 1, 4], ["Water Strike", 1, 4],
+  ["Wind Bolt", 15, 10], ["Water Bolt", 15, 10],
+  ["Wind Blast", 30, 14], ["Water Blast", 30, 14],
+]
+
+[prayer]
+# Enabled prayers by level; all others are unavailable in this mode.
+prayers = [
+  ["Thick Skin", 1], ["Burst of Strength", 1], ["Clarity of Thought", 1], ["Sharp Eye", 1], ["Mystic Will", 1],
+  ["Rock Skin", 15], ["Superhuman Strength", 15], ["Improved Reflexes", 15], ["Hawk Eye", 15], ["Mystic Lore", 15],
+  ["Protect from Magic", 15], ["Protect from Missiles", 15], ["Protect from Melee", 15],
+  ["Steel Skin", 30], ["Ultimate Strength", 30], ["Incredible Reflexes", 30], ["Eagle Eye", 30], ["Mystic Might", 30],
+]
+
+# Bury bones for Prayer XP (canonical values).
+bones = [["Bones", 4.5], ["Big bones", 15.0]]
+
+# ---- Ordinary enemies ---------------------------------------------------------------------------
+# Mode HP and max hit; levels stay canonical unless listed. Defence bonuses (stab, slash, crush,
+# ranged, magic) give the matchups; weakness uses the elemental-weakness extension.
+
+[[npc]]
+name = "Chicken"
+id = 1173
+hp = 3
+max_hit = 1
+always = [["Bones", 1, 1], ["Raw chicken", 1, 1], ["Feather", 3, 7]]
+
+[[npc]]
+name = "Cow"
+id = 2790
+hp = 8
+max_hit = 1
+always = [["Bones", 1, 1], ["Raw beef", 1, 1], ["Cowhide", 1, 1]]
+
+[[npc]]
+name = "Giant rat"
+id = 2856
+hp = 6
+max_hit = 1
+always = [["Bones", 1, 1]]
+
+[[npc]]
+name = "Goblin"
+id = 3029
+hp = 10
+max_hit = 2
+always = [["Bones", 1, 1], ["Coins", 8, 16]]
+# one 1-in-8 roll for a bronze equipment piece
+rolls = [{ one_in = 8, pick = [["Bronze scimitar", 1, 1, 1], ["Bronze mace", 1, 1, 1], ["Bronze full helm", 1, 1, 1],
+                                ["Bronze kiteshield", 1, 1, 1], ["Bronze platelegs", 1, 1, 1], ["Bronze platebody", 1, 1, 1]] }]
+
+[[npc]]
+name = "Skeleton"
+id = 70
+hp = 20
+max_hit = 3
+defence = [10, 10, -10, 0, 0]
+weakness = ["Air", 50]
+always = [["Bones", 1, 1], ["Coins", 10, 20]]
+rolls = [{ one_in = 4, pick = [["Steel arrow", 5, 15, 1]] }]
+
+[[npc]]
+name = "Dark wizard"
+id = 510
+hp = 18
+max_hit = 4
+defence = [0, 0, 0, -10, 20]
+always = [["Bones", 1, 1], ["Coins", 6, 12]]
+# one rune bundle (weights in percent), and an independent 1-in-20 wizard clothing roll
+rolls = [{ one_in = 1, pick = [["Mind rune", 8, 16, 60], ["Chaos rune", 3, 6, 25], ["Death rune", 1, 3, 15]] },
+         { one_in = 20, pick = [["Blue wizard hat", 1, 1, 1], ["Blue wizard robe", 1, 1, 1]] }]
+
+[[npc]]
+name = "Hill Giant"
+id = 2098
+hp = 35
+max_hit = 5
+defence = [0, 0, 0, -10, 0]
+weakness = ["Water", 50]
+always = [["Big bones", 1, 1], ["Coins", 20, 35]]
+rolls = [{ one_in = 5, pick = [["Iron ore", 2, 2, 1], ["Coal", 2, 2, 1]] }]

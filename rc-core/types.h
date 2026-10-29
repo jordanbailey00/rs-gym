@@ -783,7 +783,7 @@ typedef enum {
 // A shop's live stock (rc-core/shops.c). Every player in the world trades
 // against the same stock.
 #define RC_MAX_SHOPS 8
-#define RC_SHOP_MAX_ITEMS 40
+#define RC_SHOP_MAX_ITEMS 64
 
 typedef struct {
     int item_id;
@@ -791,6 +791,8 @@ typedef struct {
     int stock;
     uint16_t restock_ticks;  // ticks per step back toward base_stock
     RcTick next_restock;
+    int price;               // fixed-price shops: coins per item
+    uint16_t restock_qty;    // fixed-price shops: items per restock step
 } RcShopSlot;
 
 typedef struct {
@@ -799,6 +801,10 @@ typedef struct {
     uint16_t buy_mult, sell_mult;  // per mille of item value at base stock
     uint16_t delta;                // per mille per step away from base stock
     bool general;                  // buys any tradeable item
+    // Fixed-price shops (gym modes): listed prices, sales pay sale_value and remove the item.
+    bool fixed;
+    bool buys_valued;              // buys any item with a sale value (else only its stock)
+    int (*sale_value)(int item_id);
     RcShopSlot slots[RC_SHOP_MAX_ITEMS];
     int slot_count;
 } RcShopState;
@@ -817,15 +823,26 @@ typedef enum {
     RC_MAKE_MENU_NONE = 0,
     RC_MAKE_MENU_FURNACE,
     RC_MAKE_MENU_ANVIL,
+    RC_MAKE_MENU_KNIFE,     // knife on logs or a bone-weapon base
+    RC_MAKE_MENU_COMBINE,   // one item on another (arrows, bows, studded armour)
+    RC_MAKE_MENU_SPIN,      // spinning wheel
+    RC_MAKE_MENU_NEEDLE,    // needle on leather
+    RC_MAKE_MENU_ALTAR,     // a rune altar
+    RC_MAKE_MENU_CHISEL,    // chisel on a bone-weapon base
+    RC_MAKE_MENU_TANNER,    // a tanner's service
+    RC_MAKE_MENU_ALDO,      // Historian Aldo's bone-weapon service
+    RC_MAKE_MENU_COUNT,
 } RcMakeMenu;
 
 #define RC_MAKE_MAX_OPTIONS 96
 
-// One furnace/anvil product the gym offers (an active recipes.bin row).
+// One product a station offers (an active recipes.bin row).
 typedef struct {
     int16_t recipe;
     uint8_t facility;     // RcMakeMenu
     uint8_t success_pct;  // 50 for iron bars at an ordinary furnace
+    uint8_t batch;        // one action converts every carried input (rune altars)
+    int32_t station_loc;  // offered only at this loc (altars), 0 for any station of the menu
 } RcMakeOption;
 
 typedef struct {
@@ -967,7 +984,8 @@ typedef struct {
     int skill_action;
     RcTick skill_ready_tick;
     RcSkillJob skill_job;
-    uint8_t make_menu;     // RcMakeMenu open at a furnace or anvil
+    uint8_t make_menu;     // RcMakeMenu open at a station
+    int32_t make_station;  // loc id of the station the menu was opened at (0: none)
     int8_t shop_open;      // index into RcWorld.shops, -1: none
     // Death (rc-core/death.c): respawn tick while dead, 0 otherwise.
     RcTick respawn_tick;
@@ -1347,6 +1365,7 @@ typedef struct RcWorld {
     int next_ground_item_uid;
     RcNpcLootHook npc_loot_hook;
     void *npc_loot_ctx;
+    int loot_private_ticks, loot_public_ticks;  // NPC drops: owner-only, then public (0: 100/200)
     RcLootReceipt last_loot;
     struct RcDormantNpcState *dormant_npcs;
     int dormant_npc_count;

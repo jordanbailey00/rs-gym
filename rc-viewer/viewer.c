@@ -1,5 +1,6 @@
 // RuneC Raylib viewer.
 
+#include "../rc-core/mode.h"
 #include "../rc-core/api.h"
 #include "../rc-core/assets.h"
 #include "../rc-core/combat.h"
@@ -10355,6 +10356,8 @@ int main(int argc, char **argv) {
         // agents were placed and equipped by rc-env
     } else if (runec_dev_validation_enabled()) {
         set_viewer_demo_stats(v.world->player);
+    } else if (rc_mode_active()) {
+        rc_content_compact_new_character(v.world);  // the mode's fresh character
     } else {
         rc_env_give_task_kit(v.world, RC_TASK_TOTAL);
     }

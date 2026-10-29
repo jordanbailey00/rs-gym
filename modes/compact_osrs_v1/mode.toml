@@ -1,0 +1,41 @@
+# compact_osrs_v1: the v1 benchmark mode (SPEC.md, "v1"). Values marked "default" are the spec's
+# provisional balance settings; every change to them goes in the override ledger with its evidence.
+# Items, NPCs and locs are named as in the b237 cache; content.toml pins ambiguous names to ids.
+
+[mode]
+name = "compact_osrs_v1"
+version = 1
+map = "maps/compact_v1.toml"
+max_players = 8
+level_cap = 40
+bands = [1, 15, 30]
+xp_multiplier = 8                  # default: 8x ordinary awarded XP for enabled skills
+members = true                     # access rule: selected members content needs no membership
+skills = ["Attack", "Strength", "Defence", "Hitpoints", "Ranged", "Magic", "Prayer", "Mining",
+          "Smithing", "Woodcutting", "Fletching", "Fishing", "Cooking", "Crafting", "Runecraft"]
+
+# Issued once per fresh character; never again on death.
+[start]
+equipment = [["Bronze dagger", 1]]
+inventory = [["Shrimps", 4]]
+bank = [["Coins", 100], ["Bronze axe", 1], ["Bronze pickaxe", 1], ["Hammer", 1], ["Knife", 1],
+        ["Small fishing net", 1], ["Fly fishing rod", 1], ["Lobster pot", 1], ["Needle", 1],
+        ["Thread", 20], ["Feather", 30], ["Shortbow", 1], ["Bronze arrow", 50],
+        ["Staff of air", 1], ["Mind rune", 50], ["Water rune", 50]]
+
+[death]
+respawn_ticks = 10                 # default
+recovery_ticks = 1500              # default: private recovery container, then the bank
+
+[loot]
+private_ticks = 100                # default: the top damage dealer's drop
+public_ticks = 300                 # default: then anyone's, then gone
+
+[resources]
+rock_respawn = 20                  # default (copper, tin, iron, coal, mithril)
+flax_respawn = 20                  # default
+tree_respawn = 40                  # default (oak and willow; normal trees too)
+npc_respawn = 50                   # default: ordinary enemies
+
+[benchmark]
+horizon = 12000                    # default: fresh-start benchmark horizon in ticks

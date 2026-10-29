@@ -1,0 +1,5317 @@
+{
+ "format": "rs-gym-content-manifest-v1",
+ "mode": "compact_osrs_v1",
+ "version": 1,
+ "sources": {
+  "cache": "b237-openrs2-2528",
+  "recipes": "data/defs/recipes.bin",
+  "mode_tables": [
+   "modes/compact_osrs_v1/mode.toml",
+   "modes/compact_osrs_v1/content.toml",
+   "modes/compact_osrs_v1/economy.toml",
+   "modes/compact_osrs_v1/scurrius.toml"
+  ]
+ },
+ "items": [
+  {
+   "id": 39,
+   "name": "Bronze arrowtips",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Bronze arrowtips"
+   ],
+   "needed_by": [
+    "recipe Bronze arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 41,
+   "name": "Steel arrowtips",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Steel arrowtips"
+   ],
+   "needed_by": [
+    "recipe Steel arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 42,
+   "name": "Mithril arrowtips",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Mithril arrowtips"
+   ],
+   "needed_by": [
+    "recipe Mithril arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 50,
+   "name": "Shortbow (u)",
+   "roles": [
+    "ingredient",
+    "fletching product"
+   ],
+   "sources": [
+    "recipe Shortbow (u)"
+   ],
+   "needed_by": [
+    "recipe Shortbow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 6
+  },
+  {
+   "id": 52,
+   "name": "Arrow shaft",
+   "roles": [
+    "fletching product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Arrow shaft"
+   ],
+   "needed_by": [
+    "recipe Headless arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 53,
+   "name": "Headless arrow",
+   "roles": [
+    "fletching product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Headless arrow"
+   ],
+   "needed_by": [
+    "recipe Bronze arrow",
+    "recipe Steel arrow",
+    "recipe Mithril arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 54,
+   "name": "Oak shortbow (u)",
+   "roles": [
+    "fletching product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Oak shortbow (u)"
+   ],
+   "needed_by": [
+    "recipe Oak shortbow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 30
+  },
+  {
+   "id": 60,
+   "name": "Willow shortbow (u)",
+   "roles": [
+    "ingredient",
+    "fletching product"
+   ],
+   "sources": [
+    "recipe Willow shortbow (u)"
+   ],
+   "needed_by": [
+    "recipe Willow shortbow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 100
+  },
+  {
+   "id": 139,
+   "name": "Prayer potion(3)",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 72
+  },
+  {
+   "id": 141,
+   "name": "Prayer potion(2)",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 48
+  },
+  {
+   "id": 143,
+   "name": "Prayer potion(1)",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 24
+  },
+  {
+   "id": 229,
+   "name": "Vial",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 301,
+   "name": "Lobster pot",
+   "roles": [
+    "starter kit",
+    "fishing tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "fishing"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 303,
+   "name": "Small fishing net",
+   "roles": [
+    "starter kit",
+    "fishing tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "fishing"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 309,
+   "name": "Fly fishing rod",
+   "roles": [
+    "starter kit",
+    "fishing tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "fishing"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 314,
+   "name": "Feather",
+   "roles": [
+    "starter kit",
+    "fishing bait",
+    "ingredient",
+    "drop",
+    "shop good",
+    "boss loot"
+   ],
+   "sources": [
+    "starter kit",
+    "Chicken drop",
+    "shop General Store",
+    "Scurrius"
+   ],
+   "needed_by": [
+    "fishing",
+    "recipe Headless arrow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 315,
+   "name": "Shrimps",
+   "roles": [
+    "starter kit",
+    "food",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "cooking",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 317,
+   "name": "Raw shrimps",
+   "roles": [
+    "raw fish",
+    "raw food"
+   ],
+   "sources": [
+    "fishing"
+   ],
+   "needed_by": [
+    "cooking"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 333,
+   "name": "Trout",
+   "roles": [
+    "food",
+    "shop good"
+   ],
+   "sources": [
+    "cooking",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 3
+  },
+  {
+   "id": 335,
+   "name": "Raw trout",
+   "roles": [
+    "raw fish",
+    "raw food"
+   ],
+   "sources": [
+    "fishing"
+   ],
+   "needed_by": [
+    "cooking"
+   ],
+   "overrides": [
+    "Fishing level 20 -> 15"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 3
+  },
+  {
+   "id": 343,
+   "name": "Burnt fish",
+   "roles": [
+    "burnt food"
+   ],
+   "sources": [
+    "cooking (burnt)"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 377,
+   "name": "Raw lobster",
+   "roles": [
+    "raw fish",
+    "raw food"
+   ],
+   "sources": [
+    "fishing"
+   ],
+   "needed_by": [
+    "cooking"
+   ],
+   "overrides": [
+    "Fishing level 40 -> 30"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 8
+  },
+  {
+   "id": 379,
+   "name": "Lobster",
+   "roles": [
+    "food",
+    "shop good"
+   ],
+   "sources": [
+    "cooking",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "Cooking level 40 -> 30"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 8
+  },
+  {
+   "id": 381,
+   "name": "Burnt lobster",
+   "roles": [
+    "burnt food"
+   ],
+   "sources": [
+    "cooking (burnt)"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 436,
+   "name": "Copper ore",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "mining (Copper rocks)"
+   ],
+   "needed_by": [
+    "recipe Bronze bar"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 2
+  },
+  {
+   "id": 438,
+   "name": "Tin ore",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "mining (Tin rocks)"
+   ],
+   "needed_by": [
+    "recipe Bronze bar"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 2
+  },
+  {
+   "id": 440,
+   "name": "Iron ore",
+   "roles": [
+    "gathered resource",
+    "ingredient",
+    "drop"
+   ],
+   "sources": [
+    "mining (Iron rocks)",
+    "Hill Giant drop"
+   ],
+   "needed_by": [
+    "recipe Steel bar"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 447,
+   "name": "Mithril ore",
+   "roles": [
+    "gathered resource",
+    "ingredient",
+    "boss loot"
+   ],
+   "sources": [
+    "mining (Mithril rocks)",
+    "Scurrius"
+   ],
+   "needed_by": [
+    "recipe Mithril bar"
+   ],
+   "overrides": [
+    "Mining level 55 -> 30"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 10
+  },
+  {
+   "id": 453,
+   "name": "Coal",
+   "roles": [
+    "gathered resource",
+    "ingredient",
+    "drop"
+   ],
+   "sources": [
+    "mining (Coal rocks)",
+    "Hill Giant drop"
+   ],
+   "needed_by": [
+    "recipe Steel bar",
+    "recipe Mithril bar"
+   ],
+   "overrides": [
+    "Mining level 30 -> 15"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 3
+  },
+  {
+   "id": 526,
+   "name": "Bones",
+   "roles": [
+    "bones",
+    "drop"
+   ],
+   "sources": [
+    "Chicken drop",
+    "Cow drop",
+    "Giant rat drop",
+    "Goblin drop",
+    "Skeleton drop",
+    "Dark wizard drop"
+   ],
+   "needed_by": [
+    "Prayer (bury)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 532,
+   "name": "Big bones",
+   "roles": [
+    "bones",
+    "drop"
+   ],
+   "sources": [
+    "Hill Giant drop"
+   ],
+   "needed_by": [
+    "Prayer (bury)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 555,
+   "name": "Water rune",
+   "roles": [
+    "starter kit",
+    "runecraft product",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Water rune",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 556,
+   "name": "Air rune",
+   "roles": [
+    "runecraft product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Air rune",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 558,
+   "name": "Mind rune",
+   "roles": [
+    "starter kit",
+    "runecraft product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Mind rune",
+    "Dark wizard drop",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 560,
+   "name": "Death rune",
+   "roles": [
+    "runecraft product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Death rune",
+    "Dark wizard drop",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 3
+  },
+  {
+   "id": 562,
+   "name": "Chaos rune",
+   "roles": [
+    "staff charge",
+    "runecraft product",
+    "ingredient",
+    "drop",
+    "shop good",
+    "boss loot"
+   ],
+   "sources": [
+    "recipe Chaos rune",
+    "Dark wizard drop",
+    "shop Aubury's Rune Shop",
+    "Scurrius"
+   ],
+   "needed_by": [
+    "recipe Bone staff",
+    "recipe Aldo Bone staff"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 577,
+   "name": "Blue wizard robe",
+   "roles": [
+    "equipment",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "Dark wizard drop",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 40
+  },
+  {
+   "id": 579,
+   "name": "Blue wizard hat",
+   "roles": [
+    "equipment",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "Dark wizard drop",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 20
+  },
+  {
+   "id": 841,
+   "name": "Shortbow",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "fletching product",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Shortbow",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 12
+  },
+  {
+   "id": 843,
+   "name": "Oak shortbow",
+   "roles": [
+    "equipment",
+    "fletching product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Oak shortbow",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 849,
+   "name": "Willow shortbow",
+   "roles": [
+    "equipment",
+    "fletching product",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Willow shortbow",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Bone shortbow",
+    "recipe Aldo Bone shortbow"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 180
+  },
+  {
+   "id": 857,
+   "name": "Yew shortbow",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true
+  },
+  {
+   "id": 882,
+   "name": "Bronze arrow",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "fletching product",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Bronze arrow",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 886,
+   "name": "Steel arrow",
+   "roles": [
+    "equipment",
+    "fletching product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel arrow",
+    "Skeleton drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 888,
+   "name": "Mithril arrow",
+   "roles": [
+    "equipment",
+    "fletching product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril arrow",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 946,
+   "name": "Knife",
+   "roles": [
+    "starter kit",
+    "tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Arrow shaft (tool)",
+    "recipe Oak shortbow (u) (tool)",
+    "recipe Shortbow (u) (tool)",
+    "recipe Willow shortbow (u) (tool)",
+    "recipe Bone shortbow (tool)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 995,
+   "name": "Coins",
+   "roles": [
+    "starter kit",
+    "drop",
+    "currency",
+    "boss loot"
+   ],
+   "sources": [
+    "starter kit",
+    "Goblin drop",
+    "Skeleton drop",
+    "Dark wizard drop",
+    "Hill Giant drop",
+    "Scurrius"
+   ],
+   "needed_by": [
+    "recipe tan Leather",
+    "recipe tan Hard leather",
+    "recipe Aldo Bone mace",
+    "recipe Aldo Bone shortbow",
+    "recipe Aldo Bone staff"
+   ],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 1069,
+   "name": "Steel platelegs",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel platelegs",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 80
+  },
+  {
+   "id": 1071,
+   "name": "Mithril platelegs",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril platelegs",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 240
+  },
+  {
+   "id": 1075,
+   "name": "Bronze platelegs",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze platelegs",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 16
+  },
+  {
+   "id": 1095,
+   "name": "Leather chaps",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Leather chaps",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Studded chaps"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 16
+  },
+  {
+   "id": 1097,
+   "name": "Studded chaps",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Studded chaps",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 160
+  },
+  {
+   "id": 1117,
+   "name": "Bronze platebody",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze platebody",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 24
+  },
+  {
+   "id": 1119,
+   "name": "Steel platebody",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel platebody",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 120
+  },
+  {
+   "id": 1121,
+   "name": "Mithril platebody",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril platebody",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 360
+  },
+  {
+   "id": 1129,
+   "name": "Leather body",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Leather body",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Studded body"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 20
+  },
+  {
+   "id": 1131,
+   "name": "Hardleather body",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Hardleather body",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 80
+  },
+  {
+   "id": 1133,
+   "name": "Studded body",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Studded body",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 240
+  },
+  {
+   "id": 1155,
+   "name": "Bronze full helm",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze full helm",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 8
+  },
+  {
+   "id": 1157,
+   "name": "Steel full helm",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel full helm",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 40
+  },
+  {
+   "id": 1159,
+   "name": "Mithril full helm",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril full helm",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 120
+  },
+  {
+   "id": 1167,
+   "name": "Leather cowl",
+   "roles": [
+    "equipment",
+    "crafting product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Leather cowl",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 8
+  },
+  {
+   "id": 1189,
+   "name": "Bronze kiteshield",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze kiteshield",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 16
+  },
+  {
+   "id": 1193,
+   "name": "Steel kiteshield",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel kiteshield",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 80
+  },
+  {
+   "id": 1197,
+   "name": "Mithril kiteshield",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril kiteshield",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 240
+  },
+  {
+   "id": 1205,
+   "name": "Bronze dagger",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "smithing product"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Bronze dagger"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 1265,
+   "name": "Bronze pickaxe",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "pickaxe",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Mining tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 1269,
+   "name": "Steel pickaxe",
+   "roles": [
+    "equipment",
+    "pickaxe",
+    "shop good"
+   ],
+   "sources": [
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Mining tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 20
+  },
+  {
+   "id": 1273,
+   "name": "Mithril pickaxe",
+   "roles": [
+    "equipment",
+    "pickaxe",
+    "shop good"
+   ],
+   "sources": [
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Mining tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 1321,
+   "name": "Bronze scimitar",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze scimitar",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 12
+  },
+  {
+   "id": 1325,
+   "name": "Steel scimitar",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel scimitar",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 1329,
+   "name": "Mithril scimitar",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril scimitar",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 180
+  },
+  {
+   "id": 1351,
+   "name": "Bronze axe",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "axe",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "recipe Bronze axe",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Woodcutting tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 1353,
+   "name": "Steel axe",
+   "roles": [
+    "equipment",
+    "axe",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel axe",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Woodcutting tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 20
+  },
+  {
+   "id": 1355,
+   "name": "Mithril axe",
+   "roles": [
+    "equipment",
+    "axe",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril axe",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "Woodcutting tool"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 1381,
+   "name": "Staff of air",
+   "roles": [
+    "starter kit",
+    "equipment",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop Aubury's Rune Shop"
+   ],
+   "needed_by": [
+    "recipe Bone staff",
+    "recipe Aldo Bone staff"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 1391,
+   "name": "Battlestaff",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true
+  },
+  {
+   "id": 1422,
+   "name": "Bronze mace",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "drop",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Bronze mace",
+    "Goblin drop",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 12
+  },
+  {
+   "id": 1424,
+   "name": "Steel mace",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Steel mace",
+    "shop General Store"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 60
+  },
+  {
+   "id": 1428,
+   "name": "Mithril mace",
+   "roles": [
+    "equipment",
+    "smithing product",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "recipe Mithril mace",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Bone mace",
+    "recipe Aldo Bone mace"
+   ],
+   "overrides": [
+    "use requirements"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 180
+  },
+  {
+   "id": 1432,
+   "name": "Rune mace",
+   "roles": [],
+   "sources": [],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false
+  },
+  {
+   "id": 1511,
+   "name": "Logs",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "woodcutting (Tree)"
+   ],
+   "needed_by": [
+    "recipe Arrow shaft",
+    "recipe Shortbow (u)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 2
+  },
+  {
+   "id": 1519,
+   "name": "Willow logs",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "woodcutting (Willow tree)"
+   ],
+   "needed_by": [
+    "recipe Willow shortbow (u)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 10
+  },
+  {
+   "id": 1521,
+   "name": "Oak logs",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "woodcutting (Oak tree)"
+   ],
+   "needed_by": [
+    "recipe Oak shortbow (u)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 5
+  },
+  {
+   "id": 1733,
+   "name": "Needle",
+   "roles": [
+    "starter kit",
+    "tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Leather body (tool)",
+    "recipe Leather chaps (tool)",
+    "recipe Leather cowl (tool)",
+    "recipe Hardleather body (tool)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 1734,
+   "name": "Thread",
+   "roles": [
+    "starter kit",
+    "ingredient",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Leather body",
+    "recipe Leather chaps",
+    "recipe Leather cowl",
+    "recipe Hardleather body"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 1739,
+   "name": "Cowhide",
+   "roles": [
+    "drop",
+    "hide"
+   ],
+   "sources": [
+    "Cow drop"
+   ],
+   "needed_by": [
+    "recipe tan Leather",
+    "recipe tan Hard leather"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 3
+  },
+  {
+   "id": 1741,
+   "name": "Leather",
+   "roles": [
+    "ingredient",
+    "tanned leather"
+   ],
+   "sources": [
+    "recipe tan Leather"
+   ],
+   "needed_by": [
+    "recipe Leather body",
+    "recipe Leather chaps",
+    "recipe Leather cowl"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 4
+  },
+  {
+   "id": 1743,
+   "name": "Hard leather",
+   "roles": [
+    "ingredient",
+    "tanned leather"
+   ],
+   "sources": [
+    "recipe tan Hard leather"
+   ],
+   "needed_by": [
+    "recipe Hardleather body"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 6
+  },
+  {
+   "id": 1755,
+   "name": "Chisel",
+   "roles": [
+    "shop good"
+   ],
+   "sources": [
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Bone staff (tool)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 1777,
+   "name": "Bow string",
+   "roles": [
+    "ingredient",
+    "crafting product"
+   ],
+   "sources": [
+    "recipe Bow string"
+   ],
+   "needed_by": [
+    "recipe Shortbow",
+    "recipe Oak shortbow",
+    "recipe Willow shortbow"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 3
+  },
+  {
+   "id": 1779,
+   "name": "Flax",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "crafting (Flax)"
+   ],
+   "needed_by": [
+    "recipe Bow string"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 1
+  },
+  {
+   "id": 2132,
+   "name": "Raw beef",
+   "roles": [
+    "raw food",
+    "drop"
+   ],
+   "sources": [
+    "Cow drop"
+   ],
+   "needed_by": [
+    "cooking"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 2138,
+   "name": "Raw chicken",
+   "roles": [
+    "raw food",
+    "drop"
+   ],
+   "sources": [
+    "Chicken drop"
+   ],
+   "needed_by": [
+    "cooking"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 2140,
+   "name": "Cooked chicken",
+   "roles": [
+    "food"
+   ],
+   "sources": [
+    "cooking"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 2142,
+   "name": "Cooked meat",
+   "roles": [
+    "food"
+   ],
+   "sources": [
+    "cooking"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 2144,
+   "name": "Burnt chicken",
+   "roles": [
+    "burnt food"
+   ],
+   "sources": [
+    "cooking (burnt)"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 2146,
+   "name": "Burnt meat",
+   "roles": [
+    "burnt food"
+   ],
+   "sources": [
+    "cooking (burnt)"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 2347,
+   "name": "Hammer",
+   "roles": [
+    "starter kit",
+    "tool",
+    "shop good"
+   ],
+   "sources": [
+    "starter kit",
+    "shop General Store"
+   ],
+   "needed_by": [
+    "recipe Bronze dagger (tool)",
+    "recipe Bronze scimitar (tool)",
+    "recipe Bronze mace (tool)",
+    "recipe Bronze full helm (tool)",
+    "recipe Bronze platebody (tool)",
+    "recipe Bronze platelegs (tool)",
+    "recipe Bronze kiteshield (tool)",
+    "recipe Bronze axe (tool)",
+    "recipe Bronze arrowtips (tool)",
+    "recipe Steel scimitar (tool)",
+    "recipe Steel mace (tool)",
+    "recipe Steel full helm (tool)",
+    "recipe Steel platebody (tool)",
+    "recipe Steel platelegs (tool)",
+    "recipe Steel kiteshield (tool)",
+    "recipe Steel axe (tool)",
+    "recipe Steel arrowtips (tool)",
+    "recipe Steel studs (tool)",
+    "recipe Mithril scimitar (tool)",
+    "recipe Mithril mace (tool)",
+    "recipe Mithril full helm (tool)",
+    "recipe Mithril platebody (tool)",
+    "recipe Mithril platelegs (tool)",
+    "recipe Mithril kiteshield (tool)",
+    "recipe Mithril axe (tool)",
+    "recipe Mithril arrowtips (tool)",
+    "recipe Bone mace (tool)"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 2349,
+   "name": "Bronze bar",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Bronze bar"
+   ],
+   "needed_by": [
+    "recipe Bronze dagger",
+    "recipe Bronze scimitar",
+    "recipe Bronze mace",
+    "recipe Bronze full helm",
+    "recipe Bronze platebody",
+    "recipe Bronze platelegs",
+    "recipe Bronze kiteshield",
+    "recipe Bronze axe",
+    "recipe Bronze arrowtips"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 8
+  },
+  {
+   "id": 2353,
+   "name": "Steel bar",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Steel bar"
+   ],
+   "needed_by": [
+    "recipe Steel scimitar",
+    "recipe Steel mace",
+    "recipe Steel full helm",
+    "recipe Steel platebody",
+    "recipe Steel platelegs",
+    "recipe Steel kiteshield",
+    "recipe Steel axe",
+    "recipe Steel arrowtips",
+    "recipe Steel studs"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 20
+  },
+  {
+   "id": 2359,
+   "name": "Mithril bar",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Mithril bar"
+   ],
+   "needed_by": [
+    "recipe Mithril scimitar",
+    "recipe Mithril mace",
+    "recipe Mithril full helm",
+    "recipe Mithril platebody",
+    "recipe Mithril platelegs",
+    "recipe Mithril kiteshield",
+    "recipe Mithril axe",
+    "recipe Mithril arrowtips"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 50
+  },
+  {
+   "id": 2370,
+   "name": "Steel studs",
+   "roles": [
+    "smithing product",
+    "ingredient"
+   ],
+   "sources": [
+    "recipe Steel studs"
+   ],
+   "needed_by": [
+    "recipe Studded body",
+    "recipe Studded chaps"
+   ],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 10
+  },
+  {
+   "id": 2434,
+   "name": "Prayer potion(4)",
+   "roles": [
+    "shop good",
+    "boss loot"
+   ],
+   "sources": [
+    "shop General Store",
+    "Scurrius"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": true,
+   "members": true,
+   "sale_value": 96
+  },
+  {
+   "id": 7936,
+   "name": "Pure essence",
+   "roles": [
+    "gathered resource",
+    "ingredient"
+   ],
+   "sources": [
+    "mining (Rune Essence)"
+   ],
+   "needed_by": [
+    "recipe Air rune",
+    "recipe Water rune",
+    "recipe Mind rune",
+    "recipe Chaos rune",
+    "recipe Death rune"
+   ],
+   "overrides": [
+    "Mining level 30 -> 1"
+   ],
+   "tradeable": true,
+   "members": false,
+   "sale_value": 1
+  },
+  {
+   "id": 7954,
+   "name": "Burnt shrimp",
+   "roles": [
+    "burnt food"
+   ],
+   "sources": [
+    "cooking (burnt)"
+   ],
+   "needed_by": [],
+   "overrides": [],
+   "tradeable": false,
+   "members": false,
+   "sale_value": 0
+  },
+  {
+   "id": 28792,
+   "name": "Bone mace",
+   "roles": [
+    "equipment",
+    "bone weapon"
+   ],
+   "sources": [
+    "recipe Bone mace",
+    "recipe Aldo Bone mace"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements",
+    "combat bonuses",
+    "creation recipe"
+   ],
+   "tradeable": false,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 28794,
+   "name": "Bone shortbow",
+   "roles": [
+    "equipment",
+    "bone weapon"
+   ],
+   "sources": [
+    "recipe Bone shortbow",
+    "recipe Aldo Bone shortbow"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements",
+    "combat bonuses",
+    "creation recipe"
+   ],
+   "tradeable": false,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 28796,
+   "name": "Bone staff",
+   "roles": [
+    "equipment",
+    "bone weapon"
+   ],
+   "sources": [
+    "recipe Bone staff",
+    "recipe Aldo Bone staff"
+   ],
+   "needed_by": [],
+   "overrides": [
+    "use requirements",
+    "combat bonuses",
+    "powered spell",
+    "creation recipe"
+   ],
+   "tradeable": false,
+   "members": true,
+   "sale_value": 0
+  },
+  {
+   "id": 28798,
+   "name": "Scurrius' spine",
+   "roles": [
+    "ingredient",
+    "boss loot"
+   ],
+   "sources": [
+    "Scurrius"
+   ],
+   "needed_by": [
+    "recipe Bone mace",
+    "recipe Bone shortbow",
+    "recipe Bone staff",
+    "recipe Aldo Bone mace",
+    "recipe Aldo Bone shortbow",
+    "recipe Aldo Bone staff"
+   ],
+   "overrides": [],
+   "tradeable": false,
+   "members": true,
+   "sale_value": 0
+  }
+ ],
+ "npcs": [
+  {
+   "id": 70,
+   "name": "Skeleton",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit",
+    "defence bonuses",
+    "elemental weakness"
+   ],
+   "combat_level": 22
+  },
+  {
+   "id": 510,
+   "name": "Dark wizard",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit",
+    "defence bonuses"
+   ],
+   "combat_level": 20
+  },
+  {
+   "id": 1173,
+   "name": "Chicken",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit"
+   ],
+   "combat_level": 1
+  },
+  {
+   "id": 1519,
+   "name": "Fishing spot",
+   "roles": [
+    "fishing spot"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 1525,
+   "name": "Fishing spot",
+   "roles": [
+    "fishing spot"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 1526,
+   "name": "Rod Fishing spot",
+   "roles": [
+    "fishing spot"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 2098,
+   "name": "Hill Giant",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit",
+    "defence bonuses",
+    "elemental weakness"
+   ],
+   "combat_level": 28
+  },
+  {
+   "id": 2790,
+   "name": "Cow",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit"
+   ],
+   "combat_level": 2
+  },
+  {
+   "id": 2813,
+   "name": "Shop keeper",
+   "roles": [
+    "shopkeeper"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 2856,
+   "name": "Giant rat",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit"
+   ],
+   "combat_level": 3
+  },
+  {
+   "id": 3029,
+   "name": "Goblin",
+   "roles": [
+    "enemy"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit"
+   ],
+   "combat_level": 2
+  },
+  {
+   "id": 3231,
+   "name": "Ellis",
+   "roles": [
+    "tanner"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 7222,
+   "name": "Scurrius",
+   "roles": [
+    "boss"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit",
+    "levels",
+    "defence bonuses",
+    "group scaling",
+    "loot"
+   ],
+   "combat_level": 200
+  },
+  {
+   "id": 7223,
+   "name": "Giant rat",
+   "roles": [
+    "boss minion"
+   ],
+   "overrides": [
+    "hitpoints",
+    "max hit"
+   ],
+   "combat_level": 46
+  },
+  {
+   "id": 7615,
+   "name": "Historian Aldo",
+   "roles": [
+    "bone-weapon service"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  },
+  {
+   "id": 11434,
+   "name": "Aubury",
+   "roles": [
+    "shopkeeper"
+   ],
+   "overrides": [],
+   "combat_level": 0
+  }
+ ],
+ "locs": [
+  {
+   "id": 114,
+   "name": "Cooking range",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 1276,
+   "name": "Tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 8
+  },
+  {
+   "id": 1278,
+   "name": "Tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 3
+  },
+  {
+   "id": 2097,
+   "name": "Anvil",
+   "roles": [
+    "anvil"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 7183,
+   "name": "Range",
+   "roles": [
+    "range"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 7184,
+   "name": "Range",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 9682,
+   "name": "Range",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 10819,
+   "name": "Willow tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 10820,
+   "name": "Oak tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 6
+  },
+  {
+   "id": 10829,
+   "name": "Willow tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 10831,
+   "name": "Willow tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 10833,
+   "name": "Willow tree",
+   "roles": [
+    "woodcutting node"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 10943,
+   "name": "Copper rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 3
+  },
+  {
+   "id": 11161,
+   "name": "Copper rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 11360,
+   "name": "Tin rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 11361,
+   "name": "Tin rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 11364,
+   "name": "Iron rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 4
+  },
+  {
+   "id": 11365,
+   "name": "Iron rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 11366,
+   "name": "Coal rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 4
+  },
+  {
+   "id": 11367,
+   "name": "Coal rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 11372,
+   "name": "Mithril rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 11373,
+   "name": "Mithril rocks",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 12269,
+   "name": "Stove",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 14889,
+   "name": "Spinning wheel",
+   "roles": [
+    "spinning wheel"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 14896,
+   "name": "Flax",
+   "roles": [
+    "crafting node"
+   ],
+   "placed": 8
+  },
+  {
+   "id": 21792,
+   "name": "Range",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 24009,
+   "name": "Furnace",
+   "roles": [
+    "furnace"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 26181,
+   "name": "Range",
+   "roles": [
+    "range"
+   ],
+   "placed": 0
+  },
+  {
+   "id": 34760,
+   "name": "Altar",
+   "roles": [
+    "air rune altar"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 34761,
+   "name": "Altar",
+   "roles": [
+    "mind rune altar"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 34762,
+   "name": "Altar",
+   "roles": [
+    "water rune altar"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 34769,
+   "name": "Altar",
+   "roles": [
+    "chaos rune altar"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 34770,
+   "name": "Altar",
+   "roles": [
+    "death rune altar"
+   ],
+   "placed": 1
+  },
+  {
+   "id": 34773,
+   "name": "Rune Essence",
+   "roles": [
+    "mining node"
+   ],
+   "placed": 2
+  },
+  {
+   "id": 39620,
+   "name": "Rusted anvil",
+   "roles": [
+    "anvil"
+   ],
+   "placed": 1
+  }
+ ],
+ "recipes": [
+  {
+   "id": 0,
+   "key": "Bronze bar",
+   "output": 2349,
+   "output_name": "Bronze bar",
+   "quantity": 1,
+   "station": "furnace",
+   "canonical_row": 0,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 6.2
+    }
+   ],
+   "inputs": [
+    {
+     "item": 436,
+     "name": "Copper ore",
+     "quantity": 1
+    },
+    {
+     "item": 438,
+     "name": "Tin ore",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 5,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 1,
+   "key": "Steel bar",
+   "output": 2353,
+   "output_name": "Steel bar",
+   "quantity": 1,
+   "station": "furnace",
+   "canonical_row": 394,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 17.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 440,
+     "name": "Iron ore",
+     "quantity": 1
+    },
+    {
+     "item": 453,
+     "name": "Coal",
+     "quantity": 2
+    }
+   ],
+   "tools": [],
+   "ticks": 4,
+   "overrides": [
+    "Smithing level 30 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 2,
+   "key": "Mithril bar",
+   "output": 2359,
+   "output_name": "Mithril bar",
+   "quantity": 1,
+   "station": "furnace",
+   "canonical_row": 499,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 30.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 447,
+     "name": "Mithril ore",
+     "quantity": 1
+    },
+    {
+     "item": 453,
+     "name": "Coal",
+     "quantity": 4
+    }
+   ],
+   "tools": [],
+   "ticks": 4,
+   "overrides": [
+    "Smithing level 50 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 3,
+   "key": "Bronze dagger",
+   "output": 1205,
+   "output_name": "Bronze dagger",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 159,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 12.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 4,
+   "key": "Bronze scimitar",
+   "output": 1321,
+   "output_name": "Bronze scimitar",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 187,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 25.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 5 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 5,
+   "key": "Bronze mace",
+   "output": 1422,
+   "output_name": "Bronze mace",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 175,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 12.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 2 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 6,
+   "key": "Bronze full helm",
+   "output": 1155,
+   "output_name": "Bronze full helm",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 4,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 25.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 7 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 7,
+   "key": "Bronze platebody",
+   "output": 1117,
+   "output_name": "Bronze platebody",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 9,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 62.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 5
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 18 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 8,
+   "key": "Bronze platelegs",
+   "output": 1075,
+   "output_name": "Bronze platelegs",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 178,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 16 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 9,
+   "key": "Bronze kiteshield",
+   "output": 1189,
+   "output_name": "Bronze kiteshield",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 11,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 12 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 10,
+   "key": "Bronze axe",
+   "output": 1351,
+   "output_name": "Bronze axe",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 154,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 12.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 11,
+   "key": "Bronze arrowtips",
+   "output": 39,
+   "output_name": "Bronze arrowtips",
+   "quantity": 15,
+   "station": "anvil",
+   "canonical_row": 153,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 1,
+     "xp": 12.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2349,
+     "name": "Bronze bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 5 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 12,
+   "key": "Steel scimitar",
+   "output": 1325,
+   "output_name": "Steel scimitar",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 231,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 75.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 35 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 13,
+   "key": "Steel mace",
+   "output": 1424,
+   "output_name": "Steel mace",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 37,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 32 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 14,
+   "key": "Steel full helm",
+   "output": 1157,
+   "output_name": "Steel full helm",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 45,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 75.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 37 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 15,
+   "key": "Steel platebody",
+   "output": 1119,
+   "output_name": "Steel platebody",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 229,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 187.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 5
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 48 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 16,
+   "key": "Steel platelegs",
+   "output": 1069,
+   "output_name": "Steel platelegs",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 56,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 112.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 46 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 17,
+   "key": "Steel kiteshield",
+   "output": 1193,
+   "output_name": "Steel kiteshield",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 228,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 112.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 42 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 18,
+   "key": "Steel axe",
+   "output": 1353,
+   "output_name": "Steel axe",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 72,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 31 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 19,
+   "key": "Steel arrowtips",
+   "output": 41,
+   "output_name": "Steel arrowtips",
+   "quantity": 15,
+   "station": "anvil",
+   "canonical_row": 820,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 35 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 20,
+   "key": "Steel studs",
+   "output": 2370,
+   "output_name": "Steel studs",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 39,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 15,
+     "xp": 37.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2353,
+     "name": "Steel bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 36 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 21,
+   "key": "Mithril scimitar",
+   "output": 1329,
+   "output_name": "Mithril scimitar",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 402,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 100.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 55 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 22,
+   "key": "Mithril mace",
+   "output": 1428,
+   "output_name": "Mithril mace",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 191,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 50.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 52 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 23,
+   "key": "Mithril full helm",
+   "output": 1159,
+   "output_name": "Mithril full helm",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 183,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 100.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 2
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 57 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 24,
+   "key": "Mithril platebody",
+   "output": 1121,
+   "output_name": "Mithril platebody",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 193,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 250.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 5
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 68 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 25,
+   "key": "Mithril platelegs",
+   "output": 1071,
+   "output_name": "Mithril platelegs",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 194,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 150.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 66 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 26,
+   "key": "Mithril kiteshield",
+   "output": 1197,
+   "output_name": "Mithril kiteshield",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 188,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 150.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 3
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 62 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 27,
+   "key": "Mithril axe",
+   "output": 1355,
+   "output_name": "Mithril axe",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 71,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 50.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 51 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 28,
+   "key": "Mithril arrowtips",
+   "output": 42,
+   "output_name": "Mithril arrowtips",
+   "quantity": 15,
+   "station": "anvil",
+   "canonical_row": 1362,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 50.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 2359,
+     "name": "Mithril bar",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 55 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 29,
+   "key": "Arrow shaft",
+   "output": 52,
+   "output_name": "Arrow shaft",
+   "quantity": 15,
+   "station": "knife",
+   "canonical_row": 64,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 1,
+     "xp": 5.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1511,
+     "name": "Logs",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 946,
+     "name": "Knife"
+    }
+   ],
+   "ticks": 2,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 30,
+   "key": "Oak shortbow (u)",
+   "output": 54,
+   "output_name": "Oak shortbow (u)",
+   "quantity": 1,
+   "station": "knife",
+   "canonical_row": 357,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 15,
+     "xp": 16.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1521,
+     "name": "Oak logs",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 946,
+     "name": "Knife"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "Fletching level 20 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 31,
+   "key": "Headless arrow",
+   "output": 53,
+   "output_name": "Headless arrow",
+   "quantity": 15,
+   "station": "combine",
+   "canonical_row": 413,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 1,
+     "xp": 15.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 52,
+     "name": "Arrow shaft",
+     "quantity": 15
+    },
+    {
+     "item": 314,
+     "name": "Feather",
+     "quantity": 15
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 32,
+   "key": "Bronze arrow",
+   "output": 882,
+   "output_name": "Bronze arrow",
+   "quantity": 15,
+   "station": "combine",
+   "canonical_row": 152,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 1,
+     "xp": 19.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 53,
+     "name": "Headless arrow",
+     "quantity": 15
+    },
+    {
+     "item": 39,
+     "name": "Bronze arrowtips",
+     "quantity": 15
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [],
+   "note": ""
+  },
+  {
+   "id": 33,
+   "key": "Shortbow",
+   "output": 841,
+   "output_name": "Shortbow",
+   "quantity": 1,
+   "station": "combine",
+   "canonical_row": 339,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 1,
+     "xp": 5.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 50,
+     "name": "Shortbow (u)",
+     "quantity": 1
+    },
+    {
+     "item": 1777,
+     "name": "Bow string",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [
+    "Fletching level 5 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 34,
+   "key": "Steel arrow",
+   "output": 886,
+   "output_name": "Steel arrow",
+   "quantity": 15,
+   "station": "combine",
+   "canonical_row": 222,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 15,
+     "xp": 75.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 53,
+     "name": "Headless arrow",
+     "quantity": 15
+    },
+    {
+     "item": 41,
+     "name": "Steel arrowtips",
+     "quantity": 15
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [
+    "Fletching level 30 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 35,
+   "key": "Oak shortbow",
+   "output": 843,
+   "output_name": "Oak shortbow",
+   "quantity": 1,
+   "station": "combine",
+   "canonical_row": 536,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 15,
+     "xp": 16.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 54,
+     "name": "Oak shortbow (u)",
+     "quantity": 1
+    },
+    {
+     "item": 1777,
+     "name": "Bow string",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [
+    "Fletching level 20 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 36,
+   "key": "Mithril arrow",
+   "output": 888,
+   "output_name": "Mithril arrow",
+   "quantity": 15,
+   "station": "combine",
+   "canonical_row": 177,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 30,
+     "xp": 112.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 53,
+     "name": "Headless arrow",
+     "quantity": 15
+    },
+    {
+     "item": 42,
+     "name": "Mithril arrowtips",
+     "quantity": 15
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [
+    "Fletching level 45 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 37,
+   "key": "Willow shortbow",
+   "output": 849,
+   "output_name": "Willow shortbow",
+   "quantity": 1,
+   "station": "combine",
+   "canonical_row": 353,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 30,
+     "xp": 33.2
+    }
+   ],
+   "inputs": [
+    {
+     "item": 60,
+     "name": "Willow shortbow (u)",
+     "quantity": 1
+    },
+    {
+     "item": 1777,
+     "name": "Bow string",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 2,
+   "overrides": [
+    "Fletching level 35 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 38,
+   "key": "Bow string",
+   "output": 1777,
+   "output_name": "Bow string",
+   "quantity": 1,
+   "station": "spin",
+   "canonical_row": 403,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 1,
+     "xp": 15.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1779,
+     "name": "Flax",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 10 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 39,
+   "key": "Leather body",
+   "output": 1129,
+   "output_name": "Leather body",
+   "quantity": 1,
+   "station": "needle",
+   "canonical_row": 302,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 1,
+     "xp": 25.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1741,
+     "name": "Leather",
+     "quantity": 1
+    },
+    {
+     "item": 1734,
+     "name": "Thread",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 1733,
+     "name": "Needle"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 14 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 40,
+   "key": "Leather chaps",
+   "output": 1095,
+   "output_name": "Leather chaps",
+   "quantity": 1,
+   "station": "needle",
+   "canonical_row": 726,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 1,
+     "xp": 27.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1741,
+     "name": "Leather",
+     "quantity": 1
+    },
+    {
+     "item": 1734,
+     "name": "Thread",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 1733,
+     "name": "Needle"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 18 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 41,
+   "key": "Leather cowl",
+   "output": 1167,
+   "output_name": "Leather cowl",
+   "quantity": 1,
+   "station": "needle",
+   "canonical_row": 371,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 1,
+     "xp": 18.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1741,
+     "name": "Leather",
+     "quantity": 1
+    },
+    {
+     "item": 1734,
+     "name": "Thread",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 1733,
+     "name": "Needle"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 9 -> 1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 42,
+   "key": "Hardleather body",
+   "output": 1131,
+   "output_name": "Hardleather body",
+   "quantity": 1,
+   "station": "needle",
+   "canonical_row": 691,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 15,
+     "xp": 35.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1743,
+     "name": "Hard leather",
+     "quantity": 1
+    },
+    {
+     "item": 1734,
+     "name": "Thread",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 1733,
+     "name": "Needle"
+    }
+   ],
+   "ticks": 2,
+   "overrides": [
+    "Crafting level 28 -> 15"
+   ],
+   "note": ""
+  },
+  {
+   "id": 43,
+   "key": "Studded body",
+   "output": 1133,
+   "output_name": "Studded body",
+   "quantity": 1,
+   "station": "combine",
+   "canonical_row": 570,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 30,
+     "xp": 40.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1129,
+     "name": "Leather body",
+     "quantity": 1
+    },
+    {
+     "item": 2370,
+     "name": "Steel studs",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 41 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 44,
+   "key": "Studded chaps",
+   "output": 1097,
+   "output_name": "Studded chaps",
+   "quantity": 1,
+   "station": "combine",
+   "canonical_row": 377,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 30,
+     "xp": 42.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1095,
+     "name": "Leather chaps",
+     "quantity": 1
+    },
+    {
+     "item": 2370,
+     "name": "Steel studs",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 3,
+   "overrides": [
+    "Crafting level 44 -> 30"
+   ],
+   "note": ""
+  },
+  {
+   "id": 45,
+   "key": "Air rune",
+   "output": 556,
+   "output_name": "Air rune",
+   "quantity": 1,
+   "station": "altar",
+   "canonical_row": 74,
+   "requirements": [
+    {
+     "skill": "Runecraft",
+     "level": 1,
+     "xp": 5.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 7936,
+     "name": "Pure essence",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "tools Air tiara, Air talisman -> none"
+   ],
+   "note": ""
+  },
+  {
+   "id": 46,
+   "key": "Water rune",
+   "output": 555,
+   "output_name": "Water rune",
+   "quantity": 1,
+   "station": "altar",
+   "canonical_row": 408,
+   "requirements": [
+    {
+     "skill": "Runecraft",
+     "level": 1,
+     "xp": 6.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 7936,
+     "name": "Pure essence",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "Runecraft level 5 -> 1",
+    "tools Water tiara, Water talisman -> none"
+   ],
+   "note": ""
+  },
+  {
+   "id": 47,
+   "key": "Mind rune",
+   "output": 558,
+   "output_name": "Mind rune",
+   "quantity": 1,
+   "station": "altar",
+   "canonical_row": 366,
+   "requirements": [
+    {
+     "skill": "Runecraft",
+     "level": 1,
+     "xp": 5.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 7936,
+     "name": "Pure essence",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "Runecraft level 2 -> 1",
+    "tools Mind tiara, Mind talisman -> none"
+   ],
+   "note": ""
+  },
+  {
+   "id": 48,
+   "key": "Chaos rune",
+   "output": 562,
+   "output_name": "Chaos rune",
+   "quantity": 1,
+   "station": "altar",
+   "canonical_row": 438,
+   "requirements": [
+    {
+     "skill": "Runecraft",
+     "level": 15,
+     "xp": 8.5
+    }
+   ],
+   "inputs": [
+    {
+     "item": 7936,
+     "name": "Pure essence",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "Runecraft level 35 -> 15",
+    "tools Chaos tiara, Chaos talisman -> none"
+   ],
+   "note": ""
+  },
+  {
+   "id": 49,
+   "key": "Death rune",
+   "output": 560,
+   "output_name": "Death rune",
+   "quantity": 1,
+   "station": "altar",
+   "canonical_row": 516,
+   "requirements": [
+    {
+     "skill": "Runecraft",
+     "level": 30,
+     "xp": 10.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 7936,
+     "name": "Pure essence",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "Runecraft level 65 -> 30",
+    "tools Death tiara, Death talisman -> none"
+   ],
+   "note": ""
+  },
+  {
+   "id": 50,
+   "key": "Shortbow (u)",
+   "output": 50,
+   "output_name": "Shortbow (u)",
+   "quantity": 1,
+   "station": "knife",
+   "canonical_row": -1,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 1,
+     "xp": 5.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1511,
+     "name": "Logs",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 946,
+     "name": "Knife"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "authored row (OSRS Wiki, Fletching: Shortbow (u), level 5, 5 XP)",
+    "Fletching level 5 -> 1"
+   ],
+   "note": "OSRS Wiki, Fletching: Shortbow (u), level 5, 5 XP"
+  },
+  {
+   "id": 51,
+   "key": "Willow shortbow (u)",
+   "output": 60,
+   "output_name": "Willow shortbow (u)",
+   "quantity": 1,
+   "station": "knife",
+   "canonical_row": -1,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 30,
+     "xp": 33.3
+    }
+   ],
+   "inputs": [
+    {
+     "item": 1519,
+     "name": "Willow logs",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 946,
+     "name": "Knife"
+    }
+   ],
+   "ticks": 3,
+   "overrides": [
+    "authored row (OSRS Wiki, Fletching: Willow shortbow (u), level 35, 33.3 XP)",
+    "Fletching level 35 -> 30"
+   ],
+   "note": "OSRS Wiki, Fletching: Willow shortbow (u), level 35, 33.3 XP"
+  },
+  {
+   "id": 52,
+   "key": "Bone mace",
+   "output": 28792,
+   "output_name": "Bone mace",
+   "quantity": 1,
+   "station": "anvil",
+   "canonical_row": 2891,
+   "requirements": [
+    {
+     "skill": "Smithing",
+     "level": 30,
+     "xp": 300.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 1428,
+     "name": "Mithril mace",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 2347,
+     "name": "Hammer"
+    }
+   ],
+   "ticks": 5,
+   "overrides": [
+    "Smithing level 35 -> 30",
+    "inputs Rune mace x1, Scurrius' spine x1 -> Scurrius' spine x1, Mithril mace x1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 53,
+   "key": "Bone shortbow",
+   "output": 28794,
+   "output_name": "Bone shortbow",
+   "quantity": 1,
+   "station": "knife",
+   "canonical_row": 2892,
+   "requirements": [
+    {
+     "skill": "Fletching",
+     "level": 30,
+     "xp": 300.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 849,
+     "name": "Willow shortbow",
+     "quantity": 1
+    }
+   ],
+   "tools": [
+    {
+     "item": 946,
+     "name": "Knife"
+    }
+   ],
+   "ticks": 0,
+   "overrides": [
+    "Fletching level 35 -> 30",
+    "inputs Yew shortbow x1, Scurrius' spine x1 -> Scurrius' spine x1, Willow shortbow x1"
+   ],
+   "note": ""
+  },
+  {
+   "id": 54,
+   "key": "Bone staff",
+   "output": 28796,
+   "output_name": "Bone staff",
+   "quantity": 1,
+   "station": "chisel",
+   "canonical_row": 2893,
+   "requirements": [
+    {
+     "skill": "Crafting",
+     "level": 30,
+     "xp": 300.0
+    }
+   ],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 1381,
+     "name": "Staff of air",
+     "quantity": 1
+    },
+    {
+     "item": 562,
+     "name": "Chaos rune",
+     "quantity": 100
+    }
+   ],
+   "tools": [
+    {
+     "item": 1755,
+     "name": "Chisel"
+    }
+   ],
+   "ticks": 0,
+   "overrides": [
+    "Crafting level 35 -> 30",
+    "inputs Battlestaff x1, Chaos rune x1000, Scurrius' spine x1 -> Scurrius' spine x1, Staff of air x1, Chaos rune x100"
+   ],
+   "note": ""
+  },
+  {
+   "id": 55,
+   "key": "tan Leather",
+   "output": 1741,
+   "output_name": "Leather",
+   "quantity": 1,
+   "station": "tanner",
+   "canonical_row": -1,
+   "requirements": [],
+   "inputs": [
+    {
+     "item": 1739,
+     "name": "Cowhide",
+     "quantity": 1
+    },
+    {
+     "item": 995,
+     "name": "Coins",
+     "quantity": 1
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "authored row (Ellis tans for 1 coins)"
+   ],
+   "note": "Ellis tans for 1 coins"
+  },
+  {
+   "id": 56,
+   "key": "tan Hard leather",
+   "output": 1743,
+   "output_name": "Hard leather",
+   "quantity": 1,
+   "station": "tanner",
+   "canonical_row": -1,
+   "requirements": [],
+   "inputs": [
+    {
+     "item": 1739,
+     "name": "Cowhide",
+     "quantity": 1
+    },
+    {
+     "item": 995,
+     "name": "Coins",
+     "quantity": 3
+    }
+   ],
+   "tools": [],
+   "ticks": 1,
+   "overrides": [
+    "authored row (Ellis tans for 3 coins)"
+   ],
+   "note": "Ellis tans for 3 coins"
+  },
+  {
+   "id": 57,
+   "key": "Aldo Bone mace",
+   "output": 28792,
+   "output_name": "Bone mace",
+   "quantity": 1,
+   "station": "aldo",
+   "canonical_row": -1,
+   "requirements": [],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 1428,
+     "name": "Mithril mace",
+     "quantity": 1
+    },
+    {
+     "item": 995,
+     "name": "Coins",
+     "quantity": 100
+    }
+   ],
+   "tools": [],
+   "ticks": 4,
+   "overrides": [
+    "authored row (paid service: 100 coins, no creation requirement or XP)"
+   ],
+   "note": "paid service: 100 coins, no creation requirement or XP"
+  },
+  {
+   "id": 58,
+   "key": "Aldo Bone shortbow",
+   "output": 28794,
+   "output_name": "Bone shortbow",
+   "quantity": 1,
+   "station": "aldo",
+   "canonical_row": -1,
+   "requirements": [],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 849,
+     "name": "Willow shortbow",
+     "quantity": 1
+    },
+    {
+     "item": 995,
+     "name": "Coins",
+     "quantity": 100
+    }
+   ],
+   "tools": [],
+   "ticks": 4,
+   "overrides": [
+    "authored row (paid service: 100 coins, no creation requirement or XP)"
+   ],
+   "note": "paid service: 100 coins, no creation requirement or XP"
+  },
+  {
+   "id": 59,
+   "key": "Aldo Bone staff",
+   "output": 28796,
+   "output_name": "Bone staff",
+   "quantity": 1,
+   "station": "aldo",
+   "canonical_row": -1,
+   "requirements": [],
+   "inputs": [
+    {
+     "item": 28798,
+     "name": "Scurrius' spine",
+     "quantity": 1
+    },
+    {
+     "item": 1381,
+     "name": "Staff of air",
+     "quantity": 1
+    },
+    {
+     "item": 562,
+     "name": "Chaos rune",
+     "quantity": 100
+    },
+    {
+     "item": 995,
+     "name": "Coins",
+     "quantity": 100
+    }
+   ],
+   "tools": [],
+   "ticks": 4,
+   "overrides": [
+    "authored row (paid service: 100 coins, no creation requirement or XP)"
+   ],
+   "note": "paid service: 100 coins, no creation requirement or XP"
+  }
+ ],
+ "services": {
+  "shop:General Store": {
+   "npc": 2813,
+   "kind": "shop",
+   "goods": [
+    {
+     "item": 2347,
+     "name": "Hammer",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 946,
+     "name": "Knife",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 1755,
+     "name": "Chisel",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 1733,
+     "name": "Needle",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 303,
+     "name": "Small fishing net",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 309,
+     "name": "Fly fishing rod",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 301,
+     "name": "Lobster pot",
+     "price": 1,
+     "stock": 16,
+     "restock": [
+      1,
+      10
+     ]
+    },
+    {
+     "item": 1734,
+     "name": "Thread",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 314,
+     "name": "Feather",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 1351,
+     "name": "Bronze axe",
+     "price": 10,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1353,
+     "name": "Steel axe",
+     "price": 50,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1355,
+     "name": "Mithril axe",
+     "price": 150,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1265,
+     "name": "Bronze pickaxe",
+     "price": 10,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1269,
+     "name": "Steel pickaxe",
+     "price": 50,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1273,
+     "name": "Mithril pickaxe",
+     "price": 150,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 1321,
+     "name": "Bronze scimitar",
+     "price": 30,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1325,
+     "name": "Steel scimitar",
+     "price": 150,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1329,
+     "name": "Mithril scimitar",
+     "price": 450,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1422,
+     "name": "Bronze mace",
+     "price": 30,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1424,
+     "name": "Steel mace",
+     "price": 150,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1428,
+     "name": "Mithril mace",
+     "price": 450,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1155,
+     "name": "Bronze full helm",
+     "price": 20,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1157,
+     "name": "Steel full helm",
+     "price": 100,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1159,
+     "name": "Mithril full helm",
+     "price": 300,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1117,
+     "name": "Bronze platebody",
+     "price": 60,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1119,
+     "name": "Steel platebody",
+     "price": 300,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1121,
+     "name": "Mithril platebody",
+     "price": 900,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1075,
+     "name": "Bronze platelegs",
+     "price": 40,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1069,
+     "name": "Steel platelegs",
+     "price": 200,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1071,
+     "name": "Mithril platelegs",
+     "price": 600,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1189,
+     "name": "Bronze kiteshield",
+     "price": 40,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1193,
+     "name": "Steel kiteshield",
+     "price": 200,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1197,
+     "name": "Mithril kiteshield",
+     "price": 600,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 841,
+     "name": "Shortbow",
+     "price": 30,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 843,
+     "name": "Oak shortbow",
+     "price": 150,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 849,
+     "name": "Willow shortbow",
+     "price": 450,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1129,
+     "name": "Leather body",
+     "price": 50,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1131,
+     "name": "Hardleather body",
+     "price": 200,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1133,
+     "name": "Studded body",
+     "price": 600,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1095,
+     "name": "Leather chaps",
+     "price": 40,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1097,
+     "name": "Studded chaps",
+     "price": 400,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 1167,
+     "name": "Leather cowl",
+     "price": 20,
+     "stock": 4,
+     "restock": [
+      1,
+      200
+     ]
+    },
+    {
+     "item": 882,
+     "name": "Bronze arrow",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 886,
+     "name": "Steel arrow",
+     "price": 2,
+     "stock": 300,
+     "restock": [
+      15,
+      20
+     ]
+    },
+    {
+     "item": 888,
+     "name": "Mithril arrow",
+     "price": 4,
+     "stock": 200,
+     "restock": [
+      10,
+      20
+     ]
+    },
+    {
+     "item": 315,
+     "name": "Shrimps",
+     "price": 3,
+     "stock": 50,
+     "restock": [
+      5,
+      30
+     ]
+    },
+    {
+     "item": 333,
+     "name": "Trout",
+     "price": 8,
+     "stock": 30,
+     "restock": [
+      3,
+      30
+     ]
+    },
+    {
+     "item": 379,
+     "name": "Lobster",
+     "price": 20,
+     "stock": 20,
+     "restock": [
+      2,
+      30
+     ]
+    },
+    {
+     "item": 2434,
+     "name": "Prayer potion(4)",
+     "price": 240,
+     "stock": 8,
+     "restock": [
+      1,
+      160
+     ]
+    }
+   ]
+  },
+  "shop:Aubury's Rune Shop": {
+   "npc": 11434,
+   "kind": "shop",
+   "goods": [
+    {
+     "item": 556,
+     "name": "Air rune",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 555,
+     "name": "Water rune",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 558,
+     "name": "Mind rune",
+     "price": 1,
+     "stock": 500,
+     "restock": [
+      25,
+      20
+     ]
+    },
+    {
+     "item": 562,
+     "name": "Chaos rune",
+     "price": 4,
+     "stock": 200,
+     "restock": [
+      10,
+      20
+     ]
+    },
+    {
+     "item": 560,
+     "name": "Death rune",
+     "price": 8,
+     "stock": 100,
+     "restock": [
+      5,
+      20
+     ]
+    },
+    {
+     "item": 1381,
+     "name": "Staff of air",
+     "price": 150,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 579,
+     "name": "Blue wizard hat",
+     "price": 50,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    },
+    {
+     "item": 577,
+     "name": "Blue wizard robe",
+     "price": 100,
+     "stock": 8,
+     "restock": [
+      1,
+      100
+     ]
+    }
+   ]
+  },
+  "tanner": {
+   "npc": 3231,
+   "kind": "tanner",
+   "rows": [
+    [
+     "Cowhide",
+     "Leather",
+     1
+    ],
+    [
+     "Cowhide",
+     "Hard leather",
+     3
+    ]
+   ]
+  },
+  "aldo": {
+   "npc": 7615,
+   "kind": "bone weapons",
+   "fee": 100
+  }
+ }
+}

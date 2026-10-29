@@ -24,6 +24,7 @@ int rc_content_register_all(struct RcWorld *world) {
     ok &= rc_content_storage_register(world);
     ok &= rc_content_skilling_register(world);
     ok &= rc_content_gym_register(world);
+    ok &= rc_content_compact_register(world);
 
     // ---- Encounters -------------------------------------------------
     ok &= rc_content_vorkath_register(world);

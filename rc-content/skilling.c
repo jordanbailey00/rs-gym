@@ -9,6 +9,7 @@
 #include "config.h"
 #include "interaction.h"
 #include "items.h"
+#include "mode.h"
 #include "npc.h"
 #include "skilling.h"
 #include "skills.h"
@@ -244,6 +245,7 @@ static int handle(RcWorld *world, RcInteractionKind kind, RcInteractionOp op,
 
 int rc_content_skilling_register(RcWorld *world) {
     if (!world) return 0;
+    if (rc_mode_active()) return 1;  // a gym mode brings its own rules (compact.c)
     if (!(world->enabled & RC_SUB_SKILLS)) return 1;
     rc_skilling_install(world, &rules);
     add_make_options(world);
