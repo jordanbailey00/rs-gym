@@ -14,7 +14,8 @@
 static uint16_t *fields[RC_GYM_MAX_LANDMARKS];
 static int field_x, field_y, field_w, field_h;
 static pthread_once_t fields_once = PTHREAD_ONCE_INIT;
-static const RcEnv *build_env;
+static const RcGymLayout *build_layout;
+static const RcWorldMap *build_map;
 
 static const int dirs[8][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}, {1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
 
@@ -55,21 +56,23 @@ static void build_field(const RcWorldMap *map, const RcGymLandmark *lm, uint16_t
 }
 
 static void build_fields(void) {
-    const RcEnv *env = build_env;
-    field_x = env->layout.min_rx * 64;
-    field_y = env->layout.min_ry * 64;
-    field_w = (env->layout.max_rx - env->layout.min_rx + 1) * 64;
-    field_h = (env->layout.max_ry - env->layout.min_ry + 1) * 64;
+    const RcGymLayout *layout = build_layout;
+    field_x = layout->min_rx * 64;
+    field_y = layout->min_ry * 64;
+    field_w = (layout->max_rx - layout->min_rx + 1) * 64;
+    field_h = (layout->max_ry - layout->min_ry + 1) * 64;
     int *queue = malloc((size_t)field_w * field_h * sizeof(*queue));
-    for (int i = 0; queue && i < env->layout.landmark_count; i++) {
+    for (int i = 0; queue && i < layout->landmark_count; i++) {
         fields[i] = malloc((size_t)field_w * field_h * sizeof(uint16_t));
-        if (fields[i]) build_field(&env->world->map, &env->layout.landmarks[i], fields[i], queue);
+        if (fields[i]) build_field(build_map, &layout->landmarks[i], fields[i], queue);
     }
     free(queue);
 }
 
-void rc_env_build_travel(const RcEnv *env) {
-    build_env = env;
+// The process's layout and loaded map (one mode per process, like its game data).
+void rc_env_build_travel(const RcGymLayout *layout, const RcWorldMap *map) {
+    build_layout = layout;
+    build_map = map;
     pthread_once(&fields_once, build_fields);
 }
 

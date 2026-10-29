@@ -404,7 +404,7 @@ RcEnv *rc_env_create(const RcEnvConfig *cfg) {
     }
     rc_env_reset(env, cfg->seed);
     freeze_shared_caches(env);
-    rc_env_build_travel(env);
+    rc_env_build_travel(&env->layout, &env->world->map);
     if (!rc_env_index_objects(env)) {
         rc_env_destroy(env);
         return NULL;

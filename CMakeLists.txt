@@ -58,7 +58,7 @@ foreach(GYM_TEST test_gym_world test_gym_multiplayer test_gym_skilling test_gym_
 endforeach()
 
 # Scripted controllers (rc-env/script.c) driving the compact mode through player commands.
-foreach(SCRIPT_TEST test_compact_economy test_compact_boss)
+foreach(SCRIPT_TEST test_compact_economy test_compact_boss test_compact_env)
     add_executable(${SCRIPT_TEST} tests/${SCRIPT_TEST}.c)
     target_link_libraries(${SCRIPT_TEST} rc-env)
     add_test(NAME ${SCRIPT_TEST} COMMAND ${SCRIPT_TEST})
@@ -86,6 +86,11 @@ target_include_directories(test_puffer_binding PRIVATE tests/puffer_stub rc-env/
 target_link_libraries(test_puffer_binding rc-env)
 add_test(NAME test_puffer_binding COMMAND test_puffer_binding)
 set_tests_properties(test_puffer_binding PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} SKIP_RETURN_CODE 77)
+add_executable(test_puffer_compact tests/test_puffer_compact.c rc-env/puffer/compact/binding.c)
+target_include_directories(test_puffer_compact PRIVATE tests/puffer_stub rc-env/puffer/compact)
+target_link_libraries(test_puffer_compact rc-env)
+add_test(NAME test_puffer_compact COMMAND test_puffer_compact)
+set_tests_properties(test_puffer_compact PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} SKIP_RETURN_CODE 77)
 
 # Built by tools/puffer_overlay.sh: one position-independent archive for a PufferLib
 # checkout's trainer, compiled against its pufferenv.h.
@@ -97,4 +102,11 @@ if(RS_GYM_PUFFERLIB)
     set_target_properties(rs_gym_puffer PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_include_directories(rs_gym_puffer PRIVATE rc-core rc-content rc-env rc-env/puffer
         ${RS_GYM_PUFFERLIB}/src ${RS_GYM_PUFFERLIB}/vendor ${RS_GYM_RAYLIB_INCLUDE})
+    # The compact mode's env (schema compact-v2) as PufferLib env "rs_gym_compact".
+    add_library(rs_gym_compact_puffer STATIC ${RC_CORE_SOURCES} ${RC_CONTENT_SOURCES}
+        ${RC_ENV_SOURCES} rc-env/puffer/compact/binding.c)
+    set_target_properties(rs_gym_compact_puffer PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_include_directories(rs_gym_compact_puffer PRIVATE rc-core rc-content rc-env
+        rc-env/puffer/compact ${RS_GYM_PUFFERLIB}/src ${RS_GYM_PUFFERLIB}/vendor
+        ${RS_GYM_RAYLIB_INCLUDE})
 endif()

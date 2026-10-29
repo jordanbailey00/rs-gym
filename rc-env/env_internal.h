@@ -87,7 +87,7 @@ struct RcEnv {
 };
 
 // rc-env/travel.c
-void rc_env_build_travel(const RcEnv *env);
+void rc_env_build_travel(const RcGymLayout *layout, const RcWorldMap *map);
 int rc_env_travel_distance(int landmark, int x, int y, int plane);  // -1: unreachable
 int rc_env_travel_waypoint(const RcWorldMap *map, int landmark, int x, int y,
                            int plane, int max_steps, int *wx, int *wy);

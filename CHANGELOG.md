@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-10-29: compact-v2 RL interface (Stage 5, in progress)
+
+**What.** `rc-env/compact_env.h` is the mode's RL interface, schema `compact-v2`: per-agent
+observations of own state, a 25x25 window (tiles, NPCs, locs, ground items, players, brick
+shadows, incoming hits by style), open interfaces only (bank, shop, menu, trade), and optional
+public-map landmark bearings; one flat masked action space (1,215 actions) with distinct Wait and
+Stop; profiles free play, solo boss, development and cooperative boss with sparse +1 rewards and
+termination kept apart from truncation; per-agent metrics and an event log; snapshots
+(`rc-core/snapshot.c`), canonical state hashes, replays, and a PufferLib 5.0 binding
+(`rc-env/puffer/compact`, env `rs_gym_compact`).
+
+**Why.** Stage 5 of the v1 roadmap.
+
+**Checked.** `tests/test_compact_env.c`: finite observations and no masked actions under random
+play; identical hashes for identical seeds and actions; a restored snapshot reproduces the
+uninterrupted run; Wait keeps a walk and Stop ends it; unseen changes (another player's items and
+bank, shop stock, the RNG) leave an agent's observation and mask unchanged; masked and
+out-of-range actions fail safely; replays reproduce the final state; the solo boss profile
+terminates with +1 (boss HP lowered as test setup). `tests/test_puffer_compact.c` runs the binding
+against the stand-in header. PufferLib 5.0 has one done buffer, so the binding sets it at either
+end and the observation and logs keep terminated and truncated apart.
+
 ## 2026-10-29: trading, loot ownership and contention (Stage 4)
 
 **What.** Players can trade directly (`rc-core/trade.c`), NPC drop ownership breaks ties with the
