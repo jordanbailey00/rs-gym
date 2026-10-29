@@ -1453,6 +1453,7 @@ static void bank_expiring_item(RcWorld *world, RcGroundItem *g) {
         g->version = g->version == INT_MAX ? 1 : g->version + 1;
     } else {
         g->despawn_timer = 2;  // advanced to 1 below: retried next tick
+        if (g->reveal_timer > 0) g->reveal_timer = 3;  // and still private meanwhile
     }
 }
 

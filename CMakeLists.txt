@@ -80,6 +80,13 @@ add_executable(rs-gym-validate rc-env/tools/validate.c)
 target_link_libraries(rs-gym-validate rc-env)
 add_executable(rs-gym-acceptance rc-env/tools/acceptance.c)
 target_link_libraries(rs-gym-acceptance rc-env)
+# The acceptance runs at a small size (two seeds per route; the full report uses five).
+add_test(NAME acceptance COMMAND rs-gym-acceptance routes --seeds 2)
+add_test(NAME acceptance_shared COMMAND rs-gym-acceptance coop)
+add_test(NAME acceptance_contention COMMAND rs-gym-acceptance contention)
+add_test(NAME acceptance_economy COMMAND rs-gym-acceptance economy)
+set_tests_properties(acceptance acceptance_shared acceptance_contention acceptance_economy PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} SKIP_RETURN_CODE 77)
 
 # PufferLib 5.0 binding: rs_gym_puffer bundles rc-env with puf_* for a PufferLib checkout
 # (tools/puffer_overlay.sh); the test builds it against a stand-in pufferenv.h.

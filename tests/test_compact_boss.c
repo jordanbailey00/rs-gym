@@ -6,7 +6,8 @@
 //   - an abandoned fight resets after 50 ticks with nobody inside;
 //   - bone weapons: the rat bonus, the staff's charges (made with 100, one per cast, charged and
 //     uncharged with chaos runes);
-//   - death: carried and worn items wait privately, then move to the bank when they expire.
+//   - death: carried and worn items wait privately, then move to the bank when they expire; with a
+//     full bank they stay on the ground, still private, and bank as soon as a slot frees.
 #include "../rc-core/api.h"
 #include "../rc-core/items.h"
 #include "../rc-core/mode.h"
@@ -259,6 +260,32 @@ static void check_death_recovery(RcWorld *w) {
           banked - bank_scimitars, left);
 }
 
+static void check_full_bank_expiry(RcWorld *w) {
+    fighter(w, 4, 0);
+    RcPlayer *p = w->player;
+    // Test setup: a bank with every slot taken by other items.
+    for (int i = 0; i < RC_BANK_SIZE; i++) p->bank[i] = (RcInvSlot){.item_id = 4000 + i, .quantity = 1};
+    int x = p->x, y = p->y;
+    p->current_hp = 0;
+    rc_world_tick(w);
+    CHECK(p->is_dead, "player 4 did not die");
+    for (int t = 0; t < 1520; t++) rc_world_tick(w);
+    int waiting = 0, private_ = 1;
+    for (int i = 0; i < w->ground_item_count; i++) {
+        const RcGroundItem *g = &w->ground_items[i];
+        waiting += g->active && g->bank_on_expiry && g->x == x && g->y == y && (g->owner_uid == 4 || g->original_owner_uid == 4);
+        if (g->active && g->bank_on_expiry && g->x == x && g->y == y) private_ &= g->owner_uid == 4;
+    }
+    CHECK(waiting >= 5, "full bank: %d recovery items still waiting (expected the worn mithril)", waiting);
+    CHECK(private_, "full bank: waiting recovery items became visible to other players");
+    p->bank[0] = (RcInvSlot){.item_id = -1};  // a slot frees
+    rc_world_tick(w);
+    rc_world_tick(w);
+    int banked = 0;
+    for (int i = 0; i < RC_BANK_SIZE; i++) banked += p->bank[i].item_id >= 0 && p->bank[i].item_id < 4000;
+    CHECK(banked == 1, "one freed slot banked %d recovery items", banked);
+}
+
 int main(void) {
     if (!gym_mode_built("compact_osrs_v1")) {
         fprintf(stderr, "mode not built; run tools/build_mode.py compact_osrs_v1\n");
@@ -279,6 +306,7 @@ int main(void) {
     check_scaling_and_reset(w);
     check_bone_weapons(w);
     check_death_recovery(w);
+    check_full_bank_expiry(w);
     rc_world_destroy(w);
     if (failures) return 1;
     printf("compact boss: PASS\n");
