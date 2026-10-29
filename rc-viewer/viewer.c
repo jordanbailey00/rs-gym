@@ -4374,8 +4374,15 @@ static int skilling_anim(const RcWorld *world, const RcPlayer *p) {
     case RC_SKILL_JOB_COOK:
         return job->target == (int)world->skilling->fire_obj_id ? 897 : 896;
     case RC_SKILL_JOB_MAKE:
-        return world->make_options[job->rule].facility == RC_MAKE_MENU_FURNACE
-            ? 899 : 898;
+        switch (world->make_options[job->rule].facility) {
+        case RC_MAKE_MENU_FURNACE: return 899;
+        case RC_MAKE_MENU_ANVIL:   return 898;
+        case RC_MAKE_MENU_KNIFE:   return 1248;  // fletching with a knife
+        case RC_MAKE_MENU_SPIN:    return 894;
+        case RC_MAKE_MENU_NEEDLE:  return 1249;
+        case RC_MAKE_MENU_ALTAR:   return 791;   // binding runes
+        default:                   return -1;
+        }
     default: return -1;
     }
 }
@@ -4391,17 +4398,33 @@ static void viewer_sync_skilling(ViewerState *v) {
     menu->open = p->make_menu != RC_MAKE_MENU_NONE;
     menu->count = 0;
     if (!menu->open) return;
-    snprintf(menu->title, sizeof(menu->title), "%s",
-             p->make_menu == RC_MAKE_MENU_FURNACE
-                 ? "What would you like to smelt? (right-click: one)"
-                 : "What would you like to make? (right-click: one)");
+    static const char *const titles[RC_MAKE_MENU_COUNT] = {
+        [RC_MAKE_MENU_FURNACE] = "What would you like to smelt?",
+        [RC_MAKE_MENU_ANVIL] = "What would you like to smith?",
+        [RC_MAKE_MENU_KNIFE] = "What would you like to fletch?",
+        [RC_MAKE_MENU_SPIN] = "What would you like to spin?",
+        [RC_MAKE_MENU_NEEDLE] = "What would you like to craft?",
+        [RC_MAKE_MENU_CHISEL] = "What would you like to craft?",
+        [RC_MAKE_MENU_TANNER] = "Ellis: which leather would you like?",
+        [RC_MAKE_MENU_ALDO] = "Historian Aldo: which bone weapon?",
+    };
+    const char *title = p->make_menu < RC_MAKE_MENU_COUNT && titles[p->make_menu]
+                      ? titles[p->make_menu] : "What would you like to make?";
+    snprintf(menu->title, sizeof(menu->title), "%s (right-click: one)", title);
     for (int i = 0; i < v->world->make_option_count
             && menu->count < RUNEC_UI_MAKE_MAX; i++) {
         if (!rc_skilling_make_option_ready(v->world, i)) continue;
         const RcRecipe *recipe = rc_recipe_get(v->world->make_options[i].recipe);
+        const RcItemDef *out = recipe ? rc_item_def_get((int)recipe->output_item) : NULL;
+        int fee = 0;
+        for (int k = 0; recipe && k < recipe->input_count; k++)
+            if (recipe->inputs[k].item_id == 995) fee = recipe->inputs[k].quantity;
+        char extra[32] = "";
+        if (recipe && recipe->output_qty > 1) snprintf(extra, sizeof(extra), " x%u", recipe->output_qty);
+        else if (fee) snprintf(extra, sizeof(extra), " (%d coins)", fee);
         menu->option[menu->count] = i;
-        snprintf(menu->label[menu->count], sizeof(menu->label[0]), "%s",
-                 recipe ? recipe->name : "?");
+        snprintf(menu->label[menu->count], sizeof(menu->label[0]), "%.40s%s",
+                 out ? out->name : recipe ? recipe->name : "?", extra);
         menu->count++;
     }
 }

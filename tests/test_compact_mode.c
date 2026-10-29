@@ -12,6 +12,7 @@
 #include "../rc-core/skills.h"
 #include "../rc-core/spells.h"
 #include "../rc-core/storage.h"
+#include "../rc-content/combat/magic.h"
 #include "../rc-content/content.h"
 #include "gym_test_config.h"
 
@@ -54,6 +55,32 @@ static int option_named(const RcWorld *w, int obj, int x, int y, const char *lab
                 && !strcmp(rc_world_object_option_label(w, obj, x, y, 0, 0, op), label))
             return op;
     return -1;
+}
+
+// Wind Strike against a skeleton (50% air weakness) gains half its base max hit and half again its
+// attack roll; against a goblin it is the plain mode spell.
+static void check_weakness(RcWorld *w) {
+    int wind = -1;
+    for (int i = 0; i < RC_MAX_SPELL_DEFS && wind < 0; i++) {
+        const RcSpellDef *s = rc_spell_def_get(i);
+        if (s && s->loaded && !strcmp(s->name, "Wind Strike")) wind = i;
+    }
+    const RcNpc *skeleton = nearest_npc(w, 70, 0, 0), *goblin = nearest_npc(w, 3029, 0, 0);
+    CHECK(wind >= 0 && skeleton && goblin, "no Wind Strike, skeleton or goblin");
+    if (wind < 0 || !skeleton || !goblin) return;
+    RcPlayer *p = w->player;
+    p->manual_spell_cast = wind;
+    RcCombatCalc weak = {0}, plain = {0};
+    int speed = 5;
+    const char *why = NULL;
+    CHECK(rc_content_prepare_magic(w, skeleton, rc_spell_def_get(wind), &weak, &speed, &why)
+          && rc_content_prepare_magic(w, goblin, rc_spell_def_get(wind), &plain, &speed, &why),
+          "Wind Strike could not be prepared: %s", why ? why : "?");
+    CHECK(plain.max_hit == 4 && weak.max_hit == 6, "Wind Strike max hit %d (goblin), %d (skeleton)",
+          plain.max_hit, weak.max_hit);
+    CHECK(weak.attack_roll == plain.attack_roll * 3 / 2, "weakness accuracy %d vs %d",
+          weak.attack_roll, plain.attack_roll);
+    p->manual_spell_cast = -1;
 }
 
 static void check_rules(const RcModeRules *m) {
@@ -210,6 +237,7 @@ int main(void) {
     }
     rc_world_select_player(w, 0);
     check_kit_and_xp(w);
+    check_weakness(w);
     check_shop(w);
     rc_world_select_player(w, 1);
     check_chicken(w);

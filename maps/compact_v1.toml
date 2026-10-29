@@ -6,7 +6,7 @@
 [map]
 name = "compact_v1"
 seed = 7
-start = [66, 52]
+start = [34, 54]
 
 [[area]]
 name = "surface"
@@ -45,128 +45,132 @@ water_depths = [[2, "shallow"], [4, "water_mid"], [8, "water_deep"], [999, "ocea
 
 # Quarry and outer-area ground.
 [[paint]]
-rect = [78, 84, 96, 102]
+rect = [58, 66, 76, 82]
 material = "dirt"
 alt = "grass"
 
 [[paint]]
-rect = [94, 88, 116, 114]
+rect = [96, 70, 116, 96]
 material = "dirt"
 alt = "grass_alt"
 
-# A river from an inland spring west to the coast, between the farm and the willows.
+# A river from an inland spring west to the coast, north of the town.
 [[river]]
-points = [[42, 104], [30, 98], [16, 92], [0, 90]]
+points = [[70, 110], [50, 106], [30, 102], [0, 97]]
 width = 5
 material = "river"
 
-# Paths: the town street, then out to every region.
+# Paths: the town street east to the outer area and dungeon, and out to every region.
 [[path]]
-points = [[14, 52], [100, 52]]
+points = [[14, 56], [112, 56]]
 width = 3
 
 [[path]]
-points = [[66, 14], [66, 100]]
+points = [[40, 18], [40, 102]]
 width = 3
 
 [[path]]
-points = [[66, 78], [86, 92], [104, 104]]
+points = [[40, 86], [66, 96]]
 width = 2
 
 [[path]]
-points = [[66, 26], [88, 22]]
+points = [[56, 56], [66, 74]]
 width = 2
 
 [[path]]
-points = [[86, 52], [102, 42]]
+points = [[90, 56], [106, 82]]
 width = 2
 
 [[path]]
-points = [[34, 52], [24, 32]]
+points = [[40, 30], [66, 24], [80, 22]]
 width = 2
 
-# ---- Town -----------------------------------------------------------------------------------------
+[[path]]
+points = [[30, 56], [18, 48]]
+width = 2
+
+# ---- Town (west) ---------------------------------------------------------------------------------
 
 [[stamp]]
 name = "Draynor bank"
 source = [3086, 3236]
 size = [14, 13]
-at = [58, 56]
+at = [26, 58]
 
 [[stamp]]
-name = "Lumbridge general store"   # shopkeeper, Aubury
+name = "Lumbridge general store"   # shopkeeper
 source = [3206, 3240]
 size = [11, 14]
-at = [42, 58]
+at = [26, 74]
 rotation = 1
 
 [[stamp]]
-name = "Lumbridge smithy"          # furnace and anvil
+name = "Lumbridge smithy"          # furnace and anvil, north-east of the bank's door
 source = [3219, 3248]
 size = [13, 13]
-at = [74, 56]
+at = [40, 70]
 rotation = 3
 
 [[stamp]]
-name = "Lumbridge church"          # prayer altar
+name = "Lumbridge church"          # prayer altar, west of the bank, door facing it
 source = [3237, 3203]
 size = [13, 14]
-at = [40, 34]
+at = [12, 58]
+rotation = 2
+drop_ids = [1540, 1521, 1524]      # closed doors: the town's services stay open
 
-[[stamp]]
-name = "Varrock house"             # kitchen range
-source = [3147, 3426]
-size = [19, 17]
-at = [58, 30]
+[[loc]]
+id = 7183                          # Range, beside the bank
+at = [42, 64]
 
 [[loc]]
 id = 14889                         # Spinning wheel
-at = [56, 54]
+at = [21, 74]
 
 [[loc]]
 id = 884                           # Well (the town's water source)
-at = [62, 47]
+at = [36, 52]
 
 # ---- Rune sites: pure essence and five altars, spread so travel and inventory space set the cost.
 
 [[loc]]
 id = 34773                         # Rune Essence (5x5)
-at = [84, 16]
+at = [60, 28]
 
 [[loc]]
 id = 34773
-at = [92, 22]
+at = [68, 34]
 
 [[loc]]
 id = 34760                         # Air altar
-at = [64, 10]
+at = [52, 16]
 
 [[loc]]
 id = 34762                         # Water altar
-at = [22, 28]
+at = [16, 48]
 
 [[loc]]
 id = 34761                         # Mind altar
-at = [104, 38]
+at = [80, 22]
 
 [[loc]]
-id = 34769                         # Chaos altar
-at = [112, 66]
+id = 34769                         # Chaos altar, on the way east
+at = [104, 44]
 
 [[loc]]
-id = 34770                         # Death altar
-at = [110, 112]
+id = 34770                         # Death altar, by the outer area
+at = [106, 64]
 
-# ---- Dungeon entrance -----------------------------------------------------------------------------
+# ---- Dungeon entrance (east) ----------------------------------------------------------------------
 
 [[loc]]
 id = 14880                         # Trapdoor (Climb-down)
-at = [96, 56]
+at = [100, 58]
 type = 22
 
 [[link]]
 loc = 14880
-at = [96, 56]
+at = [100, 58]
 option = "Climb-down"
 to_area = "dungeon"
 to = [26, 32]
@@ -193,17 +197,17 @@ area = "dungeon"
 at = [26, 33]
 option = "Climb-up"
 to_area = "surface"
-to = [96, 55]
+to = [100, 57]
 
 [[loc]]
-id = 16511                         # Obstacle pipe by the cave's east wall
+id = 16511                         # Obstacle pipe at the cave's far (south-west) end
 area = "dungeon"
-at = [33, 26]
+at = [14, 11]
 
 [[link]]
 loc = 16511
 area = "dungeon"
-at = [33, 26]
+at = [14, 11]
 option = "Squeeze-through"
 to = [33, 51]
 
@@ -217,7 +221,7 @@ loc = 16511
 area = "dungeon"
 at = [32, 55]
 option = "Squeeze-through"
-to = [32, 25]
+to = [14, 12]
 
 [[link]]
 loc = 14203                        # Broken bars into the arena
@@ -253,71 +257,71 @@ planes = [0]
 
 [[scatter]]
 ids = [1276, 1278]                 # Tree
-rect = [40, 78, 58, 92]
+rect = [42, 88, 56, 100]
 count = 8
 spacing = 1
 
 [[scatter]]
 ids = [10820]                      # Oak tree
-rect = [60, 82, 76, 96]
+rect = [58, 90, 70, 102]
 count = 6
 spacing = 1
 
 [[loc]]
 id = 10829                         # Willow trees by the river
-at = [30, 102]
+at = [28, 98]
 
 [[loc]]
 id = 10831
-at = [36, 105]
+at = [36, 100]
 
 [[loc]]
 id = 10833                         # ... and in the outer area
-at = [96, 108]
+at = [100, 78]
 
 [[loc]]
 id = 10829
-at = [100, 111]
+at = [104, 90]
 
 [[scatter]]
 ids = [10943, 11161]               # Copper rocks
-rect = [78, 86, 94, 100]
+rect = [60, 68, 74, 80]
 count = 4
 spacing = 0
 
 [[scatter]]
 ids = [11360, 11361]               # Tin rocks
-rect = [78, 86, 94, 100]
+rect = [60, 68, 74, 80]
 count = 4
 spacing = 0
 
 [[scatter]]
 ids = [11364, 11365]               # Iron rocks
-rect = [78, 86, 94, 100]
+rect = [60, 68, 74, 80]
 count = 4
 spacing = 0
 
 [[scatter]]
 ids = [11366, 11367]               # Coal rocks: two in the quarry ...
-rect = [78, 86, 94, 100]
+rect = [60, 68, 74, 80]
 count = 2
 spacing = 0
 
 [[scatter]]
 ids = [11366, 11367]               # ... four in the outer area
-rect = [96, 90, 110, 100]
+rect = [98, 84, 108, 92]
 count = 4
 spacing = 0
 
 [[scatter]]
 ids = [11372, 11373]               # Mithril rocks
-rect = [100, 100, 114, 110]
+rect = [102, 72, 112, 84]
 count = 4
 spacing = 0
 
 [[scatter]]
 ids = [14896]                      # Flax
-rect = [14, 68, 24, 80]
+rect = [24, 30, 34, 38]
 count = 8
 spacing = 0
 
@@ -325,59 +329,59 @@ spacing = 0
 
 [[npc]]
 ids = [2813]                       # Shop keeper (general store)
-at = [48, 63]
+at = [32, 79]
 
 [[npc]]
 ids = [11434]                      # Aubury (runes, staff, wizard clothing)
-at = [50, 56]
+at = [24, 78]
 
 [[npc]]
 ids = [3231]                       # Ellis (tanner)
-at = [72, 54]
+at = [43, 55]
 
 [[npc]]
 ids = [7615]                       # Historian Aldo, by the dungeon entrance
-at = [98, 54]
+at = [102, 56]
 
 [[npc]]
 ids = [1173]                       # Chicken
-rect = [26, 66, 38, 76]
+rect = [36, 22, 46, 30]
 count = 8
 
 [[npc]]
 ids = [2790]                       # Cow
-rect = [12, 50, 30, 64]
+rect = [50, 18, 64, 28]
 count = 6
 
 [[npc]]
 ids = [1525]                       # Fishing spot: small net (shrimps)
-rect = [0, 40, 20, 70]
+rect = [4, 20, 30, 42]
 placement = "shore"
 wander = 0
 count = 3
 
 [[npc]]
 ids = [1526]                       # Rod fishing spot: lure (trout)
-rect = [14, 86, 40, 106]
+rect = [20, 96, 56, 110]
 placement = "shore"
 wander = 0
 count = 2
 
 [[npc]]
 ids = [1519]                       # Fishing spot: cage (lobster)
-rect = [108, 60, 128, 92]
+rect = [112, 48, 128, 80]
 placement = "shore"
 wander = 0
 count = 2
 
 [[npc]]
 ids = [70]                         # Skeleton: two on the outer-resource route
-rect = [92, 86, 116, 112]
+rect = [94, 70, 112, 94]
 count = 2
 
 [[npc]]
 ids = [2098]                       # Hill Giant: two on the outer-resource route
-rect = [92, 86, 116, 112]
+rect = [94, 70, 112, 94]
 count = 2
 
 [[npc]]
@@ -420,91 +424,95 @@ wander = 0
 
 [[landmark]]
 name = "start"
-at = [66, 52]
+at = [34, 54]
 
 [[landmark]]
 name = "bank"
-at = [65, 57]
+at = [32, 65]
 
 [[landmark]]
 name = "general_store"
-at = [48, 62]
+at = [32, 78]
 
 [[landmark]]
 name = "ellis"
-at = [72, 53]
+at = [43, 54]
 
 [[landmark]]
 name = "smithy"
-at = [79, 60]
+at = [45, 75]
 
 [[landmark]]
 name = "range"
-at = [72, 32]
+at = [41, 64]
 
 [[landmark]]
 name = "spinning_wheel"
-at = [56, 53]
+at = [22, 73]
 
 [[landmark]]
 name = "church"
-at = [46, 40]
+at = [20, 66]
 
 [[landmark]]
 name = "chickens"
-at = [32, 71]
+at = [41, 26]
 
 [[landmark]]
 name = "cows"
-at = [21, 57]
+at = [57, 23]
 
 [[landmark]]
 name = "flax"
-at = [19, 74]
+at = [29, 34]
 
 [[landmark]]
 name = "trees"
-at = [49, 85]
+at = [49, 94]
 
 [[landmark]]
 name = "oaks"
-at = [68, 89]
+at = [64, 96]
 
 [[landmark]]
 name = "quarry"
-at = [86, 93]
+at = [67, 74]
 
 [[landmark]]
 name = "outer_area"
-at = [104, 102]
+at = [104, 82]
+
+[[landmark]]
+name = "lobster"
+at = [114, 64]
 
 [[landmark]]
 name = "essence"
-at = [86, 21]
+at = [64, 26]
 
 [[landmark]]
 name = "air_altar"
-at = [65, 14]
+at = [53, 20]
 
 [[landmark]]
 name = "water_altar"
-at = [23, 32]
+at = [19, 51]
 
 [[landmark]]
 name = "mind_altar"
-at = [105, 42]
+at = [81, 26]
 
 [[landmark]]
 name = "chaos_altar"
-at = [111, 70]
+at = [105, 48]
 
 [[landmark]]
 name = "death_altar"
-at = [111, 110]
+at = [107, 68]
 
 [[landmark]]
 name = "dungeon_entrance"
-at = [96, 55]
+at = [100, 57]
 
 [[landmark]]
 name = "lair_bars"

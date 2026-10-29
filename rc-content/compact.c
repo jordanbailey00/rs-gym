@@ -10,6 +10,7 @@
 #include "items.h"
 #include "mode.h"
 #include "npc.h"
+#include "objects.h"
 #include "rng.h"
 #include "shops.h"
 #include "skilling.h"
@@ -182,16 +183,28 @@ static int register_item_pairs(RcWorld *world, const RcModeRules *m) {
     return ok;
 }
 
+// A loc's option is its cache action slot: the handler goes on the slot that carries the label.
+static int register_loc_option(RcWorld *world, int loc, const char *label,
+                               RcInteractionHandlerFn fn, void *ctx) {
+    const RcObjectDef *def = rc_object_def_get(loc);
+    for (int o = 0; def && o < RC_OBJECT_ACTIONS; o++)
+        if (!strcmp(def->actions[o], label))
+            return handle(world, RC_INTERACTION_OBJECT, rc_interaction_op_from_option(o), loc,
+                          RC_INTERACTION_KEY_ANY, fn, ctx);
+    return 0;
+}
+
 static int register_stations(RcWorld *world, const RcModeRules *m) {
+    static const char *const labels[RC_MAKE_MENU_COUNT] = {
+        [RC_MAKE_MENU_FURNACE] = "Smelt", [RC_MAKE_MENU_ANVIL] = "Smith",
+        [RC_MAKE_MENU_SPIN] = "Spin", [RC_MAKE_MENU_ALTAR] = "Craft-rune",
+    };
     int ok = 1;
     for (int i = 0; i < m->station_count; i++) {
         void *ctx = (void *)(intptr_t)m->stations[i].station;
         int loc = m->stations[i].loc;
-        // Furnaces smelt on their second option; anvils and spinning wheels on the first.
-        RcInteractionOp op = m->stations[i].station == RC_MAKE_MENU_FURNACE
-                           ? RC_INTERACTION_OP2 : RC_INTERACTION_OP1;
-        ok &= handle(world, RC_INTERACTION_OBJECT, op, loc, RC_INTERACTION_KEY_ANY,
-                     station_handler, ctx);
+        const char *label = labels[m->stations[i].station];
+        ok &= label && register_loc_option(world, loc, label, station_handler, ctx);
         ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_USE_ON, loc,
                      RC_INTERACTION_KEY_ANY, station_handler, ctx);
     }
@@ -199,8 +212,7 @@ static int register_stations(RcWorld *world, const RcModeRules *m) {
         const RcModeRecipe *x = &m->recipes[i];
         if (x->station != RC_MAKE_MENU_ALTAR || !x->loc) continue;
         void *ctx = (void *)(intptr_t)RC_MAKE_MENU_ALTAR;
-        ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_OP1, x->loc,
-                     RC_INTERACTION_KEY_ANY, station_handler, ctx);
+        ok &= register_loc_option(world, x->loc, "Craft-rune", station_handler, ctx);
         ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_USE_ON, x->loc,
                      RC_INTERACTION_KEY_ANY, station_handler, ctx);
     }
@@ -341,16 +353,16 @@ int rc_content_compact_register(RcWorld *world) {
                          (int)m->fish[i].npc_id, RC_INTERACTION_KEY_ANY, fish_handler,
                          (void *)&m->fish[i]);
         for (int i = 0; i < m->cook_object_count; i++) {
-            ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_OP1, (int)m->cook_objects[i],
-                         RC_INTERACTION_KEY_ANY, cook_handler, NULL);
+            ok &= register_loc_option(world, (int)m->cook_objects[i], "Cook", cook_handler, NULL);
             ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_USE_ON, (int)m->cook_objects[i],
                          RC_INTERACTION_KEY_ANY, cook_handler, NULL);
         }
         // Hand-picked and never-depleting nodes have no resource behaviour of their own.
         for (int i = 0; i < m->gather_count; i++)
             if ((m->gather[i].flags & RC_GATHER_NO_TOOL) || !m->gather[i].deplete_one_in)
-                ok &= handle(world, RC_INTERACTION_OBJECT, RC_INTERACTION_OP1, (int)m->gather[i].obj_id,
-                             RC_INTERACTION_KEY_ANY, gather_handler, NULL);
+                ok &= register_loc_option(world, (int)m->gather[i].obj_id,
+                                          m->gather[i].flags & RC_GATHER_NO_TOOL ? "Pick" : "Mine",
+                                          gather_handler, NULL);
         ok &= register_stations(world, m);
         ok &= register_item_pairs(world, m);
         if (m->tanner_npc)

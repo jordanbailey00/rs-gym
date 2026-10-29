@@ -17,6 +17,8 @@
 #include "../../rc-core/prayer.h"
 #include "../../rc-core/skills.h"
 #include "../../rc-core/spells.h"
+#include "../../rc-core/traversal.h"
+#include "../../rc-core/pathfinding.h"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -259,6 +261,101 @@ static void check_world(const RcModeRules *m, const RcGymLayout *layout, const R
     note("world: %d NPCs spawned", active);
 }
 
+// ---- Walking distances ----------------------------------------------------------------------------
+// Breadth-first walking steps (one tile per tick, diagonals included) over the mode's loaded area,
+// crossing object links (ladders, trapdoors, pipes, bars) from any tile within two of the loc.
+
+typedef struct {
+    int x0, y0, w, h;
+    int *dist;
+} Field;
+
+static int field_index(const Field *f, int x, int y) {
+    return x < f->x0 || y < f->y0 || x >= f->x0 + f->w || y >= f->y0 + f->h ? -1
+         : (y - f->y0) * f->w + (x - f->x0);
+}
+
+static void walk_field(const RcWorld *w, Field *f, int sx, int sy) {
+    int n = f->w * f->h, *queue = malloc((size_t)n * sizeof(int)), head = 0, tail = 0;
+    for (int i = 0; i < n; i++) f->dist[i] = -1;
+    int s = field_index(f, sx, sy);
+    if (s < 0 || !queue) {
+        free(queue);
+        return;
+    }
+    f->dist[s] = 0;
+    queue[tail++] = s;
+    int edge_count = 0;
+    const RcTraversalEdge *edges = rc_traversal_edges_all(&edge_count);
+    while (head < tail) {
+        int cur = queue[head++], x = f->x0 + cur % f->w, y = f->y0 + cur / f->w;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if ((!dx && !dy) || !rc_can_move(&w->map, x, y, dx, dy, 0)) continue;
+                int next = field_index(f, x + dx, y + dy);
+                if (next < 0 || f->dist[next] >= 0) continue;
+                f->dist[next] = f->dist[cur] + 1;
+                queue[tail++] = next;
+            }
+        }
+        for (int e = 0; edges && e < edge_count; e++) {
+            const RcTraversalEdge *edge = &edges[e];
+            if (edge->start_plane || edge->dest_plane || abs(edge->start_x - x) > 2
+                    || abs(edge->start_y - y) > 2)
+                continue;
+            int next = field_index(f, edge->dest_x, edge->dest_y);
+            if (next < 0 || f->dist[next] >= 0) continue;
+            f->dist[next] = f->dist[cur] + 2;  // the interaction and the climb
+            queue[tail++] = next;
+        }
+    }
+    free(queue);
+}
+
+static void check_distances(const RcGymLayout *layout, const RcWorld *w) {
+    static const struct { const char *names; int lo, hi; const char *what; } groups[] = {
+        {"general_store ellis smithy range spinning_wheel church", 10, 25, "town services"},
+        {"chickens cows flax trees oaks quarry", 25, 60, "basic resources"},
+        {"outer_area lobster chaos_altar death_altar scurrius", 70, 140, "advanced resources and boss"},
+        {"essence air_altar water_altar mind_altar", 0, 1 << 30, "rune sites"},
+    };
+    Field f = {layout->min_rx * 64, layout->min_ry * 64, (layout->max_rx - layout->min_rx + 1) * 64,
+               (layout->max_ry - layout->min_ry + 1) * 64, NULL};
+    f.dist = malloc((size_t)f.w * f.h * sizeof(int));
+    const RcGymLandmark *bank = NULL;
+    for (int i = 0; i < layout->landmark_count; i++)
+        if (!strcmp(layout->landmarks[i].name, "bank")) bank = &layout->landmarks[i];
+    if (!f.dist || !bank) {
+        free(f.dist);
+        CHECK(0, "no bank landmark to measure distances from");
+        return;
+    }
+    walk_field(w, &f, bank->x, bank->y);
+    for (int g = 0; g < (int)(sizeof(groups) / sizeof(groups[0])); g++) {
+        for (int i = 0; i < layout->landmark_count; i++) {
+            const RcGymLandmark *lm = &layout->landmarks[i];
+            char key[32];
+            snprintf(key, sizeof(key), "%s", lm->name);
+            const char *hit = strstr(groups[g].names, key);
+            size_t len = strlen(key);
+            if (!hit || (hit[len] && hit[len] != ' ') || (hit != groups[g].names && hit[-1] != ' '))
+                continue;
+            int best = -1;  // the nearest reachable tile within two of the landmark
+            for (int dx = -2; dx <= 2; dx++)
+                for (int dy = -2; dy <= 2; dy++) {
+                    int k = field_index(&f, lm->x + dx, lm->y + dy);
+                    if (k >= 0 && f.dist[k] >= 0 && (best < 0 || f.dist[k] < best)) best = f.dist[k];
+                }
+            CHECK(best >= 0, "%s is unreachable from the bank", lm->name);
+            int in = best >= groups[g].lo && best <= groups[g].hi;
+            note("distance: bank -> %-16s %4d ticks walking (%s target %d-%d)%s", lm->name, best,
+                 groups[g].what, groups[g].lo, groups[g].hi < 1 << 29 ? groups[g].hi : 0,
+                 in ? "" : "  OUTSIDE TARGET");
+        }
+    }
+    free(f.dist);
+}
+
 // ---- Ledger ---------------------------------------------------------------------------------------
 
 static void json_string(FILE *f, const char *s) {
@@ -472,6 +569,7 @@ int main(int argc, char **argv) {
     check_magic_prayer(m);
     check_ammunition(m);
     check_world(m, &layout, w);
+    check_distances(&layout, w);
     snprintf(path, sizeof(path), "modes/%s/override-ledger.json", layout.mode);
     const RcModeLedger *ledger = rc_mode_active_ledger();
     write_ledger(path, m, ledger);

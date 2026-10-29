@@ -6,6 +6,7 @@
 #include "prayer.h"
 #include "ralos.h"
 #include "ammunition.h"
+#include "mode.h"
 #include "rng.h"
 #include <string.h>
 
@@ -151,17 +152,17 @@ int rc_content_prepare_magic(RcWorld *world, const RcNpc *target,
             return 0;
         }
         max_hit = spell->max_hit;
-        // Elemental spells scale to the strongest unlocked element in their tier.
-        const char *tiers[] = {"Strike", "Bolt", "Blast", "Wave", "Surge"};
-        const int levels[][4] = {{1,5,9,13}, {17,23,29,35}, {41,47,53,59},
-                                {62,65,70,75}, {81,85,90,95}};
-        const int hits[][4] = {{2,4,6,8}, {9,10,11,12}, {13,14,15,16},
-                              {17,18,19,20}, {21,22,23,24}};
-        if (!strncmp(spell->name, "Wind ", 5) || !strncmp(spell->name, "Water ", 6) ||
-                !strncmp(spell->name, "Earth ", 6) || !strncmp(spell->name, "Fire ", 5)) {
+        // Elemental spells scale to the strongest element of their tier the caster has unlocked,
+        // read from the spell table (a mode's whitelist and levels included).
+        if (rc_spell_element(spell->name)) {
             const char *tier = strchr(spell->name, ' ') + 1;
-            for (int i = 0; i < 5; i++) if (!strcmp(tier, tiers[i]))
-                for (int j = 0; j < 4; j++) if (level >= levels[i][j]) max_hit = hits[i][j];
+            for (int i = 0; i < RC_MAX_SPELL_DEFS; i++) {
+                const RcSpellDef *s = rc_spell_def_get(i);
+                if (!s || !s->loaded || s->book != spell->book || level < s->level
+                        || !rc_spell_element(s->name) || strcmp(strchr(s->name, ' ') + 1, tier))
+                    continue;
+                if (s->max_hit > max_hit) max_hit = s->max_hit;
+            }
         }
         if (!strcmp(spell->name, "Magic Dart")) {
             if (!weapon || (!strstr(weapon->name, "Slayer") &&
@@ -207,6 +208,15 @@ int rc_content_prepare_magic(RcWorld *world, const RcNpc *target,
         *speed = staff->speed;
     }
     *calc = rc_calc_magic(p, target, max_hit);
+    // Elemental weakness: a matching spell gains the weakness percent in accuracy and that share of
+    // its base max hit in damage.
+    const RcNpcDef *target_def = spell ? rc_npc_def_for_npc(world, target) : NULL;
+    if (target_def && target_def->weakness_pct
+            && target_def->weakness_element == rc_spell_element(spell->name)) {
+        calc->attack_roll += calc->attack_roll * target_def->weakness_pct / 100;
+        calc->hit_chance = rc_hit_chance(calc->attack_roll, calc->defence_roll);
+        calc->max_hit += max_hit * target_def->weakness_pct / 100;
+    }
     const RcInvSlot *shield = &p->equipment[EQUIP_SHIELD];
     if (spell && shield->quantity > 0 && shield->state_id > 0 &&
         ((shield->item_id == 20714 && !strncmp(spell->name, "Fire ", 5)) ||

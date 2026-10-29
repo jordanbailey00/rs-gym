@@ -8,7 +8,7 @@
 #include "config.h"
 
 #define RC_GYM_DEFAULT_MODE "compact_osrs_v1"
-#define RC_GYM_MAX_LANDMARKS 24
+#define RC_GYM_MAX_LANDMARKS 32
 #define RC_GYM_PATH_LEN 320
 
 typedef struct {

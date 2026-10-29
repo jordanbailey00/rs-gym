@@ -57,6 +57,13 @@ foreach(GYM_TEST test_gym_world test_gym_multiplayer test_gym_skilling test_gym_
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} SKIP_RETURN_CODE 77)
 endforeach()
 
+# Scripted controllers (rc-env/script.c) driving the compact mode through player commands.
+add_executable(test_compact_economy tests/test_compact_economy.c)
+target_link_libraries(test_compact_economy rc-env)
+add_test(NAME test_compact_economy COMMAND test_compact_economy)
+set_tests_properties(test_compact_economy PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    SKIP_RETURN_CODE 77)
+
 add_executable(test_env tests/test_env.c)
 target_link_libraries(test_env rc-env)
 add_test(NAME test_env COMMAND test_env)

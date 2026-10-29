@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-10-29: compact_osrs_v1 playable economy (Stage 2)
+
+**What.** Every production chain of the mode works through real player interactions, checked by
+scripted controllers; elemental weakness and within-tier spell scaling apply in combat; the viewer
+labels the new production menus; the reference map meets the spec's walking-distance targets.
+
+**Why.** Stage 2 of the v1 roadmap: a character must be able to gather, process, equip, fight, earn
+coins, buy supplies and return to town, and all three combat styles' supply chains must work before
+the boss goes in.
+
+**Details.**
+- `rc-env/script.c`: scripted controllers. Each agent's plan is plain blocking C over player
+  commands (walk, use locs and items, bank, shop, make, gather, fish, fight, pick up, bury); agents
+  run as coroutines (`ucontext`) over one world, stepping in index order each tick. Plans may know
+  the map but never write game state. Stage 6's acceptance runs build on it.
+- `tests/test_compact_economy.c`: one fresh character makes every band-1 product starting from the
+  bank (mine, smelt, smith arrowtips, chop, fletch shafts and a bow, pick flax, spin, string, kill a
+  cow, tan, sew, cook, bury, net, mine essence, bind runes, sell and buy) in about 900 ticks, while
+  a second character with level 30 and seeded materials (test setup) makes every band-15 and band-30
+  product, all three bone weapons, and uses Historian Aldo's service (100 coins, no XP). XP gains
+  match the ×8 multiplier.
+- Combat: within-tier elemental scaling reads the (patched) spell table instead of a fixed table,
+  so the mode's Strike/Bolt/Blast stay at 4/10/14; a spell matching an NPC's elemental weakness gains
+  the weakness percent in accuracy and that share of its base max hit.
+- Loc handlers register on the cache action slot that carries their label (flax's Pick is slot 1).
+- Map: the town sits on the west side around the bank's north door (store, wheel, range, church,
+  smithy, Ellis within 11-22 ticks); basic resources are 28-53 ticks away; the outer area, lobster
+  coast, chaos and death altars 74-84; Scurrius 97 through the dungeon, whose pipe moved to the
+  cave's far end. `rs-gym-validate` measures these paths (breadth-first, across links) and reports
+  any outside the targets. Closed doors were removed from the town stamps; the house stamp gave way
+  to a standalone range. Landmarks allow 32.
+
 ## 2026-10-29: compact_osrs_v1 mode, rules pipeline and reference map (Stage 1)
 
 **What.** The `compact_osrs_v1` mode exists end to end: configuration in `modes/compact_osrs_v1/`,

@@ -90,3 +90,9 @@ PufferLib env is one world with `num_agents` players; rewards are clamped to [âˆ
 autoreset in the step that ends them; `perf` is the task score over a per-task target. Hook it into a
 checkout with `tools/puffer_overlay.sh /path/to/PufferLib` and set `RUNEC_DATA_ROOT` to RS-gym's
 `data/`. `puf_render` is a no-op: record episodes and replay them in rc-viewer.
+
+## Scripted controllers
+
+`script.h` runs agent plans as coroutines over one world: each plan is blocking C that acts only
+through player commands (walk, interact, bank, shop, make, gather, fish, fight, pick up, bury) and
+waits on the world clock. `tests/test_compact_economy.c` uses it to drive every production chain.

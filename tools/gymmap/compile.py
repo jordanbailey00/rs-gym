@@ -625,7 +625,7 @@ def compile_gym(spec_path: Path, source_cache: Path, source_edges_path: Path | N
                 if l.x >> 6 == rx and l.y >> 6 == ry]
         mapsquares[(rx, ry)] = (encode_terrain(tiles), encode_locs(locs))
     landmarks = [(lm["name"], *_at(lm, areas)) for lm in spec.get("landmark", [])]
-    if len(landmarks) > 24:  # RC_GYM_MAX_LANDMARKS
+    if len(landmarks) > 32:  # RC_GYM_MAX_LANDMARKS
         raise SystemExit(f"{len(landmarks)} landmarks: the engine keeps at most 24")
     return Gym(m["name"], mapsquares, areas, start, respawn, npc_spawns, ground_items, edges, zones,
                landmarks)

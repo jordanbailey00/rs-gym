@@ -2,16 +2,6 @@
 
 v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
 
-## Stage 2: playable economy
-- Apply elemental weakness (accuracy and damage) and within-tier spell scaling over the mode's
-  spells in combat; give the mode's NPC defence profiles their matchups.
-- Viewer: menus for the new stations (knife, combine, spinning wheel, needle, chisel, altars,
-  tanner, Aldo) and the fixed-price shop values.
-- Scripted checks that each chain works through real interactions: smelting and smithing,
-  fletching (shafts, headless arrows, arrows, bows), spinning, tanning and leather, runecraft,
-  fishing and cooking, burying, shops buying and selling.
-- Measure walking distances on the map against the spec's targets; adjust placements.
-
 ## Stage 3: encounter and recovery
 - Scurrius: attack styles and cues, falling rocks, rat minions, feeding, group scaling,
   participants, loot rotation, reset and respawn.
