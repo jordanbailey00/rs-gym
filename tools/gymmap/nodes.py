@@ -64,7 +64,13 @@ def _placements(path: Path):
     return struct.iter_unpack("<IQHHHBBBB", data[base:base + rows * record])
 
 
-def write_gathering_nodes(placements: Path, behaviors: Path, out: Path) -> int:
+def write_gathering_nodes(placements: Path, behaviors: Path, out: Path,
+                          respawn: dict[int, int] | None = None,
+                          depleted: dict[int, int] | None = None) -> int:
+    """Node rows for every placed tree and rock. A mode passes its own respawn times (and may
+    leave a resource out of `respawn` to keep it out of the table)."""
+    respawn = RESPAWN_TICKS if respawn is None else respawn
+    depleted = DEPLETED if depleted is None else depleted
     resources = _behaviors(behaviors)
     rows = []
     for obj, key, x, y, mapsquare, plane, loc_type, rotation, _flags in _placements(placements):
@@ -73,10 +79,10 @@ def write_gathering_nodes(placements: Path, behaviors: Path, out: Path) -> int:
         flags, mask, skill = resources[obj]
         if skill not in (SKILL_WOODCUTTING, SKILL_MINING):
             continue
-        if obj not in RESPAWN_TICKS:
-            raise SystemExit(f"gathering node {obj} at {x},{y} has no respawn time; add it to RESPAWN_TICKS")
-        rows.append((obj, key, DEPLETED.get(obj, -1), x, y, mapsquare, plane, skill, mask, loc_type,
-                     rotation, flags, RESPAWN_TICKS[obj], 0))
+        if obj not in respawn:
+            raise SystemExit(f"gathering node {obj} at {x},{y} has no respawn time")
+        rows.append((obj, key, depleted.get(obj, -1), x, y, mapsquare, plane, skill, mask, loc_type,
+                     rotation, flags, respawn[obj], 0))
     rows.sort(key=lambda r: (r[5], r[3], r[4], r[6], r[0]))  # rows of one mapsquare stay contiguous
     body = b"".join(struct.pack("<IQiHHHBBBBBBHH", *r) for r in rows)
     out.write_bytes(struct.pack("<III", GNOD_MAGIC, 2, len(rows)) + body)

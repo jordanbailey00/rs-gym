@@ -267,7 +267,7 @@ def write_report(
         "Object placement gameplay index",
         "",
         "status: READY_WITH_ACCEPTED_SIMPLIFICATIONS",
-        f"output binary: data/regions/world.object-placements.indexed.bin ({OUT.stat().st_size} bytes)",
+        f"output binary: {OUT} ({OUT.stat().st_size} bytes)",
         f"cache source: {display_path(cache_dir)}",
         "OpenRS2 layout reference: https://archive.openrs2.org/api",
         f"elapsed_ms: {elapsed_ms:.2f}",
@@ -316,9 +316,12 @@ def write_report(
 
 
 def main() -> int:
+    global OUT
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", type=Path, default=CACHE_DIR)
+    ap.add_argument("--output", type=Path, default=OUT)
     args = ap.parse_args()
+    OUT = args.output
     cache_dir = require_cache_dir(args.cache)
 
     start = time.perf_counter()

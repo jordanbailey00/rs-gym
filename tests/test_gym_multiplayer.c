@@ -1,4 +1,4 @@
-// Several players in one gym world (run tools/build_gym.py first): independent movement,
+// Several players in one gym world (run tools/build_mode.py island first): independent movement,
 // inventories and banks; NPCs fight the player who attacked them; loot belongs to the killer.
 #include "../rc-core/api.h"
 #include "../rc-core/config.h"
@@ -45,12 +45,11 @@ static const RcNpc *find_npc(const RcWorld *w, int id_a, int id_b) {
 }
 
 int main(void) {
-    struct stat st;
-    if (stat("data/regions/mapsquare.catalog", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (!gym_mode_built("island")) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_test_config(2);
+    RcWorldConfig cfg = gym_test_config_mode("island", 2);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");

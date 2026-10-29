@@ -1,4 +1,4 @@
-// Gym skilling end to end (run tools/build_gym.py first): chop a tree to a stump, mine a rock
+// Gym skilling end to end (run tools/build_mode.py island first): chop a tree to a stump, mine a rock
 // empty, net fish, light a fire and cook on it, smelt a bar and smith it.
 #include "../rc-core/api.h"
 #include "../rc-core/config.h"
@@ -199,12 +199,11 @@ static void smelting_and_smithing(RcWorld *w) {
 }
 
 int main(void) {
-    struct stat st;
-    if (stat("data/regions/mapsquare.catalog", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (!gym_mode_built("island")) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_test_config(1);
+    RcWorldConfig cfg = gym_test_config_mode("island", 1);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");

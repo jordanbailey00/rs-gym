@@ -1,4 +1,4 @@
-// Headless checks on the built gym (run tools/build_gym.py first): the world loads,
+// Headless checks on the built gym (run tools/build_mode.py island first): the world loads,
 // the player starts on the island, the sea blocks movement, NPCs spawn and the bank opens.
 #include "../rc-core/api.h"
 #include "../rc-core/config.h"
@@ -32,12 +32,11 @@ static int bank_option(const RcWorld *w, int x, int y) {
 }
 
 int main(void) {
-    struct stat st;
-    if (stat("data/regions/mapsquare.catalog", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (!gym_mode_built("island")) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_test_config(1);
+    RcWorldConfig cfg = gym_test_config_mode("island", 1);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");

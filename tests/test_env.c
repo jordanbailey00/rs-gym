@@ -1,4 +1,4 @@
-// rc-env (run tools/build_gym.py first): masked random rollouts stay valid and finite, episodes
+// rc-env (run tools/build_mode.py island first): masked random rollouts stay valid and finite, episodes
 // replay exactly from a seed, a scripted woodcutter earns reward, multi-agent episodes end
 // together, and death ends a boss episode.
 #include "../rc-core/types.h"
@@ -74,7 +74,7 @@ static uint64_t rollout(RcEnv *env, uint32_t seed, int steps, int *invalid, int 
 }
 
 static void random_play_and_determinism(void) {
-    RcEnvConfig cfg = {.num_agents = 2, .task = RC_TASK_TOTAL, .seed = 11};
+    RcEnvConfig cfg = {.mode = "island", .num_agents = 2, .task = RC_TASK_TOTAL, .seed = 11};
     RcEnv *a = rc_env_create(&cfg), *b = rc_env_create(&cfg);
     CHECK(a && b, "env creation");
     if (!a || !b) return;
@@ -101,7 +101,7 @@ static int nearest_object_of_kind(const float *o, int kind) {
 }
 
 static void scripted_woodcutter(void) {
-    RcEnvConfig cfg = {.num_agents = 1, .task = RC_TASK_WOODCUTTING, .seed = 3};
+    RcEnvConfig cfg = {.mode = "island", .num_agents = 1, .task = RC_TASK_WOODCUTTING, .seed = 3};
     RcEnv *env = rc_env_create(&cfg);
     CHECK(env != NULL, "env creation");
     if (!env) return;
@@ -128,7 +128,7 @@ static void scripted_woodcutter(void) {
 }
 
 static void multi_agent_episode(void) {
-    RcEnvConfig cfg = {.num_agents = 4, .task = RC_TASK_TOTAL, .episode_ticks = 200, .seed = 9};
+    RcEnvConfig cfg = {.mode = "island", .num_agents = 4, .task = RC_TASK_TOTAL, .episode_ticks = 200, .seed = 9};
     RcEnv *env = rc_env_create(&cfg);
     CHECK(env != NULL, "env creation");
     if (!env) return;
@@ -154,7 +154,7 @@ static void multi_agent_episode(void) {
 }
 
 static void boss_death_ends_episode(void) {
-    RcEnvConfig cfg = {.num_agents = 1, .task = RC_TASK_KBD, .seed = 1};
+    RcEnvConfig cfg = {.mode = "island", .num_agents = 1, .task = RC_TASK_KBD, .seed = 1};
     RcEnv *env = rc_env_create(&cfg);
     CHECK(env != NULL, "env creation");
     if (!env) return;
@@ -186,7 +186,7 @@ static void record_and_replay(void) {
     const char *tmp = getenv("RS_GYM_TEST_TMP");  // ctest: the build directory
     if (!tmp || !tmp[0]) tmp = getenv("TMPDIR");
     snprintf(path, sizeof(path), "%s/test_env.rgr", tmp && tmp[0] ? tmp : "/tmp");
-    RcEnvConfig cfg = {.num_agents = 3, .task = RC_TASK_TOTAL, .seed = 21, .record_path = path};
+    RcEnvConfig cfg = {.mode = "island", .num_agents = 3, .task = RC_TASK_TOTAL, .seed = 21, .record_path = path};
     RcEnv *env = rc_env_create(&cfg);
     CHECK(env != NULL, "env creation");
     if (!env) return;
@@ -212,7 +212,7 @@ static void record_and_replay(void) {
     CHECK(f && header.num_agents == 3 && header.seed == 1234 && header.ticks == 400,
           "replay header: agents %d seed %u ticks %u", header.num_agents, header.seed, header.ticks);
     if (!f) return;
-    RcEnvConfig replay_cfg = {.num_agents = header.num_agents, .task = header.task,
+    RcEnvConfig replay_cfg = {.mode = header.mode, .num_agents = header.num_agents, .task = header.task,
                               .episode_ticks = header.episode_ticks, .seed = header.seed};
     RcEnv *replay = rc_env_create(&replay_cfg);
     const RcWorld *rw = rc_env_world(replay);
@@ -232,8 +232,8 @@ static void record_and_replay(void) {
 
 int main(void) {
     struct stat st;
-    if (stat("data/regions/gym.cfg", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (stat("data/modes/island/gym.cfg", &st) != 0) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
     printf("obs %d floats, %d actions\n", RC_ENV_OBS_SIZE, RC_ENV_NUM_ACTIONS);

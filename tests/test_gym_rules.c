@@ -1,4 +1,4 @@
-// Gym shops and death rules (run tools/build_gym.py first): prices follow stock, stock is shared
+// Gym shops and death rules (run tools/build_mode.py island first): prices follow stock, stock is shared
 // and restocks; on death players keep 3 items (4 with Protect Item), the rest go to an owner-only
 // gravestone, or to the floor for everyone in the wilderness, and they respawn in town.
 #include "../rc-core/api.h"
@@ -208,12 +208,11 @@ static void burying(RcWorld *w) {
 }
 
 int main(void) {
-    struct stat st;
-    if (stat("data/regions/mapsquare.catalog", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (!gym_mode_built("island")) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_test_config(2);
+    RcWorldConfig cfg = gym_test_config_mode("island", 2);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");

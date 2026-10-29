@@ -1,0 +1,8 @@
+# The first v1 draft, kept as its own mode: the 192x192 island and dungeon with the King Black
+# Dragon, the Chaos Elemental, a wilderness strip and Firemaking. Its content rules are rc-content's
+# built-in island tables (rc-content/skilling.c, rc-content/gym.c); it has no mode rules file.
+[mode]
+name = "island"
+version = 1
+map = "maps/island.toml"
+max_players = 16

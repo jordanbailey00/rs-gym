@@ -103,6 +103,7 @@ typedef struct {
     const char *area_flags_path;     // RC_SUB_REGIONS: area_flags.bin
     const char *traversal_edges_path; // RC_SUB_TRAVERSAL: traversal_edges.bin
     const char *encounters_path;     // RC_SUB_ENCOUNTER: encounters.bin
+    const char *mode_rules_path;     // a gym mode's rules (rc-core/mode.h), or NULL
 } RcWorldConfig;
 
 RcWorldStreamingConfig rc_world_streaming_config_default(void);

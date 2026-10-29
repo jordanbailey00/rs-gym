@@ -3,14 +3,30 @@
 #include "assets.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-int rc_gym_layout_load(const char *path, RcGymLayout *out) {
-    if (!path || !out) return 0;
+const char *rc_gym_mode_name(const char *mode) {
+    if (mode && mode[0]) return mode;
+    const char *env = getenv("RS_GYM_MODE");
+    return env && env[0] ? env : RC_GYM_DEFAULT_MODE;
+}
+
+static void mode_path(char *out, const RcGymLayout *layout, const char *rel) {
+    snprintf(out, RC_GYM_PATH_LEN, "%.200s/%.100s", layout->dir, rel);
+}
+
+int rc_gym_layout_load_mode(const char *mode, RcGymLayout *out) {
+    if (!out) return 0;
     memset(out, 0, sizeof(*out));
+    mode = rc_gym_mode_name(mode);
+    snprintf(out->mode, sizeof(out->mode), "%s", mode);
+    snprintf(out->dir, sizeof(out->dir), "data/modes/%.63s", mode);
+    char path[RC_GYM_PATH_LEN];
+    mode_path(path, out, "gym.cfg");
     FILE *f = rc_asset_fopen(path, "r");
     if (!f) {
-        fprintf(stderr, "gym layout: cannot open %s (run tools/build_gym.py)\n", path);
+        fprintf(stderr, "gym layout: cannot open %s (run tools/build_mode.py %s)\n", path, mode);
         return 0;
     }
     char line[256];
@@ -32,6 +48,18 @@ int rc_gym_layout_load(const char *path, RcGymLayout *out) {
         fprintf(stderr, "gym layout: %s is missing name/start/respawn/area\n", path);
         return 0;
     }
+    mode_path(out->placements, out, "regions/world.object-placements.indexed.bin");
+    mode_path(out->collision, out, "regions/world.collision-tiles.indexed.bin");
+    mode_path(out->npc_spawns, out, "spawns/world.npc-spawns.indexed.bin");
+    mode_path(out->ground_items, out, "spawns/world.ground-items.indexed.bin");
+    mode_path(out->area_flags, out, "defs/area_flags.bin");
+    mode_path(out->traversal, out, "defs/traversal_edges.bin");
+    mode_path(out->nodes, out, "defs/gathering_nodes.bin");
+    mode_path(out->drops, out, "defs/drops.bin");
+    mode_path(out->rules, out, "mode.rules");
+    mode_path(out->regions, out, "regions");
+    mode_path(out->spawn_objects, out, "models/spawn_objects.models");
+    out->has_rules = rc_asset_exists(out->rules);
     return 1;
 }
 
@@ -56,7 +84,7 @@ RcWorldConfig rc_gym_world_config(const RcGymLayout *layout, int players) {
                    | RC_SUB_ENCOUNTER | RC_SUB_CONSUMABLES | RC_SUB_SKILLS;
     cfg.npc_defs_path = "data/defs/npc_defs.bin";
     cfg.items_path = "data/defs/items.bin";
-    cfg.drops_path = "data/defs/drops.bin";
+    cfg.drops_path = layout ? layout->drops : "data/defs/drops.bin";
     cfg.rdt_path = "data/defs/rdt.bin";
     cfg.gdt_path = "data/defs/gdt.bin";
     cfg.mrdt_path = "data/defs/mrdt.bin";
@@ -73,16 +101,17 @@ RcWorldConfig rc_gym_world_config(const RcGymLayout *layout, int players) {
     cfg.encounters_path = "data/defs/encounters.bin";
     cfg.player_actions_path = "data/defs/player_actions.bin";
     cfg.object_defs_path = "data/defs/object_defs.bin";
-    cfg.object_placements_path = "data/regions/world.object-placements.indexed.bin";
+    cfg.object_placements_path = layout ? layout->placements : NULL;
     cfg.object_behaviors_path = "data/defs/object_behaviors.bin";
-    cfg.collision_tiles_path = "data/regions/world.collision-tiles.indexed.bin";
-    cfg.spawns_path = "data/spawns/world.npc-spawns.indexed.bin";
-    cfg.ground_item_spawns_path = "data/spawns/world.ground-items.indexed.bin";
-    cfg.area_flags_path = "data/defs/area_flags.bin";
-    cfg.traversal_edges_path = "data/defs/traversal_edges.bin";
+    cfg.collision_tiles_path = layout ? layout->collision : NULL;
+    cfg.spawns_path = layout ? layout->npc_spawns : NULL;
+    cfg.ground_item_spawns_path = layout ? layout->ground_items : NULL;
+    cfg.area_flags_path = layout ? layout->area_flags : NULL;
+    cfg.traversal_edges_path = layout ? layout->traversal : NULL;
     cfg.recipes_path = "data/defs/recipes.bin";
     cfg.skill_drops_path = "data/defs/skill_drops.bin";
-    cfg.gathering_nodes_path = "data/defs/gathering_nodes.bin";
+    cfg.gathering_nodes_path = layout ? layout->nodes : NULL;
+    cfg.mode_rules_path = layout && layout->has_rules ? layout->rules : NULL;
     cfg.seed = 12345;
     cfg.player_count = players;
     if (layout) rc_gym_layout_apply(layout, &cfg);

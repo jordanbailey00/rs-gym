@@ -118,6 +118,7 @@ int rc_env_task_find(const char *name);
 
 // ---- Environment --------------------------------------------------------------
 typedef struct {
+    const char *mode;   // gym mode (data/modes/<mode>); NULL: $RS_GYM_MODE or the default
     int num_agents;     // players in the world, 1-16
     int task;           // RcTaskId
     int episode_ticks;  // 0: the task's default
@@ -172,6 +173,7 @@ void rc_env_give_task_kit(struct RcWorld *world, int task);
 // per tick. rc_env_replay_open reads the header and returns the file at the
 // first tick, or NULL.
 typedef struct {
+    char mode[64];
     int num_agents, task, episode_ticks;
     uint32_t seed, ticks;
 } RcReplayHeader;

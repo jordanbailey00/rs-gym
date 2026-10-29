@@ -705,7 +705,7 @@ static ViewerWorldTransform g_world_transform = {
 };
 #define g_world_origin_x (g_world_transform.origin_x)
 #define g_world_origin_y (g_world_transform.origin_y)
-static RcGymLayout g_gym_layout;  // start, respawn and pinned area from data/regions/gym.cfg
+static RcGymLayout g_gym_layout;  // the mode's data: start, respawn, pinned area, paths
 static int g_player_start_x;
 static int g_player_start_y;
 static int g_player_start_plane;
@@ -5448,10 +5448,11 @@ static void draw_animated_objects(ViewerState *v, int scene_plane,
 }
 
 static void load_spawn_objects(ViewerState *v) {
-    const char *models_path = env_path("RUNEC_SPAWN_OBJECT_MODELS",
-        "data/models/spawn_objects.models");
-    const char *templates_path = env_path("RUNEC_SPAWN_OBJECT_TEMPLATES",
-        "data/models/spawn_objects.oanim");
+    char templates_default[RC_GYM_PATH_LEN];
+    snprintf(templates_default, sizeof(templates_default), "%.*s.oanim",
+             (int)strlen(g_gym_layout.spawn_objects) - 7, g_gym_layout.spawn_objects);
+    const char *models_path = env_path("RUNEC_SPAWN_OBJECT_MODELS", g_gym_layout.spawn_objects);
+    const char *templates_path = env_path("RUNEC_SPAWN_OBJECT_TEMPLATES", templates_default);
     ObjectMesh *templates = calloc(1, sizeof(*templates));
     if (!templates || !objects_load_object_anims_path(templates, templates_path)) {
         fprintf(stderr, "spawn objects: no templates at %s; spawned locs are "
@@ -10159,9 +10160,11 @@ static void viewer_replay_keys(ViewerState *v) {
 }
 
 int main(int argc, char **argv) {
-    const char *replay_path = NULL;
-    for (int i = 1; i + 1 < argc; i++)
+    const char *replay_path = NULL, *mode_arg = NULL;
+    for (int i = 1; i + 1 < argc; i++) {
         if (strcmp(argv[i], "--replay") == 0) replay_path = argv[i + 1];
+        if (strcmp(argv[i], "--mode") == 0) mode_arg = argv[i + 1];
+    }
     double startup_started_ms = viewer_streaming_now_ms();
     // Static, not on the stack: per-NPC presentation state for
     // RC_MAX_NPCS slots puts it past the default 8 MB stack.
@@ -10199,7 +10202,18 @@ int main(int argc, char **argv) {
     v.minimap_tiles_plane = -1;
     g_world_origin_x = env_int("RUNEC_WORLD_ORIGIN_X", DEFAULT_WORLD_ORIGIN_X);
     g_world_origin_y = env_int("RUNEC_WORLD_ORIGIN_Y", DEFAULT_WORLD_ORIGIN_Y);
-    if (!rc_gym_layout_load(RC_GYM_LAYOUT_PATH, &g_gym_layout)) return 1;
+    static RcReplayHeader replay_header;  // a replay names its mode
+    if (replay_path) {
+        FILE *rf = rc_env_replay_open(replay_path, &replay_header);
+        if (!rf) {
+            fprintf(stderr, "viewer: %s is not an rc-env replay\n", replay_path);
+            return 1;
+        }
+        fclose(rf);
+        mode_arg = replay_header.mode;
+    }
+    if (!rc_gym_layout_load_mode(mode_arg, &g_gym_layout)) return 1;
+    fprintf(stderr, "viewer: mode %s (map %s)\n", g_gym_layout.mode, g_gym_layout.name);
     g_player_start_x = env_int("RUNEC_PLAYER_START_X", g_gym_layout.start_x);
     g_player_start_y = env_int("RUNEC_PLAYER_START_Y", g_gym_layout.start_y);
     g_player_start_plane = clamp_plane(
@@ -10219,7 +10233,7 @@ int main(int argc, char **argv) {
     if (v.object_chunk_size <= 0)
         v.object_chunk_size = 64;
     snprintf(v.mapsquare_directory, sizeof(v.mapsquare_directory), "%s",
-             env_path("RUNEC_MAPSQUARE_DIR", "data/regions"));
+             env_path("RUNEC_MAPSQUARE_DIR", g_gym_layout.regions));
     viewer_load_mapsquare_catalog(&v);
     if (v.scene_auto_export) {
         fprintf(stderr,
@@ -10277,6 +10291,7 @@ int main(int argc, char **argv) {
             return 1;
         }
         RcEnvConfig replay_cfg = {
+            .mode = v.replay_header.mode,
             .num_agents = v.replay_header.num_agents, .task = v.replay_header.task,
             .episode_ticks = v.replay_header.episode_ticks, .seed = v.replay_header.seed,
         };

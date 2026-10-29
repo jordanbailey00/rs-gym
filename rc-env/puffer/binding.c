@@ -67,7 +67,9 @@ void puf_init(Env* env, Dict* kwargs) {
         exit(1);
     }
     item = dict_find(kwargs, "episode_ticks");
+    DictItem* mode = dict_find(kwargs, "mode");
     RcEnvConfig cfg = {
+        .mode = mode && mode->str && mode->str[0] ? mode->str : NULL,
         .num_agents = env->num_agents, .task = env->task,
         .episode_ticks = item ? (int)item->value : 0, .seed = env->rng,
     };

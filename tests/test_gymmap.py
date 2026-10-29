@@ -18,7 +18,7 @@ from gymmap.mapformat import PROCEDURAL, Loc, Tile, decode_locs, decode_terrain,
 from rc_cache import RcCacheStore, find_all_map_region_files, iter_location_placements, read_map_region_file  # noqa: E402
 
 CACHE = ROOT / "data/source/b237-openrs2-2528/cache"
-SPEC = ROOT / "maps/gym_v1.toml"
+SPEC = ROOT / "maps/island.toml"
 EDGES = ROOT / "data/source/traversal_edges.b237.bin"
 DROPS = ROOT / "data/source/drops.b237.bin"
 needs_cache = unittest.skipUnless(CACHE.is_dir(), "copied b237 cache not installed")

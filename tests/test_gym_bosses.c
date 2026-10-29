@@ -1,4 +1,4 @@
-// Gym bosses (run tools/build_gym.py first): the King Black Dragon's breath is cut by the
+// Gym bosses (run tools/build_mode.py island first): the King Black Dragon's breath is cut by the
 // anti-dragon shield and it drops dragon bones and black dragonhide; the Chaos Elemental teleports
 // the player (Confusion) and takes their weapon off (Madness).
 #include "../rc-core/api.h"
@@ -91,12 +91,11 @@ static int ground_has(const RcWorld *w, int item, int x, int y) {
 }
 
 int main(void) {
-    struct stat st;
-    if (stat("data/regions/mapsquare.catalog", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (!gym_mode_built("island")) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_test_config(1);
+    RcWorldConfig cfg = gym_test_config_mode("island", 1);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");

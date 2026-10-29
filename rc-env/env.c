@@ -336,11 +336,15 @@ static void record_begin(RcEnv *env) {
         fprintf(stderr, "rc-env: cannot record to %s\n", env->cfg.record_path);
         return;
     }
-    // Header: magic, version, agents, task, episode ticks, seed, tick count (patched as it grows).
-    uint32_t header[7] = {0x50524752u /* RGRP */, 1, (uint32_t)env->cfg.num_agents,
+    // Header: magic, version, agents, task, episode ticks, seed, tick count (patched as it
+    // grows), then the 64-byte mode name.
+    uint32_t header[7] = {0x50524752u /* RGRP */, 2, (uint32_t)env->cfg.num_agents,
                           (uint32_t)env->cfg.task, (uint32_t)env->episode_ticks,
                           env->seed, 0};
+    char mode[64] = {0};
+    snprintf(mode, sizeof(mode), "%s", env->layout.mode);
     fwrite(header, sizeof(header), 1, env->record);
+    fwrite(mode, sizeof(mode), 1, env->record);
 }
 
 static void record_tick(RcEnv *env) {
@@ -386,7 +390,7 @@ RcEnv *rc_env_create(const RcEnvConfig *cfg) {
     env->cfg = *cfg;
     env->task = rc_env_task(cfg->task);
     env->episode_ticks = cfg->episode_ticks > 0 ? cfg->episode_ticks : env->task->episode_ticks;
-    if (!rc_gym_layout_load(RC_GYM_LAYOUT_PATH, &env->layout)) {
+    if (!rc_gym_layout_load_mode(cfg->mode, &env->layout)) {
         free(env);
         return NULL;
     }
@@ -539,13 +543,16 @@ void rc_env_give_task_kit(struct RcWorld *world, int task) {
 FILE *rc_env_replay_open(const char *path, RcReplayHeader *out) {
     FILE *f = path ? fopen(path, "rb") : NULL;
     uint32_t header[7];
+    char mode[64];
     if (!f || fread(header, sizeof(header), 1, f) != 1 || header[0] != 0x50524752u
-            || header[1] != 1 || header[2] < 1 || header[2] > RC_ENV_MAX_AGENTS
-            || header[3] >= RC_TASK_COUNT) {
+            || header[1] != 2 || header[2] < 1 || header[2] > RC_ENV_MAX_AGENTS
+            || header[3] >= RC_TASK_COUNT || fread(mode, sizeof(mode), 1, f) != 1) {
         if (f) fclose(f);
         return NULL;
     }
-    *out = (RcReplayHeader){(int)header[2], (int)header[3], (int)header[4], header[5], header[6]};
+    mode[sizeof(mode) - 1] = '\0';
+    *out = (RcReplayHeader){{0}, (int)header[2], (int)header[3], (int)header[4], header[5], header[6]};
+    snprintf(out->mode, sizeof(out->mode), "%s", mode);
     return f;
 }
 

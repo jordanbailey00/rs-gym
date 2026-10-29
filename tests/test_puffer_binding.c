@@ -27,8 +27,8 @@ static void wire(Env *env, obs_t *obs, float *actions, float *rewards, float *te
 
 int main(void) {
     struct stat st;
-    if (stat("data/regions/gym.cfg", &st) != 0) {
-        fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
+    if (stat("data/modes/island/gym.cfg", &st) != 0) {
+        fprintf(stderr, "gym data not built; run tools/build_mode.py island\n");
         return SKIP;
     }
     Dict kwargs = {0};
@@ -37,6 +37,9 @@ int main(void) {
     DictItem *task = &kwargs.items[kwargs.size++];
     snprintf(task->key, sizeof(task->key), "task");
     task->str = "woodcutting";
+    DictItem *mode = &kwargs.items[kwargs.size++];
+    snprintf(mode->key, sizeof(mode->key), "mode");
+    mode->str = "island";
 
     Env *env = calloc(1, sizeof(Env));
     env->rng = 42;

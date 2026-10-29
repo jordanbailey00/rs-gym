@@ -132,6 +132,7 @@ static char *rc_game_data_identity(const RcWorldConfig *cfg) {
             return NULL; \
         } \
     } while (0)
+    RC_ID_PATH(mode_rules_path);
     RC_ID_PATH(regions_dir);
     RC_ID_PATH(npc_defs_path);
     RC_ID_PATH(spawns_path);

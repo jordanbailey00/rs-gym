@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import os
 import gzip
 import io
 import math
@@ -998,7 +999,8 @@ OBHV_PAIR_WIDE = 1 << 10
 
 ROOT = Path(__file__).resolve().parents[2]
 OBJECT_BEHAVIORS = ROOT / "data/defs/object_behaviors.bin"
-GATHERING_NODES = ROOT / "data/defs/gathering_nodes.bin"
+# Gym builds point this at the mode's own node table (tools/build_mode.py).
+GATHERING_NODES = Path(os.environ.get("RS_GYM_GATHERING_NODES", ROOT / "data/defs/gathering_nodes.bin"))
 
 GatheringPlacement = tuple[int, int, int, int, int, int]
 
