@@ -150,7 +150,7 @@ int rc_content_has_spell_runes(const RcWorld *world, const RcPlayer *player, con
 }
 
 int rc_content_consume_spell_runes(RcWorld *world, RcPlayer *player, const RcSpellDef *spell) {
-    if (!world || player != &world->player) return 0;
+    if (!world || player != world->player) return 0;
     RunePayment payment;
     RcItemTransaction tx;
     if (rc_item_tx_begin(&tx, world).code != RC_ITEM_RESULT_OK || !plan_payment(player, spell, &payment))

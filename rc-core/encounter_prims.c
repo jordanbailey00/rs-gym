@@ -1,3 +1,4 @@
+#include "players.h"
 #include "encounter.h"
 #include "types.h"
 #include "combat.h"
@@ -136,7 +137,7 @@ static int roll_damage(RcWorld *world, int min, int max) {
 }
 
 static void drain_prayer_percent(RcWorld *world, uint8_t pct) {
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     if (pct == 0 || pl->current_prayer_points <= 0) return;
     int drain = (pl->current_prayer_points * pct) / 100;
     if (drain <= 0) drain = 1;
@@ -182,7 +183,7 @@ static void prim_telegraphed_aoe_tile(RcWorld *world, int enc_idx,
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss) return;
 
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
 
     // Primary tile = player's current tile (per wiki: "always target
     // the player's current tile"). Secondary tiles are random — for
@@ -241,8 +242,8 @@ static void prim_spawn_npcs(RcWorld *world, int enc_idx,
         int x = boss->x + ring_dx[slot];
         int y = boss->y + ring_dy[slot];
         if (p->freeze_player_ticks && i == 0) {
-            x = world->player.x + (world->player.x >= boss->x ? 10 : -10);
-            y = world->player.y;
+            x = world->player->x + (world->player->x >= boss->x ? 10 : -10);
+            y = world->player->y;
         }
         rc_npc_spawn(world, def_idx,
                      x, y, boss->plane);
@@ -369,7 +370,7 @@ static void prim_teleport_player_nearby(RcWorld *world, int enc_idx,
     }
     if (max_d <= 0) return;
 
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     for (int tries = 0; tries < 16; tries++) {
         int dx = rc_rng_range(&world->rng_state, max_d * 2 + 1) - max_d;
         int dy = rc_rng_range(&world->rng_state, max_d * 2 + 1) - max_d;
@@ -392,7 +393,7 @@ static void prim_unequip_player_items(RcWorld *world, int enc_idx,
                                       const void *params) {
     (void)enc_idx;
     const RcPrimParamsUnequipPlayerItems *p = params;
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     uint16_t mask = p->slot_mask;
     uint8_t removed = 0;
 
@@ -424,7 +425,7 @@ static void prim_positional_aoe(RcWorld *world, int enc_idx,
     if (!boss || !rc_npc_def_for_npc(world, boss)) return;
 
     int size = npc_size_or_one(world, boss);
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     if (pl->plane != boss->plane) return;
     if (pl->x < boss->x || pl->x >= boss->x + size ||
             pl->y < boss->y || pl->y >= boss->y + size) {
@@ -463,7 +464,7 @@ static void prim_spawn_leech_npc(RcWorld *world, int enc_idx,
         leech = &world->npcs[idx];
     }
 
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     if (pl->plane != leech->plane) return;
     int dx = pl->x - leech->x;
     int dy = pl->y - leech->y;
@@ -503,7 +504,7 @@ static void prim_attack_counter_special(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss) return;
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
 
     if (p->sequence_count) {
         int max = p->max_hit;
@@ -534,7 +535,7 @@ static void prim_spawn_soul_attackers(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss) return;
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
 
     for (int i = 0; i < p->style_count && i < 3; i++) {
         uint8_t style = p->styles[i];
@@ -564,14 +565,14 @@ static void prim_dot_tile_placement(RcWorld *world, int enc_idx,
     int on_player = p->pools_on_player;
     if (on_player > count) on_player = count;
     for (int i = 0; i < count; i++) {
-        int x = world->player.x;
-        int y = world->player.y;
+        int x = world->player->x;
+        int y = world->player->y;
         if (i >= on_player) {
             x += rc_rng_range(&world->rng_state, 6) - 3;
             y += rc_rng_range(&world->rng_state, 6) - 3;
         }
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, duration,
                                 COMBAT_MAGIC, p->dot_per_tick,
                                 "Lava Pool", "");
@@ -584,9 +585,9 @@ static void prim_static_dot_line(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss || p->damage_per_cross == 0) return;
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_per_cross, 0, COMBAT_MAGIC, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_regen_when_no_player(RcWorld *world, int enc_idx,
@@ -697,10 +698,10 @@ static void prim_covered_arena_environment(RcWorld *world, int enc_idx,
     static const int dx[10] = { 0, 2, -2, 4, -4, 0, 3, -3, 5, -5 };
     static const int dy[10] = { 0, 2, -2, -2, 2, 4, 0, 0, 3, -3 };
     for (int i = 0; i < count && i < 10; i++) {
-        int x = world->player.x + dx[i];
-        int y = world->player.y + dy[i];
+        int x = world->player->x + dx[i];
+        int y = world->player->y + dy[i];
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ACID_POOL,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, duration,
                                 COMBAT_MAGIC, p->dot_per_tick,
                                 "Acid Pool", "");
@@ -725,7 +726,7 @@ static void prim_animation_warning_style_swap(RcWorld *world, int enc_idx,
     if (!boss) return;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             p->warning_ticks ? p->warning_ticks : 1, COMBAT_NONE, 0,
                             "Style Warning", "");
 }
@@ -741,17 +742,17 @@ static void prim_converging_aoe(RcWorld *world, int enc_idx,
     static const int dy[4] = { 0, 0, -6, 6 };
     for (int i = 0; i < count && i < 4; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                world->player.x + dx[i],
-                                world->player.y + dy[i],
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + dx[i],
+                                world->player->y + dy[i],
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 p->warning_ticks ? p->warning_ticks : 2, COMBAT_MAGIC,
                                 p->damage_per_bolt,
                                 "Converging AOE", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_per_bolt, p->warning_ticks ? p->warning_ticks : 2,
-                 COMBAT_MAGIC, boss->uid, world->player.active_prayers,
+                 COMBAT_MAGIC, boss->uid, world->player->active_prayers,
                  world->tick);
 }
 
@@ -767,10 +768,10 @@ static void prim_stun_then_fire_walls(RcWorld *world, int enc_idx,
     static const int dy[4] = { 0, 0, -1, 1 };
     for (int i = 0; i < 4; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                                world->player.x + dx[i],
-                                world->player.y + dy[i],
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + dx[i],
+                                world->player->y + dy[i],
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 duration,
                                 COMBAT_MAGIC, p->fire_wall_damage,
                                 "Fire Wall", "");
@@ -785,13 +786,13 @@ static void prim_moving_dot_line(RcWorld *world, int enc_idx,
     if (!boss || p->dot_per_tick == 0) return;
     int duration = p->duration_ticks ? p->duration_ticks : 8;
     int len = p->trail_length ? p->trail_length : 4;
-    int step_x = world->player.x >= boss->x ? -1 : 1;
+    int step_x = world->player->x >= boss->x ? -1 : 1;
     for (int i = 0; i < len && i < 12; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                                world->player.x + step_x * i,
-                                world->player.y,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + step_x * i,
+                                world->player->y,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 duration,
                                 COMBAT_MAGIC, p->dot_per_tick,
                                 "Moving DOT Line", "");
@@ -836,12 +837,12 @@ static void prim_telegraphed_portal_aoe(RcWorld *world, int enc_idx,
     int delay = p->warning_ticks ? p->warning_ticks : 2;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             delay, COMBAT_MAGIC,
                             p->damage_max, "Portal AOE", "");
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_max, delay, COMBAT_MAGIC, boss->uid,
-                 p->prayer_ignorable ? 0u : world->player.active_prayers,
+                 p->prayer_ignorable ? 0u : world->player->active_prayers,
                  world->tick);
 }
 
@@ -857,9 +858,9 @@ static void prim_spawn_paired_husks(RcWorld *world, int enc_idx,
         p->green_style ? p->green_style : COMBAT_RANGED,
     };
     for (int i = 0; i < 2; i++) {
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      12, 2 + i, styles[i], boss->uid,
-                     world->player.active_prayers, world->tick);
+                     world->player->active_prayers, world->tick);
     }
 }
 
@@ -870,12 +871,12 @@ static void prim_quadrant_safe_zone_dot(RcWorld *world, int enc_idx,
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss || p->unsafe_dot_per_tick == 0) return;
     int safe = rc_rng_range(&world->rng_state, 3);
-    int player_quad = (world->player.x >= boss->x ? 1 : 0) |
-                      (world->player.y >= boss->y ? 2 : 0);
+    int player_quad = (world->player->x >= boss->x ? 1 : 0) |
+                      (world->player->y >= boss->y ? 2 : 0);
     if (player_quad != safe) {
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      p->unsafe_dot_per_tick, 0, COMBAT_MAGIC, boss->uid,
-                     world->player.active_prayers, world->tick);
+                     world->player->active_prayers, world->tick);
         int heal = p->unsafe_dot_per_tick *
                    (p->heals_boss_multiplier_x10 ?
                     p->heals_boss_multiplier_x10 : 10) / 10;
@@ -886,9 +887,9 @@ static void prim_quadrant_safe_zone_dot(RcWorld *world, int enc_idx,
         }
     }
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                            world->player.x, world->player.y,
-                            world->player.plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
+                            world->player->plane,
+                            world->player->x, world->player->y,
                             p->duration_ticks ? p->duration_ticks : 12, COMBAT_MAGIC,
                             p->unsafe_dot_per_tick, "Unsafe Quadrant", "");
 }
@@ -897,7 +898,7 @@ static void prim_shuffle_player_prayers(RcWorld *world, int enc_idx,
                                         const void *params) {
     (void)enc_idx;
     const RcPrimParamsShufflePlayerPrayers *p = params;
-    uint32_t prayers = world->player.active_prayers;
+    uint32_t prayers = world->player->active_prayers;
     uint32_t out = prayers;
     if (prayers & PRAYER_PROTECT_MAGIC) {
         out &= ~PRAYER_PROTECT_MAGIC;
@@ -912,7 +913,7 @@ static void prim_shuffle_player_prayers(RcWorld *world, int enc_idx,
         out |= PRAYER_PROTECT_MAGIC;
     }
     (void)rc_prayer_set_active(world, out);
-    world->player.attack_timer += p->duration_attacks ? 1 : 0;
+    world->player->attack_timer += p->duration_attacks ? 1 : 0;
 }
 
 static void prim_infectious_dot_with_cure(RcWorld *world, int enc_idx,
@@ -921,10 +922,10 @@ static void prim_infectious_dot_with_cure(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss || p->burst_damage == 0) return;
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->burst_damage,
                  p->incubation_ticks ? p->incubation_ticks : 18,
-                 COMBAT_MAGIC, boss->uid, world->player.active_prayers,
+                 COMBAT_MAGIC, boss->uid, world->player->active_prayers,
                  world->tick);
 }
 
@@ -945,9 +946,9 @@ static void prim_spawn_convergent_minions(RcWorld *world, int enc_idx,
     if (p->power_blast_on_absorption) {
         int dmg = p->power_blast_min +
                   count * p->absorb_damage_per_walker;
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      dmg, 6, COMBAT_MAGIC, boss->uid,
-                     world->player.active_prayers, world->tick);
+                     world->player->active_prayers, world->tick);
     }
 }
 
@@ -957,13 +958,13 @@ static void prim_aoe_tile_debuff(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss) return;
-    if (p->run_disabled) world->player.running = false;
-    if (p->attack_speed_penalty) world->player.attack_timer += p->attack_speed_penalty;
+    if (p->run_disabled) world->player->running = false;
+    if (p->attack_speed_penalty) world->player->attack_timer += p->attack_speed_penalty;
     rc_player_apply_freeze(world, p->debuff_ticks);
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                            world->player.x, world->player.y,
-                            world->player.plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
+                            world->player->plane,
+                            world->player->x, world->player->y,
                             p->debuff_ticks ? p->debuff_ticks : 10, COMBAT_NONE, 0,
                             "Tile Debuff", "");
 }
@@ -976,11 +977,11 @@ static void prim_line_dash(RcWorld *world, int enc_idx,
     if (!boss || p->damage_max == 0) return;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             2, COMBAT_MELEE_CRUSH,
                             p->damage_max, "Line Dash", "");
-    if (world->player.x == boss->x || world->player.y == boss->y) {
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    if (world->player->x == boss->x || world->player->y == boss->y) {
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      p->damage_max, 1, COMBAT_MELEE_CRUSH, boss->uid,
                      0u, world->tick);
     }
@@ -1002,7 +1003,7 @@ static void prim_spawn_objective_npcs(RcWorld *world, int enc_idx,
     }
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             4, COMBAT_NONE, 0,
                             "Objective NPCs", p->npc_name);
 }
@@ -1018,8 +1019,8 @@ static void prim_npc_pathed_movement(RcWorld *world, int enc_idx,
                                ? p->ticks_to_complete : 20;
     boss->prev_x = boss->x;
     boss->prev_y = boss->y;
-    boss->x += world->player.x >= boss->x ? 3 : -3;
-    boss->y += world->player.y >= boss->y ? 3 : -3;
+    boss->x += world->player->x >= boss->x ? 3 : -3;
+    boss->y += world->player->y >= boss->y ? 3 : -3;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->prev_x, boss->prev_y, boss->plane,
                             boss->x, boss->y,
@@ -1046,7 +1047,7 @@ static void prim_spawn_wall_tentacles(RcWorld *world, int enc_idx,
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                                 boss->x + i - 2, boss->y + 6,
                                 boss->plane,
-                                world->player.x, world->player.y,
+                                world->player->x, world->player->y,
                                 12,
                                 COMBAT_MELEE_CRUSH, 0,
                                 "Wall Tentacle", name);
@@ -1062,10 +1063,10 @@ static void prim_teleporting_tile_aoe(RcWorld *world, int enc_idx,
     if (p->boss_untargetable_during) boss->player_untargetable = true;
     int count = p->cloud_count ? p->cloud_count : 4;
     for (int i = 0; i < count && i < 12; i++) {
-        int x = world->player.x + (i % 4) - 1;
-        int y = world->player.y + (i / 4) - 1;
+        int x = world->player->x + (i % 4) - 1;
+        int y = world->player->y + (i / 4) - 1;
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ACID_POOL,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, 12,
                                 COMBAT_MAGIC, p->damage_max,
                                 "Lightning Cloud", "");
@@ -1088,16 +1089,16 @@ static void prim_homing_projectiles_with_walls(RcWorld *world, int enc_idx,
                           : (min ? min : 2);
     for (int i = 0; i < count && i < 8; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_HIDDEN_OBJECT,
-                                world->player.x + i - 1,
-                                world->player.y + 2,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + i - 1,
+                                world->player->y + 2,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 p->harden_ticks ? p->harden_ticks : 33, COMBAT_NONE, 0,
                                 "Muspah Spike", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_hit, 4, COMBAT_RANGED, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_smite_drain_shield(RcWorld *world, int enc_idx,
@@ -1109,7 +1110,7 @@ static void prim_smite_drain_shield(RcWorld *world, int enc_idx,
         return;
     }
     int drain = p->hits_to_drain ? (p->shield_hp / p->hits_to_drain) : 10;
-    if (world->player.active_prayers & (1u << RC_PRAYER_SMITE)) {
+    if (world->player->active_prayers & (1u << RC_PRAYER_SMITE)) {
         drain += drain / 2;
     }
     if (drain <= 0) drain = 10;
@@ -1131,17 +1132,17 @@ static void prim_periodic_spike_cluster(RcWorld *world, int enc_idx,
     int count = p->cluster_tiles ? p->cluster_tiles : 6;
     for (int i = 0; i < count && i < 12; i++) {
         int x = p->one_on_player && i == 0
-                ? world->player.x : world->player.x + (i % 4) - 2;
+                ? world->player->x : world->player->x + (i % 4) - 2;
         int y = p->one_on_player && i == 0
-                ? world->player.y : world->player.y + (i / 4) - 1;
+                ? world->player->y : world->player->y + (i / 4) - 1;
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_HIDDEN_OBJECT,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, 24,
                                 COMBAT_NONE, 0, "Spike Cluster", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_hit, 3, COMBAT_RANGED, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_moving_rotational_hazards(RcWorld *world, int enc_idx,
@@ -1160,13 +1161,13 @@ static void prim_moving_rotational_hazards(RcWorld *world, int enc_idx,
         int y = boss->y + sy[slot] * radius;
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                                 x, y, boss->plane,
-                                world->player.x, world->player.y,
+                                world->player->x, world->player->y,
                                 2, COMBAT_MELEE_SLASH,
                                 p->damage_on_hit, "Rotational Hazard", "");
-        if (world->player.plane == boss->plane &&
-                world->player.x == x && world->player.y == y) {
-            rc_queue_hit(world->player.pending_hits,
-                         &world->player.num_pending_hits,
+        if (world->player->plane == boss->plane &&
+                world->player->x == x && world->player->y == y) {
+            rc_queue_hit(world->player->pending_hits,
+                         &world->player->num_pending_hits,
                          p->damage_on_hit, 0, COMBAT_MELEE_SLASH,
                          boss->uid, 0u, world->tick);
         }
@@ -1183,7 +1184,7 @@ static void prim_heal_boss_on_player_attack_miss(RcWorld *world, int enc_idx,
     a->active_mechanic_ticks = p->warning_ticks ? p->warning_ticks : 4;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             a->active_mechanic_ticks, COMBAT_MAGIC, 0,
                             "Mind Flay", "");
 }
@@ -1196,24 +1197,24 @@ static void prim_tile_debuff_on_stand(RcWorld *world, int enc_idx,
     if (!boss) return;
     int count = p->tile_count ? p->tile_count : 3;
     for (int i = 0; i < count && i < 8; i++) {
-        int x = world->player.x + (i % 3) - 1;
-        int y = world->player.y + (i / 3) - 1;
+        int x = world->player->x + (i % 3) - 1;
+        int y = world->player->y + (i / 3) - 1;
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, 8,
                                 COMBAT_MAGIC, p->damage_on_step,
                                 "Debuff Tile", "");
     }
     if (p->damage_on_step) {
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      p->damage_on_step, 0, COMBAT_MAGIC, boss->uid,
-                     world->player.active_prayers, world->tick);
+                     world->player->active_prayers, world->tick);
     }
     if (p->debuff_amount) {
         int amount = p->debuff_amount < 0 ? -p->debuff_amount : p->debuff_amount;
-        world->player.skills.boosted_level[SKILL_DEFENCE] -= amount;
-        if (world->player.skills.boosted_level[SKILL_DEFENCE] < 0) {
-            world->player.skills.boosted_level[SKILL_DEFENCE] = 0;
+        world->player->skills.boosted_level[SKILL_DEFENCE] -= amount;
+        if (world->player->skills.boosted_level[SKILL_DEFENCE] < 0) {
+            world->player->skills.boosted_level[SKILL_DEFENCE] = 0;
         }
     }
 }
@@ -1251,17 +1252,17 @@ static void prim_one_shot_arena_effect(RcWorld *world, int enc_idx,
     int count = p->tile_count ? p->tile_count : 6;
     for (int i = 0; i < count && i < 12; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                world->player.x + (i % 4) - 2,
-                                world->player.y + (i / 4) - 1,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + (i % 4) - 2,
+                                world->player->y + (i / 4) - 1,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 2,
                                 COMBAT_RANGED, p->damage_max,
                                 "Arena Effect", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_max, 2, COMBAT_RANGED, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_player_sanity_tracker(RcWorld *world, int enc_idx,
@@ -1272,7 +1273,7 @@ static void prim_player_sanity_tracker(RcWorld *world, int enc_idx,
         a->mechanic_progress = p->max_sanity ? p->max_sanity : 100;
         return;
     }
-    if ((world->player.active_prayers & (PRAYER_PROTECT_MAGIC |
+    if ((world->player->active_prayers & (PRAYER_PROTECT_MAGIC |
                                          PRAYER_PROTECT_RANGE)) != 0) {
         uint16_t max = p->max_sanity ? p->max_sanity : 100;
         uint16_t regen = p->regen_per_correct_prayer_tick;
@@ -1285,7 +1286,7 @@ static void prim_player_sanity_tracker(RcWorld *world, int enc_idx,
                                : 0;
     }
     if (a->mechanic_progress <= p->insane_threshold) {
-        int damage = (world->player.current_hp + 9) / 10;
+        int damage = (world->player->current_hp + 9) / 10;
         RcPendingHit hit = {.active = 1, .source_idx = RC_HIT_SOURCE_STATUS,
             .attack_style = COMBAT_NONE, .max_hit = damage,
             .flags = RC_HIT_SUPPRESS_ENCOUNTER_EFFECTS};
@@ -1302,16 +1303,16 @@ static void prim_spawn_tentacle_projectiles(RcWorld *world, int enc_idx,
     int count = p->tentacle_count ? p->tentacle_count : 3;
     for (int i = 0; i < count && i < 8; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                world->player.x + i - 1,
-                                world->player.y + 1,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + i - 1,
+                                world->player->y + 1,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 p->warning_ticks ? p->warning_ticks : 2, COMBAT_MAGIC,
                                 p->damage_on_hit, "Tentacle", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_hit, p->warning_ticks ? p->warning_ticks : 2,
-                 COMBAT_MAGIC, boss->uid, world->player.active_prayers,
+                 COMBAT_MAGIC, boss->uid, world->player->active_prayers,
                  world->tick);
     if (a->mechanic_progress) {
         a->mechanic_progress =
@@ -1326,16 +1327,16 @@ static void prim_aoe_prayer_swap_demand(RcWorld *world, int enc_idx,
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss || p->wrong_prayer_damage == 0) return;
-    bool ok = (world->player.active_prayers &
+    bool ok = (world->player->active_prayers &
                (PRAYER_PROTECT_MAGIC | PRAYER_PROTECT_RANGE)) != 0;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             p->warning_ticks ? p->warning_ticks : 3, COMBAT_MAGIC,
                             p->wrong_prayer_damage, "Prayer Demand", "");
     if (!ok) {
-        rc_queue_hit(world->player.pending_hits,
-                     &world->player.num_pending_hits,
+        rc_queue_hit(world->player->pending_hits,
+                     &world->player->num_pending_hits,
                      p->wrong_prayer_damage,
                      p->warning_ticks ? p->warning_ticks : 3,
                      COMBAT_MAGIC, boss->uid, 0u, world->tick);
@@ -1356,7 +1357,7 @@ static void prim_audio_visual_disruption(RcWorld *world, int enc_idx,
     if (!boss) return;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             p->duration_ticks ? p->duration_ticks : 15, COMBAT_NONE, 0,
                             "Audio Visual Disruption", "");
 }
@@ -1404,17 +1405,17 @@ static void prim_spawn_tracking_tornadoes(RcWorld *world, int enc_idx,
     int duration = p->duration_ticks ? p->duration_ticks : 30;
     for (int i = 0; i < count && i < 8; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                world->player.x + i - 1,
-                                world->player.y + 2,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + i - 1,
+                                world->player->y + 2,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 duration,
                                 COMBAT_MAGIC, p->damage_on_contact,
                                 "Tracking Tornado", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_contact, 1, COMBAT_MAGIC, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_forced_prayer_switch_on_style_swap(RcWorld *world,
@@ -1426,7 +1427,7 @@ static void prim_forced_prayer_switch_on_style_swap(RcWorld *world,
     if (!boss) return;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             3, COMBAT_NONE, 0,
                             "Prayer Switch", "");
 }
@@ -1449,7 +1450,7 @@ static void prim_multi_limb_boss(RcWorld *world, int enc_idx,
     }
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             5, COMBAT_NONE, 0,
                             "Multi-Limb Boss", "");
 }
@@ -1461,10 +1462,10 @@ static void prim_player_position_swap(RcWorld *world, int enc_idx,
     RcNpc *boss = find_boss(world, a->boss_id);
     if (!boss) return;
     int dist = p->min_distance ? p->min_distance : 6;
-    world->player.prev_x = world->player.x;
-    world->player.prev_y = world->player.y;
-    world->player.x = boss->x + (world->player.x >= boss->x ? dist : -dist);
-    world->player.y = boss->y + (world->player.y >= boss->y ? dist : -dist);
+    world->player->prev_x = world->player->x;
+    world->player->prev_y = world->player->y;
+    world->player->x = boss->x + (world->player->x >= boss->x ? dist : -dist);
+    world->player->y = boss->y + (world->player->y >= boss->y ? dist : -dist);
 }
 
 static void prim_environmental_wall_spawn(RcWorld *world, int enc_idx,
@@ -1483,10 +1484,10 @@ static void prim_environmental_wall_spawn(RcWorld *world, int enc_idx,
                                 COMBAT_MAGIC, p->damage_on_cross,
                                 "Environmental Wall", "");
     }
-    if (world->player.y == boss->y) {
-        rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    if (world->player->y == boss->y) {
+        rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                      p->damage_on_cross, 0, COMBAT_MAGIC, boss->uid,
-                     world->player.active_prayers, world->tick);
+                     world->player->active_prayers, world->tick);
     }
 }
 
@@ -1499,17 +1500,17 @@ static void prim_tile_telegraph_lightning(RcWorld *world, int enc_idx,
     int count = p->tiles_per_volley ? p->tiles_per_volley : 3;
     int warn = p->telegraph_ticks ? p->telegraph_ticks : 2;
     for (int i = 0; i < count && i < 12; i++) {
-        int x = world->player.x + (i % 3) - 1;
-        int y = world->player.y + (i / 3) - 1;
+        int x = world->player->x + (i % 3) - 1;
+        int y = world->player->y + (i / 3) - 1;
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                x, y, world->player.plane,
+                                x, y, world->player->plane,
                                 x, y, warn,
                                 COMBAT_MAGIC, p->damage_on_tile,
                                 "Telegraphed Lightning", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_tile, warn, COMBAT_MAGIC, boss->uid,
-                 world->player.active_prayers, world->tick);
+                 world->player->active_prayers, world->tick);
 }
 
 static void prim_continuous_heal_unless_interrupted(RcWorld *world,
@@ -1533,9 +1534,9 @@ static void prim_one_shot_weapon_provided(RcWorld *world, int enc_idx,
     if (!boss) return;
     a->mechanic_progress = p->effective_max_hit;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_HIDDEN_OBJECT,
-                            world->player.x, world->player.y,
-                            world->player.plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
+                            world->player->plane,
+                            world->player->x, world->player->y,
                             -1, COMBAT_NONE,
                             p->effective_max_hit,
                             "Provided Weapon", p->item);
@@ -1568,9 +1569,9 @@ static void prim_spawn_web_tiles(RcWorld *world, int enc_idx,
     int count = p->web_tile_count ? p->web_tile_count : 3;
     for (int i = 0; i < count && i < 8; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_HIDDEN_OBJECT,
-                                world->player.x + i - 1,
-                                world->player.y, world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + i - 1,
+                                world->player->y, world->player->plane,
+                                world->player->x, world->player->y,
                                 8, COMBAT_NONE, 0,
                                 "Web Tile", "");
     }
@@ -1588,7 +1589,7 @@ static void prim_spawn_colored_nylocas(RcWorld *world, int enc_idx,
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                                 boss->x + i - 1, boss->y + 3,
                                 boss->plane,
-                                world->player.x, world->player.y,
+                                world->player->x, world->player->y,
                                 10, COMBAT_NONE,
                                 0, "Colored Nylocas", "");
     }
@@ -1611,10 +1612,10 @@ static void prim_persistent_dot_tile_pool(RcWorld *world, int enc_idx,
     int duration = p->duration_ticks ? p->duration_ticks : -1;
     for (int i = 0; i < count && i < 8; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_LAVA_POOL,
-                                world->player.x + i - 1,
-                                world->player.y + 1,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + i - 1,
+                                world->player->y + 1,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 duration,
                                 COMBAT_MAGIC, p->dot_per_tick,
                                 "Persistent Tile Pool", "");
@@ -1631,7 +1632,7 @@ static void prim_obelisk_dps_check(RcWorld *world, int enc_idx,
     a->active_mechanic_ticks = p->time_limit_ticks;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             p->time_limit_ticks, COMBAT_NONE, 0,
                             "Obelisk DPS Check", "");
 }
@@ -1662,16 +1663,16 @@ static void prim_periodic_death_tile_wave(RcWorld *world, int enc_idx,
     int count = p->wave_tile_count ? p->wave_tile_count : 8;
     for (int i = 0; i < count && i < 16; i++) {
         rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
-                                world->player.x + (i % 5) - 2,
-                                world->player.y + (i / 5) - 1,
-                                world->player.plane,
-                                world->player.x, world->player.y,
+                                world->player->x + (i % 5) - 2,
+                                world->player->y + (i / 5) - 1,
+                                world->player->plane,
+                                world->player->x, world->player->y,
                                 2, COMBAT_NONE,
                                 p->damage_on_tile > 255
                                     ? 255 : (uint8_t)p->damage_on_tile,
                                 "Death Tile Wave", "");
     }
-    rc_queue_hit(world->player.pending_hits, &world->player.num_pending_hits,
+    rc_queue_hit(world->player->pending_hits, &world->player->num_pending_hits,
                  p->damage_on_tile, 2, COMBAT_NONE, boss->uid,
                  0u, world->tick);
 }
@@ -1817,7 +1818,7 @@ static void prim_acid_field(RcWorld *world, int enc_idx, const void *params) {
     const RcEncounterSpec *spec = rc_encounter_spec(world, a->spec_idx);
     const RcEncounterObject *loc = spec && p->pool_object < spec->object_count
                                  ? &spec->objects[p->pool_object] : NULL;
-    const RcPlayer *pl = &world->player;
+    const RcPlayer *pl = world->player;
     record_part(world, enc_idx, mech, PART_LAUNCH, true, pl->x, pl->y,
                 COMBAT_NONE, 0);
     int r = p->pool_radius, side = r * 2 + 1;
@@ -1854,7 +1855,7 @@ static void prim_acid_field(RcWorld *world, int enc_idx, const void *params) {
 static void window_acid_field(RcWorld *world, int enc_idx,
                               const RcEncounterMechanic *mech,
                               const RcPrimParamsAcidField *p) {
-    const RcPlayer *pl = &world->player;
+    const RcPlayer *pl = world->player;
     if (rc_encounter_add_strike(world, enc_idx, pl->x, pl->y, pl->plane,
                                 p->strike_delay, p->strike_min, p->strike_max,
                                 0, p->strike_style) >= 0)
@@ -1908,7 +1909,7 @@ static void prim_spawn_owned_helpers(RcWorld *world, int enc_idx,
         ? rc_npc_def_get(rc_npc_def_find((int)spec->helpers[p->helper].npc_id))
         : NULL;
     int size = hdef && hdef->size > 0 ? hdef->size : 1;
-    const RcPlayer *pl = &world->player;
+    const RcPlayer *pl = world->player;
     record_part(world, enc_idx, mech, PART_LAUNCH, true, pl->x, pl->y,
                 COMBAT_NONE, 0);
     int16_t landings[8 * RC_ENC_SPAWN_DISTANCE_MAX][2];
@@ -1939,7 +1940,7 @@ static void prim_spawn_owned_helpers(RcWorld *world, int enc_idx,
 }
 
 static void chase_player(RcWorld *world, RcNpc *npc) {
-    RcRouteTarget target = player_chase_target(&world->player);
+    RcRouteTarget target = player_chase_target(world->player);
     if (npc->route_mode == RC_NPC_ROUTE_CHASE && npc->route_target.x == target.x
             && npc->route_target.y == target.y) return;
     (void)rc_npc_route_request(world, npc, &target, RC_NPC_ROUTE_CHASE, false);
@@ -1951,7 +1952,7 @@ static void window_owned_helpers(RcWorld *world, int enc_idx,
                                  const RcEncounterMechanic *mech,
                                  const RcPrimParamsSpawnOwnedHelpers *p) {
     RcActiveEncounter *a = &world->encounter.active[enc_idx];
-    RcPlayer *pl = &world->player;
+    RcPlayer *pl = world->player;
     for (int h = a->helper_count - 1; h >= 0 && a->active; h--) {
         if (h >= a->helper_count) continue;
         RcNpcId uid = a->helpers[h];
@@ -2061,7 +2062,7 @@ static void prim_hatch_helpers_on_hit(RcWorld *world, int enc_idx,
     RcNpc *worker = &world->npcs[r.slot];
     worker->respawns = false;
     worker->despawn_tick = world->tick + p->despawn_ticks;
-    rc_combat_start_npc_vs_player(world, worker->uid, 0);
+    rc_combat_start_npc_vs_player(world, worker->uid, world->player->index);
 }
 
 // ---- Registry ----------------------------------------------------------

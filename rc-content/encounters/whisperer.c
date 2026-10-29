@@ -20,11 +20,11 @@ static void whisperer_enter_shadow_realm(struct RcWorld *world, int enc_idx) {
             int cap = def->hitpoints;
             if (npc->current_hp > cap) npc->current_hp = cap;
         }
-        world->player.prev_x = world->player.x;
-        world->player.prev_y = world->player.y;
-        world->player.x = npc->x + 6;
-        world->player.y = npc->y;
-        world->player.plane = npc->plane;
+        world->player->prev_x = world->player->x;
+        world->player->prev_y = world->player->y;
+        world->player->x = npc->x + 6;
+        world->player->y = npc->y;
+        world->player->plane = npc->plane;
     }
 }
 

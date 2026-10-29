@@ -1,3 +1,4 @@
+#include "../../rc-core/players.h"
 #include "../content.h"
 #include "../../rc-core/encounter.h"
 #include "../../rc-core/npc.h"
@@ -19,11 +20,11 @@ static void raid_enter_phase(struct RcWorld *world, int enc_idx,
     a->attack_special_toggle = 0;
     a->active_mechanic_idx = 0xFFu;
     a->active_mechanic_ticks = 0;
-    boss->target_uid = 0;
+    boss->target_uid = world->player->index;
     boss->player_untargetable = false;
     rc_encounter_add_effect(world, enc_idx, RC_ENC_EFFECT_ROOM_ATTACK,
                             boss->x, boss->y, boss->plane,
-                            world->player.x, world->player.y,
+                            world->player->x, world->player->y,
                             5, style, 0, name, "");
 }
 

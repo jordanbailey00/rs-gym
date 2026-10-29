@@ -37,14 +37,14 @@ int rc_storage_kind_for_npc(const RcWorld *w, const RcNpcDef *def, int op) {
 
 void rc_storage_close(RcWorld *w) {
     if (!w) return;
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     p->storage_kind = RC_STORAGE_NONE;
     p->storage_session = 0;
     p->storage_target = p->storage_option = -1;
 }
 
 static int source_valid(RcWorld *w) {
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     const RcInteractionTarget *s = &p->storage_source;
     if (!p->storage_session || p->is_dead || p->current_hp <= 0
             || p->x != p->storage_x || p->y != p->storage_y
@@ -67,7 +67,7 @@ static int source_valid(RcWorld *w) {
 
 int rc_storage_open_interaction(RcWorld *w) {
     if (!w || !(w->enabled & RC_SUB_STORAGE)) return 0;
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     const RcPendingInteraction *pending = &p->interaction;
     if (!pending->active || !(pending->flags & RC_INTERACTION_ARRIVED)
             || pending->op < RC_INTERACTION_OP1 || pending->op > RC_INTERACTION_OP5) return 0;
@@ -96,8 +96,8 @@ int rc_player_close_storage(RcWorld *w) {
                                          RC_ACTION_CATEGORY_SOFT, NULL, 0);
     if (!w || !(w->enabled & RC_SUB_STORAGE)) return 0;
     rc_storage_close(w);
-    w->player.interact_type = RC_INTERACT_NONE;
-    w->player.interact_target = w->player.interact_option = -1;
+    w->player->interact_type = RC_INTERACT_NONE;
+    w->player->interact_target = w->player->interact_option = -1;
     return 1;
 }
 
@@ -124,7 +124,7 @@ int rc_bank_add_item_tab(RcWorld *w, int id, int qty, int tab) {
     const RcItemDef *def = base_item(id);
     if (!w || !(w->enabled & RC_SUB_STORAGE) || !def || qty <= 0
             || tab < -1 || tab > UINT8_MAX) return -1;
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     int slot = bank_slot(p->bank, p->bank_tab, def->id, 0, tab);
     if (slot < 0 || p->bank[slot].quantity > INT_MAX - qty) return -1;
     if (p->bank[slot].item_id < 0) {
@@ -142,8 +142,8 @@ int rc_bank_add_item(RcWorld *w, int id, int qty) { return rc_bank_add_item_tab(
 static int finish(RcWorld *w, RcBankResult result, RcBankResultCode code) {
     result.code = code;
     if (w) {
-        result.sequence = w->player.bank_result.sequence + 1;
-        w->player.bank_result = result;
+        result.sequence = w->player->bank_result.sequence + 1;
+        w->player->bank_result = result;
     }
     return result.moved > 0 ? (int)(result.moved > INT_MAX ? INT_MAX : result.moved)
                            : code == RC_BANK_OK ? 0 : -1;
@@ -157,7 +157,7 @@ static int transfer(RcWorld *w, int slot, int qty, bool withdraw, bool noted, bo
     if (!w || !(w->enabled & RC_SUB_STORAGE) || !(w->enabled & RC_SUB_INVENTORY)
             || (bulk == DEPOSIT_EQUIPMENT && !(w->enabled & RC_SUB_EQUIPMENT)))
         return finish(w, r, RC_BANK_DISABLED);
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     if ((p->storage_kind != RC_STORAGE_BANK && p->storage_kind != RC_STORAGE_DEPOSIT_BOX)
             || !source_valid(w)) {
         rc_storage_close(w);
@@ -290,7 +290,7 @@ static int transfer(RcWorld *w, int slot, int qty, bool withdraw, bool noted, bo
 
 static int submit(RcWorld *w, int slot, int qty, bool withdraw, bool noted, bool keep_one) {
     if (!rc_player_command_should_queue(w)) return transfer(w, slot, qty, withdraw, noted, keep_one, DEPOSIT_SELECTED);
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     RcInvSlot source = {.item_id=-1};
     if (slot >= 0 && slot < (withdraw ? RC_BANK_SIZE : RC_INVENTORY_SIZE))
         source = withdraw ? p->bank[slot] : p->inventory[slot];
@@ -307,7 +307,7 @@ int rc_bank_deposit_all(RcWorld *w, bool equipment) {
     if (!rc_player_command_should_queue(w)) return transfer(w, -1, 0, false, false, false, bulk);
     int args[8] = {equipment};
     if (rc_player_command_submit(w, RC_PLAYER_COMMAND_BANK_DEPOSIT_ALL,
-            RC_ACTION_CATEGORY_BACKGROUND, args, w->player.storage_session)) return 1;
+            RC_ACTION_CATEGORY_BACKGROUND, args, w->player->storage_session)) return 1;
     finish(w, (RcBankResult){.slot=-1,.item_id=-1}, RC_BANK_QUEUE_REJECTED);
     return 0;
 }
@@ -320,13 +320,13 @@ int rc_bank_execute_command(RcWorld *w, const RcPlayerCommand *command) {
     const int *a = command->args;
     bool withdraw = command->kind == RC_PLAYER_COMMAND_BANK_WITHDRAW;
     RcBankResult r = {.slot=a[0], .item_id=a[3], .requested=a[1], .withdraw=withdraw};
-    if (!command->key || command->key != w->player.storage_session)
+    if (!command->key || command->key != w->player->storage_session)
         return finish(w, r, RC_BANK_CLOSED);
     if (command->kind == RC_PLAYER_COMMAND_BANK_DEPOSIT_ALL)
         return rc_bank_deposit_all(w, a[0] != 0);
     if (a[0] < 0 || a[0] >= (withdraw ? RC_BANK_SIZE : RC_INVENTORY_SIZE))
         return finish(w, r, RC_BANK_INVALID);
-    const RcInvSlot *source = withdraw ? &w->player.bank[a[0]] : &w->player.inventory[a[0]];
+    const RcInvSlot *source = withdraw ? &w->player->bank[a[0]] : &w->player->inventory[a[0]];
     if (source->generation != (uint32_t)a[2] || source->item_id != a[3] || source->state_id != (uint32_t)a[4])
         return finish(w, r, RC_BANK_STALE);
     return transfer(w, a[0], a[1], withdraw, a[5] != 0, a[6] != 0, DEPOSIT_SELECTED);

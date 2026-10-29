@@ -143,9 +143,9 @@ static RcPrayerResult requirements(const RcWorld *world, const RcPrayerDef *def)
     if (def->flags & RC_PRAYER_EFFECT_UNAVAILABLE) return RC_PRAYER_UNSUPPORTED;
     if ((def->flags & RC_PRAYER_MEMBERS_ONLY) && !world->members_world)
         return RC_PRAYER_MEMBERS;
-    if (world->player.skills.base_level[SKILL_PRAYER] < def->level)
+    if (world->player->skills.base_level[SKILL_PRAYER] < def->level)
         return RC_PRAYER_LEVEL;
-    if (world->player.skills.base_level[SKILL_DEFENCE] < def->defence_level)
+    if (world->player->skills.base_level[SKILL_DEFENCE] < def->defence_level)
         return RC_PRAYER_DEFENCE;
     if (def->unlock_varbit) {
         if (!rc_varbit_def_get(def->unlock_varbit)) return RC_PRAYER_MISSING_DATA;
@@ -200,7 +200,7 @@ const char *rc_prayer_result_message(RcPrayerResult result) {
 
 static RcPrayerResult outcome(RcWorld *world, int id, RcPrayerResult code) {
     if (world) {
-        RcPrayerOutcome *result = &world->player.prayer_outcome;
+        RcPrayerOutcome *result = &world->player->prayer_outcome;
         result->sequence++;
         result->prayer_id = id;
         result->code = code;
@@ -209,7 +209,7 @@ static RcPrayerResult outcome(RcWorld *world, int id, RcPrayerResult code) {
 }
 
 static void commit_active(RcWorld *world, uint32_t mask) {
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     uint32_t old = p->active_prayers;
     uint32_t changed = old ^ mask;
     // -1 skips stat timer accumulation in this activation/disable tick.
@@ -238,7 +238,7 @@ static void commit_active(RcWorld *world, uint32_t mask) {
 
 void rc_prayer_disable_all(RcWorld *world, RcPrayerResult reason) {
     if (!world) return;
-    bool active = world->player.active_prayers || world->player.quick_prayers_active;
+    bool active = world->player->active_prayers || world->player->quick_prayers_active;
     commit_active(world, 0);
     if (active) outcome(world, -1, reason);
 }
@@ -266,7 +266,7 @@ void rc_prayer_reset(RcPlayer *p) {
 
 void rc_prayer_drain_tenths(RcWorld *world, int tenths) {
     if (!world || tenths <= 0) return;
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (p->current_prayer_points <= 0) return;
     p->current_prayer_points = tenths >= p->current_prayer_points
         ? 0 : p->current_prayer_points - tenths;
@@ -301,9 +301,9 @@ static uint32_t select_prayer(uint32_t mask, const RcPrayerDef *def) {
 
 RcPrayerResult rc_prayer_set_active(RcWorld *world, uint32_t mask) {
     if (!world) return RC_PRAYER_INVALID;
-    if (mask && (world->player.is_dead || world->player.current_hp <= 0))
+    if (mask && (world->player->is_dead || world->player->current_hp <= 0))
         return outcome(world, -1, RC_PRAYER_DEAD);
-    if (mask && world->player.current_prayer_points <= 0)
+    if (mask && world->player->current_prayer_points <= 0)
         return outcome(world, -1, RC_PRAYER_EMPTY);
     uint16_t groups = 0;
     for (int i = 0; i < RC_MAX_PRAYER_DEFS; i++) {
@@ -321,7 +321,7 @@ RcPrayerResult rc_prayer_set_active(RcWorld *world, uint32_t mask) {
 static RcPrayerResult queue_prayer(RcWorld *world, RcPlayerCommandKind kind, int id) {
     int args[8] = {id};
     if (!rc_player_command_submit(world, kind, RC_ACTION_CATEGORY_SOFT, args, 0)) {
-        RcPrayerResult code = world->player_commands.last_result == RC_COMMAND_RESULT_REJECTED_DEAD
+        RcPrayerResult code = world->player->commands.last_result == RC_COMMAND_RESULT_REJECTED_DEAD
             ? RC_PRAYER_DEAD : RC_PRAYER_QUEUE_REJECTED;
         return outcome(world, id, code);
     }
@@ -333,7 +333,7 @@ RcPrayerResult rc_player_set_prayer(RcWorld *world, int id) {
     if (rc_player_command_should_queue(world))
         return queue_prayer(world, RC_PLAYER_COMMAND_SET_PRAYER, id);
     uint32_t bit = rc_prayer_bit(id);
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (bit && (p->active_prayers & bit)) {
         commit_active(world, p->active_prayers & ~bit);
         return outcome(world, id, RC_PRAYER_OK);
@@ -348,7 +348,7 @@ RcPrayerResult rc_player_select_quick_prayer(RcWorld *world, int id) {
     if (!world) return RC_PRAYER_INVALID;
     if (rc_player_command_should_queue(world))
         return queue_prayer(world, RC_PLAYER_COMMAND_SELECT_QUICK_PRAYER, id);
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     uint32_t bit = rc_prayer_bit(id);
     if (bit && (p->quick_prayers & bit)) {
         p->quick_prayers &= ~bit;
@@ -364,7 +364,7 @@ RcPrayerResult rc_player_toggle_quick_prayers(RcWorld *world) {
     if (!world) return RC_PRAYER_INVALID;
     if (rc_player_command_should_queue(world))
         return queue_prayer(world, RC_PLAYER_COMMAND_TOGGLE_QUICK_PRAYERS, -1);
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (p->quick_prayers_active) {
         rc_prayer_disable_all(world, RC_PRAYER_OK);
         return RC_PRAYER_OK;
@@ -377,7 +377,7 @@ RcPrayerResult rc_player_toggle_quick_prayers(RcWorld *world) {
 
 void rc_prayer_drain_tick(RcWorld *world) {
     if (!world) return;
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (!p->active_prayers) return;
     if (p->is_dead || p->current_hp <= 0) {
         rc_prayer_disable_all(world, RC_PRAYER_DEAD);

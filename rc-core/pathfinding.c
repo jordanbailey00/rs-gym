@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Routes search a 128x128 window centred on the mover, the size of the OSRS
+// client's pathfinding grid; farther targets end at the best alternative.
 enum {
-    SEARCH_SIZE = 512,
+    SEARCH_SIZE = 128,
     SEARCH_HALF = SEARCH_SIZE / 2,
     MAX_ALTERNATIVE_DISTANCE = 10,
 };
@@ -24,10 +26,16 @@ static _Thread_local RcRouteScratch route_scratch;
 static const RcRegion *map_region_at(const RcWorldMap *map, int region_x,
                                      int region_y) {
     if (!map || map->region_count <= 0) return NULL;
+    // Route searches ask about neighbouring tiles: remember the last region.
+    static _Thread_local const RcRegion *last;
+    if (last && last >= map->regions && last < map->regions + map->region_count
+            && last->loaded && last->region_x == region_x && last->region_y == region_y)
+        return last;
     for (int i = 0; i < map->region_count; i++) {
         const RcRegion *region = &map->regions[i];
         if (region->loaded && region->region_x == region_x
                 && region->region_y == region_y) {
+            last = region;
             return region;
         }
     }

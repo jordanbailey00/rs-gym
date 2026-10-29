@@ -173,7 +173,7 @@ RcSpellResult rc_spell_available(const RcWorld *world, int spell_idx, int autoca
     if (!(world->enabled & RC_SUB_COMBAT)) return RC_SPELL_DISABLED;
     const RcSpellDef *spell = rc_spell_def_get(spell_idx);
     if (!spell) return RC_SPELL_INVALID;
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     if (p->is_dead || p->current_hp <= 0) return RC_SPELL_DEAD;
     if (spell->book != p->current_spellbook && spell->book != RC_SPELL_BOOK_ALL)
         return RC_SPELL_WRONG_BOOK;

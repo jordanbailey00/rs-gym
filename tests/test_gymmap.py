@@ -1,6 +1,5 @@
 """Tests for the gym map compiler (tools/gymmap). Run: python3 -m unittest discover -s tests"""
 
-import re
 import sys
 import tempfile
 import unittest
@@ -13,11 +12,15 @@ sys.path.insert(0, str(ROOT / "tools" / "cache_pipeline"))
 import gymmap  # noqa: E402,F401
 from gymmap.cachewrite import write_overlay_cache  # noqa: E402
 from gymmap.compile import _rotate_loc, _rotate_tile, compile_gym  # noqa: E402
+from gymmap.drops import merge_gym_drops, read_drops, write_drops  # noqa: E402
+from gymmap.spatial import AREA_MULTICOMBAT, AREA_WILDERNESS_LEVEL, read_traversal, write_traversal  # noqa: E402
 from gymmap.mapformat import PROCEDURAL, Loc, Tile, decode_locs, decode_terrain, empty_tiles, encode_locs, encode_terrain  # noqa: E402
 from rc_cache import RcCacheStore, find_all_map_region_files, iter_location_placements, read_map_region_file  # noqa: E402
 
 CACHE = ROOT / "data/source/b237-openrs2-2528/cache"
-SPEC = ROOT / "maps/gym_v0.toml"
+SPEC = ROOT / "maps/gym_v1.toml"
+EDGES = ROOT / "data/source/traversal_edges.b237.bin"
+DROPS = ROOT / "data/source/drops.b237.bin"
 needs_cache = unittest.skipUnless(CACHE.is_dir(), "copied b237 cache not installed")
 
 
@@ -66,31 +69,62 @@ class MapFormatTest(unittest.TestCase):
 class CompileTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gym = compile_gym(SPEC, CACHE)
+        cls.gym = compile_gym(SPEC, CACHE, EDGES if EDGES.exists() else None)
 
-    def test_layout_and_determinism(self):
-        self.assertEqual(sorted(self.gym.mapsquares), [(x, y) for x in range(1, 6) for y in range(1, 6)])
-        self.assertEqual(self.gym.area, (128, 128, 320, 320))
-        self.assertEqual(compile_gym(SPEC, CACHE).mapsquares, self.gym.mapsquares)
-
-    def test_viewer_start_matches_spec(self):
-        header = (ROOT / "rc-viewer/dev_validation.h").read_text()
-        x = int(re.search(r"RS_GYM_START_X = (\d+)", header).group(1))
-        y = int(re.search(r"RS_GYM_START_Y = (\d+)", header).group(1))
-        self.assertEqual((x, y, 0), self.gym.start)
+    def test_areas_and_determinism(self):
+        surface = {(x, y) for x in range(1, 6) for y in range(1, 6)}
+        dungeon = {(x, y) for x in range(8, 10) for y in range(2, 4)}
+        self.assertEqual(set(self.gym.mapsquares), surface | dungeon)
+        self.assertEqual(self.gym.areas["surface"].bounds, (128, 128, 320, 320))
+        self.assertEqual(compile_gym(SPEC, CACHE, EDGES if EDGES.exists() else None).mapsquares, self.gym.mapsquares)
 
     def test_ocean_ring_is_blocked_water(self):
         for (rx, ry), (terrain, locs) in self.gym.mapsquares.items():
-            if rx in (1, 5) or ry in (1, 5):
+            if rx <= 5 and (rx in (1, 5) or ry in (1, 5)):
                 tiles = decode_terrain(terrain)
                 self.assertTrue(all(t.settings & 1 and t.overlay for col in tiles[0] for t in col))
                 self.assertEqual(decode_locs(locs), [])
 
     def test_stamps_keep_their_interactables(self):
         ids = {loc.id for _, locs in self.gym.mapsquares.values() for loc in decode_locs(locs)}
-        self.assertIn(10355, ids)  # Draynor bank booth
-        self.assertIn(24009, ids)  # Lumbridge furnace
+        for loc_id in (10355, 24009, 409, 1817, 11797, 14880):  # booth, furnace, altar, lair lever, stairs, trapdoor
+            self.assertIn(loc_id, ids)
         self.assertTrue({10943, 11161} & ids)  # copper rocks from the Varrock mine
+
+    def test_links_and_stamped_stairs(self):
+        by_source = {}
+        for e in self.gym.edges:
+            by_source.setdefault(e.source_id, []).append(e)
+            self.assertTrue(e.action in ("Climb-up", "Climb-down", "Pull"), e)
+        down = by_source[14880]
+        self.assertTrue(any(e.dest[0] >= 512 for e in down))  # town trapdoor leads into the dungeon
+        self.assertTrue(any(e.dest[0] < 512 for e in by_source[17385]))  # cave ladder leads back up
+        if EDGES.exists():
+            stairs = by_source[11797]
+            self.assertTrue(all(e.start[2] == 0 and e.dest[2] == 1 for e in stairs))
+
+    def test_wilderness_levels_rise_north(self):
+        bands = sorted((z.rect[1], z.value) for z in self.gym.zones if z.flags == AREA_WILDERNESS_LEVEL)
+        self.assertEqual([v for _, v in bands], list(range(1, 11)))
+        self.assertTrue(any(z.flags == AREA_MULTICOMBAT for z in self.gym.zones))
+
+    def test_npcs_and_items(self):
+        ids = {row[0] for row in self.gym.npc_spawns}
+        for npc in (239, 2054, 2098, 1525, 2813):  # KBD, Chaos Elemental, hill giant, fishing spot, shop keeper
+            self.assertIn(npc, ids)
+        fishing = [row for row in self.gym.npc_spawns if row[0] in (1525, 1526, 1519)]
+        self.assertTrue(all(row[5] == 0 for row in fishing))  # fishing spots do not wander
+        self.assertTrue(self.gym.ground_items)
+
+    def test_landmarks(self):
+        names = [lm[0] for lm in self.gym.landmarks]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertLessEqual(len(names), 24)  # RC_GYM_MAX_LANDMARKS
+        by_name = {lm[0]: lm[1:] for lm in self.gym.landmarks}
+        self.assertEqual(by_name["start"], self.gym.start)
+        self.assertGreaterEqual(by_name["kbd_lair"][0], 512)  # in the dungeon area
+        for name in ("bank", "furnace", "anvil", "mine", "trees", "net_fishing", "chaos_elemental"):
+            self.assertIn(name, by_name)
 
     def test_overlay_cache_reads_back(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +138,26 @@ class CompileTest(unittest.TestCase):
             placements = list(iter_location_placements(read_map_region_file(store, 3, 3, "locations"), 3, 3))
             self.assertEqual(len(placements), len(decode_locs(self.gym.mapsquares[(3, 3)][1])))
             self.assertTrue(store.read_group(2, 6))  # other indices link back to the source cache
+
+
+@unittest.skipUnless(EDGES.exists() and DROPS.exists(), "source tables not installed")
+class TablesTest(unittest.TestCase):
+    def test_traversal_round_trip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "trav.bin"
+            write_traversal(out, read_traversal(EDGES))
+            self.assertEqual(out.read_bytes(), EDGES.read_bytes())
+
+    def test_drops_round_trip_and_merge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "drops.bin"
+            write_drops(out, read_drops(DROPS))
+            self.assertEqual(out.read_bytes(), DROPS.read_bytes())
+            merged = merge_gym_drops(DROPS, out, [{"npcs": [3029], "always": [[526, 1, 1]],
+                                                    "main": [[995, 1, 5, 4]]}])
+            self.assertEqual(merged, 1)
+            flags, always, main, _, _ = read_drops(out)[3029]
+            self.assertEqual((flags, always, main), (0, [(526, 1, 1, 1)], [(995, 1, 5, 4)]))
 
 
 if __name__ == "__main__":

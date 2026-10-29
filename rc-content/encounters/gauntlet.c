@@ -1,3 +1,4 @@
+#include "../../rc-core/players.h"
 #include "../content.h"
 #include "../../rc-core/encounter.h"
 #include "../../rc-core/npc.h"
@@ -24,7 +25,7 @@ static void hunllef_engage(struct RcWorld *world, int enc_idx) {
     if (npc) {
         npc->player_untargetable = false;
         npc->attack_timer = 2;
-        npc->target_uid = 0;
+        npc->target_uid = world->player->index;
     }
 }
 

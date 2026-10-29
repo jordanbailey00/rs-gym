@@ -1,0 +1,529 @@
+# Gym v1: a dense 192x192 island plus a dungeon, built from b237 cache content.
+# Coordinates are tiles relative to the named area's south-west corner (area defaults to "surface").
+# Source coordinates in [[stamp]] are real-world b237 tiles.
+
+[map]
+name = "gym_v1"
+seed = 1
+start = [94, 94]
+
+[[area]]
+name = "surface"
+kind = "island"
+origin = [2, 2]    # south-west mapsquare; the real world starts at mapsquare x 15, y 19
+size = [3, 3]      # 192x192 tiles, world tiles 128..319
+ocean_ring = 1     # all-water mapsquares around the island
+
+[[area]]
+name = "dungeon"
+kind = "void"
+origin = [8, 2]    # world tiles 512..639 x 128..255
+size = [2, 2]
+
+# Floor ids sampled from real tiles (map floor ids, as stored in mapsquare terrain).
+[materials]
+grass = { underlay = 48 }                                    # Tutorial Island / Lumbridge grass
+grass_alt = { underlay = 50 }
+sand = { underlay = 48, overlay = 22 }                       # Tutorial Island beach
+path = { overlay = 10 }                                      # Lumbridge stone path
+wild = { underlay = 145 }                                    # wilderness ground (north of Edgeville)
+wild_alt = { underlay = 64 }
+river = { underlay = 48, overlay = 6, settings = 1 }         # River Lum water, blocked
+# Sea overlays as found off Tutorial Island; settings = 1 blocks the tile.
+shallow = { underlay = 48, overlay = 442, settings = 1 }
+water_mid = { underlay = 48, overlay = 445, settings = 1 }
+water_deep = { underlay = 48, overlay = 448, settings = 1 }
+ocean = { underlay = 48, overlay = 451, settings = 1 }
+void = { settings = 1 }                                      # no floor, blocked (dungeon rock)
+
+[island]
+radius = 80
+wobble = 0.08
+beach_width = 3
+sea_height = 0
+ramp_tiles = 12
+height_scale = 0.4
+water_depths = [[2, "shallow"], [4, "water_mid"], [8, "water_deep"], [999, "ocean"]]
+
+# Wilderness floor on the north of the island.
+[[paint]]
+rect = [0, 132, 192, 192]
+material = "wild"
+alt = "wild_alt"
+
+# A river from an inland spring to the east coast; the Lumbridge bridge crosses it at x 150.
+[[river]]
+points = [[126, 124], [146, 124], [160, 124], [192, 116]]
+width = 15
+material = "river"
+
+[[path]]
+points = [[40, 94], [152, 94]]
+width = 3
+
+[[path]]
+points = [[100, 94], [100, 134]]
+width = 3
+
+[[path]]
+points = [[130, 94], [153, 110], [153, 116]]
+width = 3
+
+[[path]]
+points = [[153, 132], [150, 146]]
+width = 3
+
+[[path]]
+points = [[110, 94], [112, 64]]
+width = 3
+
+# Real-world rects copied with all four planes; rotation is quarter turns clockwise.
+[[stamp]]
+name = "Draynor bank"
+source = [3086, 3236]
+size = [14, 13]
+at = [86, 98]
+
+[[stamp]]
+name = "Lumbridge general store"
+source = [3206, 3240]
+size = [11, 14]
+at = [66, 99]
+rotation = 1
+
+[[stamp]]
+name = "Lumbridge smithy"   # furnace and anvil
+source = [3219, 3248]
+size = [13, 13]
+at = [105, 97]
+rotation = 3
+
+[[stamp]]
+name = "Varrock south-east mine"   # copper, tin, iron
+source = [3277, 3355]
+size = [19, 17]
+at = [104, 46]
+
+[[stamp]]
+name = "Lumbridge church"   # altar
+source = [3237, 3203]
+size = [13, 14]
+at = [70, 74]
+
+[[stamp]]
+name = "Bob's Brilliant Axes"   # tool shop
+source = [3225, 3199]
+size = [11, 11]
+at = [86, 79]
+
+[[stamp]]
+name = "Lowe's Archery Emporium"   # combat supplies shop
+source = [3228, 3418]
+size = [15, 12]
+at = [118, 79]
+
+[[stamp]]
+name = "Varrock house"   # kitchen range, staircase to a second floor
+source = [3147, 3426]
+size = [19, 17]
+at = [42, 98]
+
+[[stamp]]
+name = "Lumbridge bridge"
+source = [3237, 3222]
+size = [17, 8]
+at = [150, 116]
+rotation = 1
+
+[[stamp]]
+name = "Edgeville hill giant cave"
+area = "dungeon"
+source = [3090, 9819]
+size = [42, 40]
+at = [8, 8]
+
+[[stamp]]
+name = "King Black Dragon lair"
+area = "dungeon"
+source = [2250, 4674]
+size = [44, 45]
+at = [70, 70]
+
+[[loc]]
+id = 14880          # Trapdoor (Climb-down), town entrance to the dungeon
+at = [100, 86]
+type = 22
+
+[[loc]]
+id = 14880          # Trapdoor in the giant cave, down to the lair
+area = "dungeon"
+at = [24, 22]
+type = 22
+
+[[link]]
+loc = 14880
+at = [100, 86]
+option = "Climb-down"
+to_area = "dungeon"
+to = [34, 40]
+
+[[link]]
+loc = 17385         # the cave's own ladder
+area = "dungeon"
+at = [34, 41]
+option = "Climb-up"
+to_area = "surface"
+to = [100, 85]
+
+[[link]]
+loc = 14880
+area = "dungeon"
+at = [24, 22]
+option = "Climb-down"
+to = [91, 77]
+
+[[link]]
+loc = 1817          # the lair's exit lever
+area = "dungeon"
+at = [91, 76]
+option = "Pull"
+stand = [91, 77]
+to = [24, 21]
+
+[[zone]]
+rect = [0, 132, 192, 182]
+wilderness = [1, 10]   # levels rise northward in 5-tile bands
+planes = [0]
+
+[[zone]]
+rect = [72, 150, 120, 182]   # Chaos Elemental's ground
+multi = true
+planes = [0]
+
+[[zone]]
+area = "dungeon"
+rect = [74, 74, 112, 112]    # King Black Dragon lair
+multi = true
+planes = [0]
+
+[[scatter]]
+ids = [1276, 1278]               # Tree
+rect = [20, 104, 84, 132]
+count = 35
+spacing = 1
+
+[[scatter]]
+ids = [10820]                    # Oak tree
+rect = [134, 96, 172, 112]
+count = 8
+spacing = 1
+
+[[scatter]]
+ids = [10829, 10831, 10833]      # Willow tree
+rect = [18, 60, 40, 100]
+count = 6
+spacing = 1
+
+[[scatter]]
+ids = [10832]                    # Maple tree
+rect = [20, 132, 72, 150]
+count = 6
+spacing = 1
+
+[[scatter]]
+ids = [10822]                    # Yew tree
+rect = [104, 136, 176, 168]
+count = 4
+spacing = 2
+
+[[scatter]]
+ids = [11366, 11367]             # Coal rocks
+rect = [124, 44, 140, 62]
+count = 6
+spacing = 0
+
+[[scatter]]
+ids = [11372, 11373]             # Mithril rocks
+rect = [86, 40, 102, 56]
+count = 3
+spacing = 0
+
+# NPCs: random open tiles in `rect`, or a fixed `at` tile (b237 npc ids).
+[[npc]]
+ids = [2813]                     # Shop keeper (general store)
+at = [72, 104]
+
+[[npc]]
+ids = [10619]                    # Bob (tool shop)
+at = [91, 83]
+
+[[npc]]
+ids = [2883]                     # Lowe (combat supplies)
+at = [122, 84]
+
+[[npc]]
+ids = [3106, 3108]               # Man
+rect = [60, 90, 116, 97]
+count = 3
+
+[[npc]]
+ids = [1173, 1174]               # Chicken
+rect = [50, 60, 66, 72]
+count = 6
+
+[[npc]]
+ids = [2790, 2791, 2793]         # Cow
+rect = [25, 55, 62, 90]
+count = 8
+
+[[npc]]
+ids = [3029, 3031, 3033]         # Goblin
+rect = [122, 62, 166, 78]
+count = 6
+
+[[npc]]
+ids = [2854]                     # Rat
+rect = [108, 48, 120, 60]
+count = 3
+
+[[npc]]
+ids = [5086, 5087]               # Dark wizard (wilderness levels 1-3)
+rect = [70, 133, 130, 146]
+count = 4
+
+[[npc]]
+ids = [70, 71, 72, 73]           # Skeleton
+rect = [20, 140, 90, 165]
+count = 6
+
+[[npc]]
+ids = [3018]                     # Giant spider (level 27)
+rect = [110, 134, 172, 160]
+count = 5
+
+[[npc]]
+ids = [2841]                     # Ice warrior
+rect = [60, 152, 140, 182]
+count = 4
+
+[[npc]]
+ids = [2054]                     # Chaos Elemental
+at = [96, 160]
+
+[[npc]]
+ids = [1525]                     # Fishing spot: small net, bait
+rect = [40, 4, 152, 44]
+placement = "shore"
+wander = 0
+count = 4
+
+[[npc]]
+ids = [1526]                     # Rod fishing spot: lure, bait (river)
+rect = [124, 108, 176, 140]
+placement = "shore"
+wander = 0
+count = 4
+
+[[npc]]
+ids = [1519]                     # Fishing spot: cage, harpoon
+rect = [160, 40, 192, 112]
+placement = "shore"
+wander = 0
+count = 3
+
+[[npc]]
+area = "dungeon"
+ids = [2098, 2099, 2100, 2101]   # Hill Giant
+rect = [14, 12, 44, 40]
+count = 6
+
+[[npc]]
+area = "dungeon"
+ids = [2090, 2091, 2092, 2093]   # Moss giant
+rect = [14, 12, 44, 40]
+count = 4
+
+[[npc]]
+area = "dungeon"
+ids = [2005, 2006, 2007, 2008]   # Lesser demon
+rect = [14, 12, 44, 40]
+count = 3
+
+[[npc]]
+area = "dungeon"
+ids = [239]                      # King Black Dragon
+at = [89, 93]
+
+# Static ground items: respawn ticks after pickup.
+[[item]]
+id = 1351          # Bronze axe
+at = [96, 92]
+respawn = 200
+
+[[item]]
+id = 1265          # Bronze pickaxe
+at = [97, 92]
+respawn = 200
+
+[[item]]
+id = 303           # Small fishing net
+at = [98, 92]
+respawn = 200
+
+[[item]]
+id = 590           # Tinderbox
+at = [99, 92]
+respawn = 200
+
+[[item]]
+id = 2347          # Hammer
+at = [100, 92]
+respawn = 200
+
+[[item]]
+id = 526           # Bones
+at = [40, 70]
+respawn = 100
+
+[[item]]
+id = 526
+at = [50, 80]
+respawn = 100
+
+[[item]]
+id = 995           # Coins
+quantity = 25
+at = [60, 150]
+respawn = 300
+
+[[item]]
+id = 995
+quantity = 50
+at = [130, 165]
+respawn = 300
+
+# Drop tables for monsters whose real tables RuneC's data leaves empty (unpublished wiki rates).
+# Rows are [item, min, max] for always, and [item, min, max, 1-in-N] for main (one roll) and tertiary.
+[[drops]]
+npcs = [3029, 3031, 3033]        # Goblin
+always = [[526, 1, 1]]           # Bones
+main = [[995, 1, 5, 4], [995, 9, 15, 16], [556, 4, 8, 16], [555, 4, 8, 16], [558, 2, 5, 16], [1205, 1, 1, 64], [1139, 1, 1, 64]]
+
+[[drops]]
+npcs = [3106, 3108]              # Man
+always = [[526, 1, 1]]
+main = [[995, 3, 3, 3], [995, 15, 25, 16], [556, 6, 6, 16], [554, 6, 6, 32], [1203, 1, 1, 64]]
+
+[[drops]]
+npcs = [2854]                    # Rat
+always = [[526, 1, 1]]
+
+[[drops]]
+npcs = [5086, 5087]              # Dark wizard
+always = [[526, 1, 1]]
+main = [[556, 10, 18, 8], [555, 10, 18, 8], [557, 10, 18, 8], [554, 10, 18, 8], [558, 8, 12, 10], [562, 4, 8, 16], [561, 2, 4, 32], [995, 5, 30, 8], [579, 1, 1, 64], [577, 1, 1, 128]]
+
+[[drops]]
+npcs = [70, 71, 72, 73]          # Skeleton
+always = [[526, 1, 1]]
+main = [[995, 10, 40, 6], [1203, 1, 1, 32], [1420, 1, 1, 32], [562, 3, 6, 24], [561, 2, 4, 32], [1139, 1, 1, 48]]
+
+[[drops]]
+npcs = [2841]                    # Ice warrior
+main = [[995, 20, 90, 4], [561, 4, 8, 16], [562, 6, 10, 16], [560, 2, 4, 32], [1181, 1, 1, 64], [1355, 1, 1, 64]]
+
+# Locs the engine spawns while it runs (rendered from templates, tools/cache_pipeline/export_spawn_objects.py).
+[[spawn_objects]]
+id = 43475
+name = "Fire"                    # lit by players (Firemaking); has a Cook option
+type = 10
+
+# Named places agents can travel to and see bearings for (rc-env). Order is the travel-action order.
+[[landmark]]
+name = "start"
+at = [94, 94]
+
+[[landmark]]
+name = "bank"
+at = [92, 105]
+
+[[landmark]]
+name = "general_store"
+at = [73, 104]
+
+[[landmark]]
+name = "tool_shop"
+at = [92, 83]
+
+[[landmark]]
+name = "combat_shop"
+at = [121, 84]
+
+[[landmark]]
+name = "furnace"
+at = [108, 102]
+
+[[landmark]]
+name = "anvil"
+at = [115, 103]
+
+[[landmark]]
+name = "range"
+at = [56, 99]
+
+[[landmark]]
+name = "altar"
+at = [76, 79]
+
+[[landmark]]
+name = "mine"
+at = [113, 56]
+
+[[landmark]]
+name = "trees"
+at = [56, 116]
+
+[[landmark]]
+name = "oaks"
+at = [154, 102]
+
+[[landmark]]
+name = "willows"
+at = [30, 76]
+
+[[landmark]]
+name = "net_fishing"
+at = [94, 21]
+
+[[landmark]]
+name = "rod_fishing"
+at = [145, 118]
+
+[[landmark]]
+name = "cage_fishing"
+at = [170, 70]
+
+[[landmark]]
+name = "dungeon_entrance"
+at = [100, 87]
+
+[[landmark]]
+name = "wilderness"
+at = [94, 134]
+
+[[landmark]]
+name = "maples"
+at = [44, 138]
+
+[[landmark]]
+name = "yews"
+at = [116, 149]
+
+[[landmark]]
+name = "chaos_elemental"
+at = [96, 158]
+
+[[landmark]]
+name = "kbd_lair"
+area = "dungeon"
+at = [91, 77]

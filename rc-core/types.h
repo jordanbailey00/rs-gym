@@ -27,6 +27,7 @@
 #define RC_MAX_COMBAT_ATTACKERS 8
 #define RC_SLAYER_BLOCK_SLOTS 8
 #define RC_SLAYER_PREFER_SLOTS 8
+#define RC_MAX_PLAYERS 16
 #define RC_MAX_PLAYER_COMMANDS 32
 
 typedef enum {
@@ -76,6 +77,10 @@ typedef enum {
     RC_PLAYER_COMMAND_SELECT_QUICK_PRAYER,
     RC_PLAYER_COMMAND_TOGGLE_QUICK_PRAYERS,
     RC_PLAYER_COMMAND_CONSUME,
+    RC_PLAYER_COMMAND_SKILL_MAKE,
+    RC_PLAYER_COMMAND_LIGHT_FIRE,
+    RC_PLAYER_COMMAND_SHOP_BUY,
+    RC_PLAYER_COMMAND_SHOP_SELL,
 } RcPlayerCommandKind;
 
 typedef enum {
@@ -506,8 +511,7 @@ enum {
 };
 
 enum {
-    RC_HIT_SOURCE_STATUS = -2,
-    RC_HIT_SOURCE_PLAYER = -1,
+    RC_HIT_SOURCE_STATUS = -2,  // player hits use rc_hit_source_player(slot), see players.h
 };
 
 // Field order keeps the struct at 56 bytes (no padding growth).
@@ -776,6 +780,66 @@ typedef enum {
     RC_MOVEMENT_NO_ROUTE,
 } RcMovementResult;
 
+// A shop's live stock (rc-core/shops.c). Every player in the world trades
+// against the same stock.
+#define RC_MAX_SHOPS 8
+#define RC_SHOP_MAX_ITEMS 40
+
+typedef struct {
+    int item_id;
+    int base_stock;          // 0: an item players sold that the shop does not stock
+    int stock;
+    uint16_t restock_ticks;  // ticks per step back toward base_stock
+    RcTick next_restock;
+} RcShopSlot;
+
+typedef struct {
+    char name[48];
+    int npc_id;                    // shopkeeper NPC definition
+    uint16_t buy_mult, sell_mult;  // per mille of item value at base stock
+    uint16_t delta;                // per mille per step away from base stock
+    bool general;                  // buys any tradeable item
+    RcShopSlot slots[RC_SHOP_MAX_ITEMS];
+    int slot_count;
+} RcShopState;
+
+// A skilling action in progress (rc-core/skilling.c).
+typedef enum {
+    RC_SKILL_JOB_NONE = 0,
+    RC_SKILL_JOB_GATHER,      // tree or rock (gathering node)
+    RC_SKILL_JOB_FISH,        // fishing spot NPC
+    RC_SKILL_JOB_FIREMAKING,  // logs on the player's tile
+    RC_SKILL_JOB_COOK,        // raw food on a fire or range
+    RC_SKILL_JOB_MAKE,        // furnace or anvil recipe
+} RcSkillJobKind;
+
+typedef enum {
+    RC_MAKE_MENU_NONE = 0,
+    RC_MAKE_MENU_FURNACE,
+    RC_MAKE_MENU_ANVIL,
+} RcMakeMenu;
+
+#define RC_MAKE_MAX_OPTIONS 96
+
+// One furnace/anvil product the gym offers (an active recipes.bin row).
+typedef struct {
+    int16_t recipe;
+    uint8_t facility;     // RcMakeMenu
+    uint8_t success_pct;  // 50 for iron bars at an ordinary furnace
+} RcMakeOption;
+
+typedef struct {
+    uint8_t kind;          // RcSkillJobKind
+    int16_t rule;          // gather/fish/fire/cook rule or make option
+    int32_t target;        // object id, or fishing spot NPC uid
+    int32_t item_id;       // logs or raw food being worked
+    int32_t remaining;     // make: items left, -1 until inputs run out
+    uint64_t placement_key;
+    int16_t x, y;
+    int8_t plane;
+    RcTick started_tick;
+} RcSkillJob;
+
 // Player
 typedef struct {
     // Position
@@ -897,10 +961,16 @@ typedef struct {
     int storage_x, storage_y, storage_plane;
     RcBankResult bank_result;
 
-    // Skilling
+    // Skilling (rc-core/skilling.c). skill_action is non-zero while a job
+    // runs and clearing it cancels the job; skill_ready_tick is its next
+    // attempt.
     int skill_action;
     RcTick skill_ready_tick;
-    int skill_target_x, skill_target_y;
+    RcSkillJob skill_job;
+    uint8_t make_menu;     // RcMakeMenu open at a furnace or anvil
+    int8_t shop_open;      // index into RcWorld.shops, -1: none
+    // Death (rc-core/death.c): respawn tick while dead, 0 otherwise.
+    RcTick respawn_tick;
 
     // Regen
     int hp_regen_counter;
@@ -937,6 +1007,12 @@ typedef struct {
     uint8_t slayer_block_count;
     uint8_t slayer_prefer_count;
     uint8_t slayer_combat_achievement_tier;
+    // Per-player action lock and command queue: each player issues its own commands.
+    RcPlayerActionState action;
+    RcPlayerCommandQueue commands;
+    RcPlayerCommand command_storage[RC_MAX_PLAYER_COMMANDS];
+    uint8_t index;  // slot in RcWorld.players
+    bool active;
 } RcPlayer;
 
 struct RcWorld;
@@ -1057,7 +1133,7 @@ typedef struct {
     bool force_player_max_hit;
     bool player_untargetable;
     bool owner_controlled;  // owner drives it; no wander/hunt/attacks
-    bool player_loot_credit;
+    uint16_t player_damage[RC_MAX_PLAYERS];  // loot credit: damage dealt by each player slot
     bool loot_prepared;
     bool active;
 } RcNpc;
@@ -1253,8 +1329,15 @@ typedef struct {
 // World (top-level game state). Named struct tag so other subsystem
 // headers can forward-declare it without pulling in this file.
 typedef struct RcWorld {
-    // Base (always present, always valid)
-    RcPlayer player;
+    // Players. `player` is the one the engine is acting for: the selected player outside a
+    // tick, each player in turn during per-player phases, and an NPC's target while that NPC
+    // runs. Use rc_world_select_player / rc_world_player_at to address others.
+    RcPlayer players[RC_MAX_PLAYERS];
+    RcPlayer *player;
+    int player_count;
+    bool pin_area;  // active area is a fixed mapsquare rect (see RcWorldConfig.pin_area)
+    int16_t pinned_min_rx, pinned_min_ry, pinned_max_rx, pinned_max_ry;
+    int respawn_x, respawn_y, respawn_plane;
     RcNpc *npcs;
     int npc_count;
     int npc_capacity;
@@ -1284,8 +1367,6 @@ typedef struct RcWorld {
     RcWorldStreamingTelemetry streaming_telemetry;
     RcTick tick;
     bool in_tick;
-    RcPlayerActionState player_action;
-    RcPlayerCommandQueue player_commands;
     uint32_t rng_state;
     uint32_t initial_seed;
     bool multi_combat;
@@ -1296,6 +1377,14 @@ typedef struct RcWorld {
     int consumable_count;
     int (*consumable_prayer_bonus)(const RcPlayer *player);
     const struct RcStoragePolicy *storage_policy;
+    // Skilling rules (rc-content/skilling.c) and the furnace/anvil products
+    // built from recipes.bin when they are installed.
+    const struct RcSkillingRules *skilling;
+    RcMakeOption make_options[RC_MAKE_MAX_OPTIONS];
+    int make_option_count;
+    RcShopState shops[RC_MAX_SHOPS];
+    int shop_count;
+    const struct RcDeathRules *death_rules;  // rc-content; NULL: death only flags the player
     RcItemEquipRequirementHook item_equip_requirement_hook;
     void *item_equip_requirement_ctx;
     RcCombatAttackEvent combat_attack_events[RC_MAX_COMBAT_ATTACK_EVENTS];
@@ -1321,7 +1410,6 @@ typedef struct RcWorld {
 
     char npc_spawns_path[512];
     char ground_item_spawns_path[512];
-    RcPlayerCommand player_command_storage[RC_MAX_PLAYER_COMMANDS];
 } RcWorld;
 
 #endif

@@ -19,6 +19,11 @@ RcInteractionHandlerResult rc_interaction_result_message(const char *message);
 RcInteractionHandlerResult rc_interaction_result_failure(
     RcInteractionFailure reason, const char *message);
 RcInteractionHandlerResult rc_interaction_result_handoff(void);
+// A handler's result after it ran game code that may have published a chat
+// message (rc_interaction_publish_message): the outcome carries that message,
+// which the handler's own outcome would otherwise replace.
+RcInteractionHandlerResult rc_interaction_result_after(
+    const RcPlayer *player, uint64_t outcome_sequence, int ok);
 int  rc_interaction_begin(RcPlayer *player, int source_actor_uid,
                           RcInteractionOp op, const char *option_text,
                           const RcInteractionTarget *target,

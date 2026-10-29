@@ -57,6 +57,12 @@ typedef struct {
     bool members_world;              // gameplay availability policy
     int npc_capacity;                // dense active NPC slots for this world
     RcWorldStreamingConfig streaming;
+    int player_count;                // players in the world, 1..RC_MAX_PLAYERS (0 means 1)
+    // Keep this mapsquare rect loaded for the whole run instead of a window that follows the
+    // player (required with several players); at most RC_MAX_REGIONS mapsquares.
+    bool pin_area;
+    int pinned_min_rx, pinned_min_ry, pinned_max_rx, pinned_max_ry;
+    int respawn_x, respawn_y, respawn_plane;  // where dead players return
 
     // Asset paths. rc_world_create_config() loads each path only when
     // its owning subsystem/shared user group is enabled. Disabled

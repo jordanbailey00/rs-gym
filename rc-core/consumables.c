@@ -1,3 +1,4 @@
+#include "players.h"
 #include "consumables.h"
 #include "api.h"
 #include "combat.h"
@@ -38,9 +39,9 @@ const char *rc_consume_result_message(int result) {
 
 static RcConsumeResult result(RcWorld *w, int id, RcConsumeResult code) {
     if (w) {
-        w->player.consume_result = code;
-        w->player.consume_item_id = id;
-        if (code != RC_CONSUME_QUEUED) w->player.consume_outcome_sequence++;
+        w->player->consume_result = code;
+        w->player->consume_item_id = id;
+        if (code != RC_CONSUME_QUEUED) w->player->consume_outcome_sequence++;
     }
     return code;
 }
@@ -121,7 +122,7 @@ static void cure(RcPlayer *p, int kind) {
 RcConsumeResult rc_player_consume_expected(RcWorld *w, int slot,
                                           uint32_t generation, int drink) {
     if (!w) return RC_CONSUME_INVALID;
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     if ((w->enabled & (RC_SUB_INVENTORY | RC_SUB_CONSUMABLES))
             != (RC_SUB_INVENTORY | RC_SUB_CONSUMABLES))
         return result(w, -1, RC_CONSUME_DISABLED);
@@ -138,9 +139,9 @@ RcConsumeResult rc_player_consume_expected(RcWorld *w, int slot,
     if ((d->kind == RC_CONSUME_DRINK) != (drink != 0) || item->state_id)
         return result(w, id, RC_CONSUME_INVALID);
     if (p->is_dead || p->current_hp <= 0 || p->storage_kind != RC_STORAGE_NONE
-            || (w->player_action.active
-                && w->player_action.category == RC_ACTION_CATEGORY_STRONG
-                && w->player_action.ready_tick > w->tick)
+            || (w->player->action.active
+                && w->player->action.category == RC_ACTION_CATEGORY_STRONG
+                && w->player->action.ready_tick > w->tick)
             || (p->traversal.active && p->traversal.phase != RC_TRAVERSAL_PHASE_APPROACH))
         return result(w, id, RC_CONSUME_BUSY);
     if (rc_player_command_should_queue(w)) {
@@ -178,7 +179,7 @@ RcConsumeResult rc_player_consume_expected(RcWorld *w, int slot,
             : base_hp >= 50 ? 6 : base_hp >= 25 ? 4 : 2);
     heal(p, hp, d->overheal ? hp : 0);
     if (d->divine_ticks) {
-        RcPendingHit hit = {.source_idx = RC_HIT_SOURCE_PLAYER,
+        RcPendingHit hit = {.source_idx = rc_hit_source_player(p->index),
             .attack_style = COMBAT_NONE, .flags = RC_HIT_SUPPRESS_ENCOUNTER_EFFECTS};
         rc_combat_apply_player_hit(w, &hit, 10);
     }
@@ -238,18 +239,18 @@ RcConsumeResult rc_player_consume_expected(RcWorld *w, int slot,
 
 int rc_player_eat(RcWorld *w, int slot) {
     uint32_t gen = w && slot >= 0 && slot < RC_INVENTORY_SIZE
-        ? w->player.inventory[slot].generation : 0;
+        ? w->player->inventory[slot].generation : 0;
     return rc_consume_accepted(rc_player_consume_expected(w, slot, gen, 0));
 }
 
 int rc_player_drink(RcWorld *w, int slot) {
     uint32_t gen = w && slot >= 0 && slot < RC_INVENTORY_SIZE
-        ? w->player.inventory[slot].generation : 0;
+        ? w->player->inventory[slot].generation : 0;
     return rc_consume_accepted(rc_player_consume_expected(w, slot, gen, 1));
 }
 
 void rc_consumables_tick(RcWorld *w) {
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     if (p->is_dead || p->current_hp <= 0) return;
     if (p->delayed_food_heal && w->tick >= p->delayed_food_tick) {
         heal(p, p->delayed_food_heal, 0);
@@ -283,8 +284,8 @@ void rc_consumables_reset(RcPlayer *p) {
 }
 
 void rc_player_apply_toxin(RcWorld *w, int damage, bool venom) {
-    if (!w || damage <= 0 || damage > 1000 || w->player.is_dead) return;
-    RcPlayer *p = &w->player;
+    if (!w || damage <= 0 || damage > 1000 || w->player->is_dead) return;
+    RcPlayer *p = w->player;
     if (w->tick < (venom ? p->venom_immune_until : p->poison_immune_until)) return;
     if (!venom && p->toxin_venom) return;
     int severity = venom ? minimum(20, maximum(6, damage)) : damage * 5;
@@ -295,7 +296,7 @@ void rc_player_apply_toxin(RcWorld *w, int damage, bool venom) {
 }
 
 void rc_player_toxin_tick(RcWorld *w) {
-    RcPlayer *p = &w->player;
+    RcPlayer *p = w->player;
     if (!p->toxin_severity || p->is_dead || p->current_hp <= 0
             || w->tick < p->toxin_tick || p->storage_kind != RC_STORAGE_NONE) return;
     int damage = p->toxin_venom ? p->toxin_severity : (p->toxin_severity + 4) / 5;

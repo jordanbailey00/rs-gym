@@ -256,7 +256,7 @@ static int regular_player_damage(const RcWorld *world, const RcNpc *target,
     uint64_t tags = monster_tags_for_def(target->def_id);
     uint64_t activity = activity_behavior_for_def(target->def_id);
     uint16_t profile = activity_profile_for_def(target->def_id);
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     uint64_t gate = RC_MONSTER_TAG_WEAPON_DAMAGE_GATE |
                     RC_MONSTER_TAG_AMMO_DAMAGE_GATE |
                     RC_MONSTER_TAG_SPELL_DAMAGE_GATE;
@@ -283,21 +283,21 @@ static int regular_npc_attack_damage(RcWorld *world, RcNpc *attacker,
     if ((((tags & breath) != 0 &&
           (tags & RC_MONSTER_TAG_EQUIPMENT_MITIGATION) != 0) ||
          (activity & RC_ACTIVITY_BEHAVIOR_DRAGONFIRE) != 0) &&
-            has_breath_mitigation(&world->player)) {
+            has_breath_mitigation(world->player)) {
         damage /= 4;
     }
     if (profile == RC_ACTIVITY_PROFILE_SHELLBANE_GRYPHON) {
-        bool shield = equipment_slot_contains(&world->player, EQUIP_SHIELD,
+        bool shield = equipment_slot_contains(world->player, EQUIP_SHIELD,
                                               "tortugan shield");
-        if (shield && (world->player.active_prayers & PRAYER_PROTECT_MELEE)) {
+        if (shield && (world->player->active_prayers & PRAYER_PROTECT_MELEE)) {
             return 0;
         }
         if (!shield) damage += 10;
     }
     if ((tags & RC_MONSTER_TAG_EQUIPMENT_REQUIRED) != 0 &&
-            !has_slayer_special_protection(&world->player, tags)) {
+            !has_slayer_special_protection(world->player, tags)) {
         if ((tags & RC_MONSTER_TAG_STAT_DRAIN) != 0) {
-            drain_player_combat_stats(&world->player, 1);
+            drain_player_combat_stats(world->player, 1);
         }
         if ((tags & RC_MONSTER_TAG_SPECIAL_DAMAGE_PREVENTION) != 0) {
             damage += 2;
@@ -314,7 +314,7 @@ static void regular_on_npc_hit_player(RcWorld *world,
     uint64_t tags = monster_tags_for_def(source->def_id);
     uint64_t activity = activity_behavior_for_def(source->def_id);
     uint16_t profile = activity_profile_for_def(source->def_id);
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
 
     bool handled_heal = false;
     if (profile == RC_ACTIVITY_PROFILE_BARROWS_GUTHAN) {
@@ -516,7 +516,7 @@ static void regular_after_npc_swing(RcWorld *world, RcNpc *npc,
     uint64_t shaman = RC_MONSTER_TAG_JUMP_ATTACK |
                       RC_MONSTER_TAG_AREA_ATTACK |
                       RC_MONSTER_TAG_MINION_SPAWN;
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if ((tags & shaman) != 0 && (npc->attack_count % 5) == 0) {
         if ((tags & RC_MONSTER_TAG_JUMP_ATTACK) != 0) {
             npc->prev_x = npc->x;
@@ -721,14 +721,14 @@ static int regular_prepare_player_hits(RcWorld *world, const RcNpc *target,
                                        RcCombatCalc *base, bool special,
                                        RcPendingHit *hits, int capacity,
                                        const char **failure) {
-    if (world->player.combat_style != COMBAT_RANGED) return 0;
-    const RcItemDef *weapon = rc_item_def_get(world->player.equipment[EQUIP_WEAPON].item_id);
+    if (world->player->combat_style != COMBAT_RANGED) return 0;
+    const RcItemDef *weapon = rc_item_def_get(world->player->equipment[EQUIP_WEAPON].item_id);
     rc_content_ranged_calc(world, target, base);
     if (!weapon || !strstr(weapon->name, "Dark bow"))
         return rc_content_ralos_hits(world, target, base, special, hits, capacity, failure);
-    int count = regular_player_ranged_resource_cost(&world->player, special);
+    int count = regular_player_ranged_resource_cost(world->player, special);
     if (capacity < count) { *failure = "Insufficient hit slots for this bow."; return -1; }
-    int ammo = world->player.equipment[EQUIP_AMMO].item_id;
+    int ammo = world->player->equipment[EQUIP_AMMO].item_id;
     bool dragon = ammo == 11212 || (ammo >= 11227 && ammo <= 11229);
     RcCombatCalc calc = *base;
     if (special) calc.max_hit = calc.max_hit * (dragon ? 150 : 130) / 100;
@@ -748,7 +748,7 @@ static int regular_prepare_player_hits(RcWorld *world, const RcNpc *target,
 
 static void restore_saradomin_godsword(RcWorld *world, int damage) {
     if (!world || damage <= 0) return;
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     int hp = (damage + 1) / 2;
     if (hp < 10) hp = 10;
     p->current_hp += hp;

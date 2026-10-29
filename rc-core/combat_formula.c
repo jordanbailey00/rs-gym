@@ -436,6 +436,23 @@ void rc_refresh_player_combat_style(RcPlayer *p) {
     p->combat.attack_range = rc_player_attack_range(p);
 }
 
+int rc_player_attack_style_available(RcPlayer *p, int style_idx) {
+    if (!p || style_idx < 0 || style_idx > 3) return 0;
+    int saved_idx = p->attack_style_idx, saved_xp = p->combat_xp_mask;
+    RcCombatStyle saved_style = p->combat_style;
+    RcAttackStance saved_stance = p->attack_stance;
+    RcCombatActorState saved_combat = p->combat;
+    p->attack_style_idx = style_idx;
+    rc_refresh_player_combat_style(p);
+    int ok = p->combat_style != COMBAT_NONE;
+    p->attack_style_idx = saved_idx;
+    p->combat_xp_mask = saved_xp;
+    p->combat_style = saved_style;
+    p->attack_stance = saved_stance;
+    p->combat = saved_combat;
+    return ok;
+}
+
 void rc_player_set_attack_style(struct RcWorld *world, int style_idx) {
     if (rc_player_command_should_queue(world)) {
         int args[8] = {style_idx, 0, 0, 0, 0, 0, 0, 0};
@@ -447,8 +464,8 @@ void rc_player_set_attack_style(struct RcWorld *world, int style_idx) {
     if (!world) return;
     if (style_idx < 0) style_idx = 0;
     if (style_idx > 3) style_idx = 3;
-    world->player.attack_style_idx = style_idx;
-    rc_refresh_player_combat_style(&world->player);
+    world->player->attack_style_idx = style_idx;
+    rc_refresh_player_combat_style(world->player);
 }
 
 int rc_player_attack_speed(const RcPlayer *p) {

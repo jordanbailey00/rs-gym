@@ -11,7 +11,7 @@ enum { RALOS_EMPTY = 28919, RALOS_CHARGED = 28922, SUNFIRE = 28924,
 int rc_content_ralos_hits(RcWorld *world, const RcNpc *target,
                           const RcCombatCalc *base, bool special,
                           RcPendingHit *hits, int capacity, const char **failure) {
-    const RcInvSlot *weapon = &world->player.equipment[EQUIP_WEAPON];
+    const RcInvSlot *weapon = &world->player->equipment[EQUIP_WEAPON];
     if (weapon->item_id != RALOS_EMPTY && weapon->item_id != RALOS_CHARGED)
         return 0;
     int count = weapon->item_id == RALOS_CHARGED ? 2 : 1;

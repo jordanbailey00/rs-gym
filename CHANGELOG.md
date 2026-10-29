@@ -1,5 +1,82 @@
 # Changelog
 
+## 2026-10-25: v1 implementation
+
+**What.** All six v1 milestones: a dense island plus dungeon, up to 16 players per world, six
+skills, shops, death rules, two bosses, and an RL interface with a PufferLib 5.0 binding, replays
+and a benchmark. Not yet tested by hand in the viewer or trained.
+
+**Why.** v1 is meant to be a complete small game that single- and multi-agent RL methods can be
+compared on, fast enough for hour-long experiments.
+
+**World (`maps/gym_v1.toml`, `tools/gymmap`).**
+- Spec v1: named areas (island and void), rivers, paint rects, stamps in any area, traversal
+  links, zones (wilderness bands, multi-combat), fixed and shoreline NPC placement, static ground
+  items, gym drop tables, spawned-loc templates and named landmarks.
+- New compiler modules: `spatial.py` (traversal and area-flag tables), `nodes.py` (gathering
+  nodes, now with stump and empty-rock replacements), `drops.py` (merges gym drop tables into the
+  source table).
+- Real stair and ladder rows move with each stamp; spec links add the dungeon entrances.
+- `build_gym.py` writes `data/regions/gym.cfg` (start, respawn, the loaded mapsquare rect, landmarks)
+  and the spawned-loc templates (`tools/cache_pipeline/export_spawn_objects.py`, copied from
+  RuneC_v4 and changed to read the spec). `export_objects.py` gives depletable nodes their stump or
+  empty-rock replacement mesh.
+
+**Engine (`rc-core`).**
+- Players: a `players[16]` array with `world->player` as the acting player; per-player ticks,
+  interactions, command queues, banks, NPC targeting, hit sources and loot credit. The whole gym
+  stays loaded (`pin_area`). `layout.c` reads `gym.cfg`; `rc_gym_world_config` is the one gym config
+  for the viewer, tests and rc-env.
+- `skilling.c`: per-player skilling jobs (gather, fish, firemaking, cook, make) with OSRS success
+  curves; furnace/anvil products come from recipes.bin.
+- `shops.c`: live shops with shared stock, stock-based prices and restocking.
+- `death.c`: keep-3 (Protect Item), gravestones, wilderness drops, timed respawn.
+- New player commands for making, lighting fires and shop buy/sell, so viewer and agent input queue
+  for the next tick like every other command.
+- `rc_world_reset_seeded` resets as a new world (RNG and NPC ids start over) for exact replays.
+- Fixes found on the way:
+  - Deaths are checked before prayer drain and regen, so Protect Item counts and regen cannot
+    revive a killed player.
+  - A handler's own result no longer replaces the chat message its game code published.
+- Speed and threads:
+  - Route searches use a 128×128 window (OSRS-sized) instead of 512×512.
+  - Collision lookups remember the last map region.
+  - The shared object-placement cache can be frozen for safe reads from many threads.
+  - The combat-rejection log line only prints with `RC_DEBUG_COMBAT`.
+
+**Content (`rc-content`).** `skilling.c` (tools, rates, fishing, logs, cooking, smithing products
+and their handlers); `gym.c` (three shops, bone burying, death rules).
+
+**RL (`rc-env`, new).** The C API, observation and action layouts, masks, ten task presets,
+per-landmark travel fields, replays, `rs-gym-bench`, `rs-gym-rollout`, and the PufferLib binding with
+`tools/puffer_overlay.sh`.
+
+**Viewer.**
+- The default player is a fresh gym player with the starter kit (dev 99s and bank:
+  `RUNEC_DEV_VALIDATION=1`).
+- A furnace/anvil make menu in the chatbox and a shop window in the bank panel.
+- Skilling animations and Bury in the item menu.
+- `--replay FILE`, with keys 1–9 to follow an agent; other players are drawn.
+
+**Decisions.**
+- Agents act through a flat 453-action masked space with entity lists, not raw tile clicks: walk
+  hops and landmark travel keep every route short, which keeps stepping fast and learnable.
+- Every route the engine searches stays OSRS-faithful (same BFS, smaller window).
+- Shops, death and skilling rules are content tables; the engine holds the mechanics.
+- I did not build against or link anything into an external PufferLib checkout; the overlay script
+  does that when you run it.
+
+**Verified.**
+- `ctest`: 8 suites. Compiler tests (15), world, multiplayer, skilling (chop, mine, fish, light,
+  cook, smelt, smith), rules (shops, death, burying), bosses (dragonfire with and without the
+  shield, KBD drop, Chaos Elemental teleport and disarm), env (masked random play, determinism
+  across envs and resets, scripted woodcutting reward, multi-agent episodes, boss death,
+  record-and-replay), PufferLib binding (stand-in header).
+- ThreadSanitizer is clean across all tasks with 4 threads.
+- Viewer smoke run and a rendered replay frame.
+
+**Known gaps.** See `TODO.md`.
+
 ## 2026-10-24: v1 spec
 
 **What.** v0 is done and kept on branch `v0` (`ea600a0`). `SPEC.md` now defines v1 and v2, and

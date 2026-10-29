@@ -1,3 +1,4 @@
+#include "players.h"
 #include "drops.h"
 #include "io.h"
 #include "rng.h"
@@ -556,7 +557,11 @@ void rc_npc_prepare_loot(RcWorld *world, RcNpc *npc) {
     if (!world || !npc || !(world->enabled & RC_SUB_LOOT)
             || !npc->is_dead || npc->loot_prepared) return;
     npc->loot_prepared = true;
-    if (!npc->player_loot_credit) return;
+    int owner = -1;
+    for (int i = 0; i < RC_MAX_PLAYERS; i++)
+        if (npc->player_damage[i] && (owner < 0 || npc->player_damage[i] > npc->player_damage[owner]))
+            owner = i;
+    if (owner < 0) return;
     const RcNpcDef *def = rc_npc_def_for_npc(world, npc);
     if (!def) return;
     RcLootReceipt receipt = {.npc_uid = npc->uid, .npc_def_id = def->id,
@@ -584,7 +589,7 @@ void rc_npc_prepare_loot(RcWorld *world, RcNpc *npc) {
             .delay_ticks = npc->death_timer, .untradeable_lifetime_ticks = 300};
         RcGroundGrantResult result = rc_ground_grant(world, receipt.grants,
             receipt.count, receipt.x, receipt.y, receipt.plane,
-            RC_GROUND_OWNER_LOCAL_PLAYER, ground);
+            owner, ground);
         if (result != RC_GROUND_GRANT_OK)
             receipt.result = RC_LOOT_DELIVERY_FAILED;
     }

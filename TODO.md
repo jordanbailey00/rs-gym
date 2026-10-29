@@ -1,44 +1,21 @@
 # TODO
 
-## v1 milestone 1: world
-- Dungeon of 2×2 mapsquares at an unused location, entered by a town ladder and a cave; copy in
-  the King Black Dragon lair.
-- Traversal rows: move the real rows for stairs and ladders along with each stamp; spec-authored
-  links for the dungeon entrances.
-- Spec support for zones (wilderness levels, multi-combat) and static ground items.
-- New content:
-  - church, houses, range, tool shop and combat supplies shop
-  - maples, yews, coal and mithril
-  - fishing spots, and a river with a bridge
-  - the wilderness strip
-  - giants, lesser demons and the other new monsters
+## v1 follow-ups
+- Train a first baseline per benchmark task through PufferLib and record the scores in SPEC.
+- Run `tools/puffer_overlay.sh` against a real PufferLib 5.0 checkout (the binding is only tested
+  against a stand-in `pufferenv.h`).
+- Report a hash of the gym data with `RC_ENV_VERSION`, so results stay comparable across rebuilds.
+- Single-agent worlds run about 75k agent steps/s per thread; the per-tick NPC simulation is now
+  the largest cost. Profile `rc_world_tick` (NPC movement and combat ticks).
+- Observations describe items by category, value and tier; consider item-id embeddings with a
+  custom PufferLib policy.
+- Agents cannot open doors; either open every door at reset or add doors to the object list.
+- Viewer: other agents are drawn in the local player's pose (no per-agent animation); the replay
+  stops at the end of the recording instead of looping.
+- Viewer: the shop window reuses the bank panel; give it its own layout and a Value-on-hover tooltip.
+- Fishing spots never move (OSRS spots relocate every few minutes).
 - Smoother coastline (diagonal overlay shapes); blend floors and heights where stamps meet
   generated ground.
-
-## v1 milestone 2: several players per world
-- A player array in rc-core with per-player inventory, bank, stats and interactions; NPCs target a
-  specific player.
-- Keep the whole gym loaded instead of an active window around one player; make the default
-  position the gym start.
-- The viewer controls player 0 and draws the others.
-
-## v1 milestone 3: skilling
-- Woodcutting, mining, fishing, firemaking, cooking and smithing loops, using the recipe and
-  skill-drop data.
-- Generate gathering-node rows (with placement keys) for the gym's trees, rocks and fishing spots.
-
-## v1 milestone 4: shops and death
-- Buying and selling with stock-based prices; a shop interface in the viewer; bind the gym's
-  shopkeepers.
-- Death: keep 3 items, gravestones, wilderness drops, respawn in town.
-
-## v1 milestone 5: bosses
-- King Black Dragon and Chaos Elemental: gym spawns, with their fight areas moved to the gym.
-
-## v1 milestone 6: RL interface
-- C environment API, observations, masked actions, task presets and benchmark tasks.
-- Per-episode reseeding, a determinism test, PufferLib binding, episode recording and viewer replay.
-- Thread-safe collision and object caches; an SPS benchmark.
 
 ## Other
 - Make `data/` reproducible inside RS-gym. Non-spatial data was seeded by copying RuneC_v4's

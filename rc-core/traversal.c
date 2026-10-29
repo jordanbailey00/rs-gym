@@ -454,7 +454,7 @@ int rc_traversal_plan_object(
             || motion->transit_ticks < 0 || motion->landing_ticks < 0) {
         return 0;
     }
-    const RcPendingInteraction *interaction = &world->player.interaction;
+    const RcPendingInteraction *interaction = &world->player->interaction;
     int option = (int)interaction->op - (int)RC_INTERACTION_OP1;
     if (!interaction->active
             || interaction->generation != interaction_generation
@@ -490,7 +490,7 @@ int rc_traversal_plan_object(
         return 0;
     }
     rc_traversal_cancel(world, RC_ACTION_CANCEL_REPLACED);
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     player->traversal = (RcTraversalState){
         .active = true,
         .generation = next_nonzero(&player->next_traversal_generation),
@@ -526,22 +526,22 @@ int rc_traversal_plan_object(
 
 int rc_traversal_start(RcWorld *world, uint64_t interaction_generation) {
     if (!world) return 0;
-    RcTraversalState *state = &world->player.traversal;
+    RcTraversalState *state = &world->player->traversal;
     if (!state->active || state->phase != RC_TRAVERSAL_PHASE_APPROACH
             || state->interaction_generation != interaction_generation) {
         return 0;
     }
     state->phase = RC_TRAVERSAL_PHASE_TAKEOFF;
     state->ready_tick = world->tick + (RcTick)state->takeoff_ticks;
-    rc_player_route_clear(&world->player, RC_MOVEMENT_NONE);
+    rc_player_route_clear(world->player, RC_MOVEMENT_NONE);
     if (state->has_facing) {
-        world->player.facing_entity = -1;
-        world->player.facing_x = state->facing_x;
-        world->player.facing_y = state->facing_y;
-        world->player.facing_width = 1;
-        world->player.facing_length = 1;
+        world->player->facing_entity = -1;
+        world->player->facing_x = state->facing_x;
+        world->player->facing_y = state->facing_y;
+        world->player->facing_width = 1;
+        world->player->facing_length = 1;
     }
-    world->player_action = (RcPlayerActionState){
+    world->player->action = (RcPlayerActionState){
         .active = true,
         .owner = RC_ACTION_OWNER_TRAVERSAL,
         .category = RC_ACTION_CATEGORY_STRONG,
@@ -550,30 +550,30 @@ int rc_traversal_start(RcWorld *world, uint64_t interaction_generation) {
                     + (RcTick)state->transit_ticks
                     + (RcTick)state->landing_ticks + 1,
     };
-    publish_event(&world->player);
+    publish_event(world->player);
     return 1;
 }
 
 void rc_traversal_cancel(RcWorld *world,
                          RcPlayerActionCancelReason reason) {
-    if (!world || !world->player.traversal.active) return;
-    RcTraversalState state = world->player.traversal;
-    rc_traversal_clear(&world->player);
-    if (world->player_action.active
-            && world->player_action.owner == RC_ACTION_OWNER_TRAVERSAL) {
-        world->player_action.active = false;
-        world->player_action.owner = RC_ACTION_OWNER_NONE;
-        world->player_action.category = RC_ACTION_CATEGORY_SOFT;
-        world->player_action.ready_tick = world->tick;
-        world->player_action.last_cancel_reason = reason;
+    if (!world || !world->player->traversal.active) return;
+    RcTraversalState state = world->player->traversal;
+    rc_traversal_clear(world->player);
+    if (world->player->action.active
+            && world->player->action.owner == RC_ACTION_OWNER_TRAVERSAL) {
+        world->player->action.active = false;
+        world->player->action.owner = RC_ACTION_OWNER_NONE;
+        world->player->action.category = RC_ACTION_CATEGORY_SOFT;
+        world->player->action.ready_tick = world->tick;
+        world->player->action.last_cancel_reason = reason;
     }
-    publish_outcome(&world->player, &state, RC_TRAVERSAL_RESULT_CANCELLED,
+    publish_outcome(world->player, &state, RC_TRAVERSAL_RESULT_CANCELLED,
                     reason);
 }
 
 void rc_traversal_tick(RcWorld *world) {
-    if (!world || !world->player.traversal.active) return;
-    RcPlayer *player = &world->player;
+    if (!world || !world->player->traversal.active) return;
+    RcPlayer *player = world->player;
     RcTraversalState *state = &player->traversal;
     if (state->phase == RC_TRAVERSAL_PHASE_APPROACH) {
         if (!player->interaction.active
@@ -595,7 +595,7 @@ void rc_traversal_tick(RcWorld *world) {
             && state->presentation == RC_TRAVERSAL_PRESENTATION_EXACT_MOVE) {
         state->phase = RC_TRAVERSAL_PHASE_TRANSIT;
         state->ready_tick = world->tick + (RcTick)state->transit_ticks;
-        world->player_action.ready_tick = state->ready_tick
+        world->player->action.ready_tick = state->ready_tick
                                         + (RcTick)state->landing_ticks + 1;
         publish_event(player);
         return;
@@ -623,7 +623,7 @@ void rc_traversal_tick(RcWorld *world) {
         admitted.phase = RC_TRAVERSAL_PHASE_LANDING;
         admitted.ready_tick = world->tick + (RcTick)admitted.landing_ticks;
         player->traversal = admitted;
-        world->player_action = (RcPlayerActionState){
+        world->player->action = (RcPlayerActionState){
             .active = true,
             .owner = RC_ACTION_OWNER_TRAVERSAL,
             .category = RC_ACTION_CATEGORY_STRONG,

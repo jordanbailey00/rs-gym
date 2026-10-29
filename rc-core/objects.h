@@ -152,4 +152,8 @@ int rc_object_placements_prefetch_rect(int min_x, int min_y,
                                        int max_x, int max_y,
                                        RcObjectPlacementLoadStats *stats);
 int rc_object_placements_set_cache_limit(int max_pages);
+// Freezes the placement page cache as it is: lookups stop updating LRU state
+// and pages that are not resident read as empty. Prefetch every page you need
+// first; afterwards worlds on several threads may read placements at once.
+int rc_object_placements_freeze(void);
 #endif

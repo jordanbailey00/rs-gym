@@ -36,7 +36,7 @@ int rc_content_dragonfire_max_hit(const RcWorld *world, const RcNpc *npc,
                                   bool *shielded) {
     (void)npc;
     if (!world) return -1;
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     bool shield = dragonfire_shield(p);
     bool prayer = (p->active_prayers & PRAYER_PROTECT_MAGIC) != 0;
     int potion = world->tick < p->super_antifire_until ? 2

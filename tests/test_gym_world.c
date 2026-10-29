@@ -4,54 +4,19 @@
 #include "../rc-core/config.h"
 #include "../rc-core/pathfinding.h"
 #include "../rc-content/content.h"
-#include "../rc-viewer/dev_validation.h"
+#include "gym_test_config.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 
-enum { START_X = RS_GYM_START_X, START_Y = RS_GYM_START_Y, BANK_BOOTH = 10355, SKIP = 77 };
+enum { BANK_BOOTH = 10355, SKIP = 77 };
+#define START_X GYM_START_X
+#define START_Y GYM_START_Y
 
 static int failures = 0;
 #define CHECK(cond, ...) do { if (!(cond)) { failures++; fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); \
     fprintf(stderr, __VA_ARGS__); fputc('\n', stderr); } } while (0)
-
-// Same subsystems and data paths as rc-viewer's world.
-static RcWorldConfig gym_config(void) {
-    RcWorldConfig cfg = rc_preset_base_only();
-    cfg.npc_capacity = RC_WORLD_NPC_CAPACITY_FULL;
-    cfg.subsystems = RC_SUB_INVENTORY | RC_SUB_EQUIPMENT | RC_SUB_LOOT | RC_SUB_COMBAT | RC_SUB_PRAYER |
-                     RC_SUB_OBJECTS | RC_SUB_REGIONS | RC_SUB_TRAVERSAL | RC_SUB_STORAGE |
-                     RC_SUB_ENCOUNTER | RC_SUB_CONSUMABLES;
-    cfg.npc_defs_path = "data/defs/npc_defs.bin";
-    cfg.items_path = "data/defs/items.bin";
-    cfg.drops_path = "data/defs/drops.bin";
-    cfg.rdt_path = "data/defs/rdt.bin";
-    cfg.gdt_path = "data/defs/gdt.bin";
-    cfg.mrdt_path = "data/defs/mrdt.bin";
-    cfg.prayers_path = "data/defs/prayers.bin";
-    cfg.varbits_path = "data/defs/varbits.bin";
-    cfg.varps_path = "data/defs/varps.bin";
-    cfg.spells_path = "data/defs/spells.bin";
-    cfg.combat_profiles_path = "data/defs/combat_visuals.tsv";
-    cfg.monster_mechanics_path = "data/defs/regular_npc_mechanics.bin";
-    cfg.activity_schemas_path = "data/defs/activity_schemas.bin";
-    cfg.activity_spawns_path = "data/defs/activity_spawns.bin";
-    cfg.activity_mechanics_path = "data/defs/activity_mechanics.bin";
-    cfg.activity_states_path = "data/defs/activity_states.bin";
-    cfg.encounters_path = "data/defs/encounters.bin";
-    cfg.player_actions_path = "data/defs/player_actions.bin";
-    cfg.object_defs_path = "data/defs/object_defs.bin";
-    cfg.object_placements_path = "data/regions/world.object-placements.indexed.bin";
-    cfg.object_behaviors_path = "data/defs/object_behaviors.bin";
-    cfg.collision_tiles_path = "data/regions/world.collision-tiles.indexed.bin";
-    cfg.spawns_path = "data/spawns/world.npc-spawns.indexed.bin";
-    cfg.ground_item_spawns_path = "data/spawns/world.ground-items.indexed.bin";
-    cfg.area_flags_path = "data/defs/area_flags.bin";
-    cfg.traversal_edges_path = "data/defs/traversal_edges.bin";
-    cfg.seed = 12345;
-    return cfg;
-}
 
 static void tick(RcWorld *w, int n) {
     for (int i = 0; i < n; i++) rc_world_tick(w);
@@ -72,7 +37,7 @@ int main(void) {
         fprintf(stderr, "gym data not built; run tools/build_gym.py\n");
         return SKIP;
     }
-    RcWorldConfig cfg = gym_config();
+    RcWorldConfig cfg = gym_test_config(1);
     RcWorld *w = rc_world_create_config(&cfg);
     if (!w) {
         fprintf(stderr, "FAIL: world creation\n");
@@ -89,11 +54,15 @@ int main(void) {
     CHECK(active > 0, "no NPCs spawned");
 
     // The ocean ring (world x 64..127) is blocked. Clicking just past the west coast walks
-    // to the shore and stops on land, like an OSRS click on water.
+    // to the shore and stops on land, like an OSRS click on water. Routes search a 128x128
+    // window, so the click starts within 64 tiles of the coast.
     CHECK(rc_tile_blocked(&w->map, 100, START_Y, 0), "ocean ring tile is walkable");
     int coast_x = 128;
     while (coast_x < START_X && rc_tile_blocked(&w->map, coast_x, START_Y, 0)) coast_x++;
     CHECK(coast_x > 128 && coast_x < START_X, "no west coast found on row %d", START_Y);
+    int from_x = coast_x + 40;
+    while (from_x > coast_x && rc_tile_blocked(&w->map, from_x, START_Y, 0)) from_x--;
+    CHECK(rc_world_relocate_player(w, from_x, START_Y, 0), "relocate near the coast");
     CHECK(rc_player_walk_to(w, coast_x - 3, START_Y), "walk command rejected");
     tick(w, 120);
     CHECK(p->x >= coast_x && p->x <= coast_x + 2 && !rc_tile_blocked(&w->map, p->x, p->y, 0),

@@ -439,7 +439,7 @@ static int eligible_boss_count(const RcWorld *world, int master_idx,
         return 0;
     }
     const char *master = g_rc_slayer_masters[master_idx].name;
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     int slayer = p->skills.base_level[SKILL_SLAYER];
     int count = 0;
     for (uint8_t i = 0; i < task->boss_candidate_count; i++) {
@@ -462,7 +462,7 @@ int rc_slayer_task_eligible(const struct RcWorld *world, int master_idx,
     RcSlayerMasterDef *m = &g_rc_slayer_masters[master_idx];
     if (task_idx < 0 || task_idx >= (int)m->task_count) return 0;
     const RcSlayerTaskDef *task = &m->tasks[task_idx];
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     int slayer = p->skills.base_level[SKILL_SLAYER];
     int combat = player_combat_level(p);
     if (slayer < m->req_slayer || combat < m->req_combat) return 0;
@@ -483,15 +483,15 @@ int rc_slayer_task_eligible(const struct RcWorld *world, int master_idx,
 
 int rc_slayer_block_task(struct RcWorld *world, const char *task_name) {
     if (!world || !task_name) return -1;
-    return add_task_key(world->player.slayer_blocked_keys,
-                        &world->player.slayer_block_count,
+    return add_task_key(world->player->slayer_blocked_keys,
+                        &world->player->slayer_block_count,
                         RC_SLAYER_BLOCK_SLOTS, task_name);
 }
 
 int rc_slayer_prefer_task(struct RcWorld *world, const char *task_name) {
     if (!world || !task_name) return -1;
-    return add_task_key(world->player.slayer_preferred_keys,
-                        &world->player.slayer_prefer_count,
+    return add_task_key(world->player->slayer_preferred_keys,
+                        &world->player->slayer_prefer_count,
                         RC_SLAYER_PREFER_SLOTS, task_name);
 }
 
@@ -518,7 +518,7 @@ int rc_slayer_task_amount_for_world(const RcWorld *world,
     }
     uint16_t min = task->amount_min ? task->amount_min : 3;
     uint16_t max = task->amount_max ? task->amount_max : 35;
-    int tier = world ? world->player.slayer_combat_achievement_tier : 0;
+    int tier = world ? world->player->slayer_combat_achievement_tier : 0;
     if (tier > 6) tier = 6;
     max = (uint16_t)(max + tier * 5);
     if (max > 65) max = 65;
@@ -536,7 +536,7 @@ int rc_slayer_task_location_for_roll(const RcWorld *world,
     int eligible = 0;
     for (uint8_t i = 0; i < task->location_count; i++) {
         const RcSlayerLocationDef *loc = &task->location_defs[i];
-        if (has_progression(&world->player, loc->progression_flags, 0)) {
+        if (has_progression(world->player, loc->progression_flags, 0)) {
             eligible++;
         }
     }
@@ -546,7 +546,7 @@ int rc_slayer_task_location_for_roll(const RcWorld *world,
     int seen = 0;
     for (uint8_t i = 0; i < task->location_count; i++) {
         const RcSlayerLocationDef *loc = &task->location_defs[i];
-        if (has_progression(&world->player, loc->progression_flags, 0)) {
+        if (has_progression(world->player, loc->progression_flags, 0)) {
             if (seen == target) {
                 strncpy(out, loc->name, (size_t)cap - 1);
                 out[cap - 1] = '\0';
@@ -568,7 +568,7 @@ int rc_slayer_boss_task_for_roll(const RcWorld *world, int master_idx,
     }
     out[0] = '\0';
     const char *master = g_rc_slayer_masters[master_idx].name;
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     int slayer = p->skills.base_level[SKILL_SLAYER];
     int eligible = eligible_boss_count(world, master_idx, task);
     if (eligible == 0) return -1;
@@ -613,11 +613,11 @@ int rc_slayer_start_task(struct RcWorld *world, const char *master_name,
     int task = rc_slayer_find_task(master, task_name);
     if (master < 0 || task < 0) return -1;
     if (!rc_slayer_task_eligible(world, master, task)) return -1;
-    world->player.slayer_master_idx = master;
-    world->player.slayer_task_idx = task;
-    world->player.slayer_task_remaining = amount;
-    world->player.slayer_boss_name[0] = '\0';
-    world->player.slayer_location[0] = '\0';
+    world->player->slayer_master_idx = master;
+    world->player->slayer_task_idx = task;
+    world->player->slayer_task_remaining = amount;
+    world->player->slayer_boss_name[0] = '\0';
+    world->player->slayer_location[0] = '\0';
     return 0;
 }
 
@@ -631,16 +631,16 @@ int rc_slayer_assign_task(struct RcWorld *world, const char *master_name,
     uint32_t total = 0;
     for (uint16_t i = 0; i < m->task_count; i++) {
         if (!rc_slayer_task_eligible(world, master, i)) continue;
-        if (player_has_task_key(&world->player,
-                                world->player.slayer_blocked_keys,
-                                world->player.slayer_block_count,
+        if (player_has_task_key(world->player,
+                                world->player->slayer_blocked_keys,
+                                world->player->slayer_block_count,
                                 m->tasks[i].name)) {
             continue;
         }
         uint32_t weight = m->tasks[i].weight;
-        if (player_has_task_key(&world->player,
-                                world->player.slayer_preferred_keys,
-                                world->player.slayer_prefer_count,
+        if (player_has_task_key(world->player,
+                                world->player->slayer_preferred_keys,
+                                world->player->slayer_prefer_count,
                                 m->tasks[i].name)) {
             weight *= 2u;
         }
@@ -651,43 +651,43 @@ int rc_slayer_assign_task(struct RcWorld *world, const char *master_name,
     uint32_t acc = 0;
     for (uint16_t i = 0; i < m->task_count; i++) {
         if (!rc_slayer_task_eligible(world, master, i)) continue;
-        if (player_has_task_key(&world->player,
-                                world->player.slayer_blocked_keys,
-                                world->player.slayer_block_count,
+        if (player_has_task_key(world->player,
+                                world->player->slayer_blocked_keys,
+                                world->player->slayer_block_count,
                                 m->tasks[i].name)) {
             continue;
         }
         uint32_t weight = m->tasks[i].weight;
-        if (player_has_task_key(&world->player,
-                                world->player.slayer_preferred_keys,
-                                world->player.slayer_prefer_count,
+        if (player_has_task_key(world->player,
+                                world->player->slayer_preferred_keys,
+                                world->player->slayer_prefer_count,
                                 m->tasks[i].name)) {
             weight *= 2u;
         }
         acc += weight;
         if (pick < acc) {
-            world->player.slayer_master_idx = master;
-            world->player.slayer_task_idx = i;
-            world->player.slayer_task_remaining =
+            world->player->slayer_master_idx = master;
+            world->player->slayer_task_idx = i;
+            world->player->slayer_task_remaining =
                 amount > 0 ? amount :
                 rc_slayer_task_amount_for_world(world, &m->tasks[i],
                                                 roll >> 16, 0);
-            world->player.slayer_boss_name[0] = '\0';
-            world->player.slayer_location[0] = '\0';
+            world->player->slayer_boss_name[0] = '\0';
+            world->player->slayer_location[0] = '\0';
             if ((m->tasks[i].task_flags & RC_SLAYER_TASK_BOSS_SECOND_ROLL)
                     != 0) {
                 rc_slayer_boss_task_for_roll(
                     world, master, &m->tasks[i], roll >> 8,
-                    world->player.slayer_boss_name,
-                    sizeof(world->player.slayer_boss_name));
+                    world->player->slayer_boss_name,
+                    sizeof(world->player->slayer_boss_name));
             }
             if (strcmp(m->name, "Konar quo Maten") == 0 &&
                     (m->tasks[i].task_flags & RC_SLAYER_TASK_HAS_LOCATIONS)
                     != 0) {
                 rc_slayer_task_location_for_roll(
                     world, &m->tasks[i], roll >> 4,
-                    world->player.slayer_location,
-                    sizeof(world->player.slayer_location));
+                    world->player->slayer_location,
+                    sizeof(world->player->slayer_location));
             }
             return 0;
         }
@@ -697,8 +697,8 @@ int rc_slayer_assign_task(struct RcWorld *world, const char *master_name,
 
 const char *rc_slayer_current_task_name(const struct RcWorld *world) {
     if (!world) return NULL;
-    int master = world->player.slayer_master_idx;
-    int task = world->player.slayer_task_idx;
+    int master = world->player->slayer_master_idx;
+    int task = world->player->slayer_task_idx;
     if (master < 0 || master >= g_rc_slayer_master_count) return NULL;
     RcSlayerMasterDef *m = &g_rc_slayer_masters[master];
     if (task < 0 || task >= (int)m->task_count) return NULL;
@@ -706,28 +706,28 @@ const char *rc_slayer_current_task_name(const struct RcWorld *world) {
 }
 
 const char *rc_slayer_current_boss_name(const struct RcWorld *world) {
-    if (!world || !world->player.slayer_boss_name[0]) return NULL;
-    return world->player.slayer_boss_name;
+    if (!world || !world->player->slayer_boss_name[0]) return NULL;
+    return world->player->slayer_boss_name;
 }
 
 const char *rc_slayer_current_location(const struct RcWorld *world) {
-    if (!world || !world->player.slayer_location[0]) return NULL;
-    return world->player.slayer_location;
+    if (!world || !world->player->slayer_location[0]) return NULL;
+    return world->player->slayer_location;
 }
 
 static void on_npc_died(struct RcWorld *world, int evt,
                         const void *payload, void *ctx) {
     (void)evt;
     (void)ctx;
-    if (!world || !payload || world->player.slayer_task_remaining <= 0) return;
+    if (!world || !payload || world->player->slayer_task_remaining <= 0) return;
     int def_idx = rc_npc_def_find((int)((const RcPayloadNpcEvent *)payload)->def_id);
-    int master = world->player.slayer_master_idx;
-    int task_idx = world->player.slayer_task_idx;
+    int master = world->player->slayer_master_idx;
+    int task_idx = world->player->slayer_task_idx;
     if (master < 0 || master >= g_rc_slayer_master_count) return;
     RcSlayerMasterDef *m = &g_rc_slayer_masters[master];
     if (task_idx < 0 || task_idx >= (int)m->task_count) return;
-    if (npc_matches_task_def(def_idx, &m->tasks[task_idx], &world->player)) {
-        world->player.slayer_task_remaining--;
+    if (npc_matches_task_def(def_idx, &m->tasks[task_idx], world->player)) {
+        world->player->slayer_task_remaining--;
     }
 }
 

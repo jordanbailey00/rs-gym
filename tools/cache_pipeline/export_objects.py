@@ -1161,8 +1161,9 @@ def load_dynamic_behaviors(
 
 def load_gathering_placements(
     path: Path = GATHERING_NODES,
-) -> set[GatheringPlacement]:
-    """Read exact object placements that can enter a depleted state."""
+) -> dict[GatheringPlacement, int]:
+    """Read exact object placements that can enter a depleted state, mapped to
+    the loc shown while depleted (-1: the placement disappears)."""
     data = path.read_bytes()
     if len(data) < 12:
         raise ValueError(f"{path}: gathering-node header is truncated")
@@ -1177,15 +1178,15 @@ def load_gathering_placements(
             f"{path}: expected {expected_size} bytes for {count} rows, "
             f"found {len(data)}"
         )
-    placements: set[GatheringPlacement] = set()
+    placements: dict[GatheringPlacement, int] = {}
     for i in range(count):
         row = struct.unpack_from(row_fmt, data, 12 + i * row_size)
-        obj_id, _key, _replacement, x, y, _mapsquare, plane, _skill, \
+        obj_id, _key, replacement, x, y, _mapsquare, plane, _skill, \
             _mask, obj_type, rotation, _flags, _respawn, _pad = row
         placement = (obj_id, x, y, plane, obj_type, rotation)
         if placement in placements:
             raise ValueError(f"{path}: duplicate gathering placement {placement}")
-        placements.add(placement)
+        placements[placement] = replacement
     return placements
 
 
@@ -1312,7 +1313,7 @@ def process_placements(
     tex_colors: dict[int, int] | None = None,
     atlas: TextureAtlas | None = None,
     dynamic_behaviors: dict[int, DynamicObjectBehavior] | None = None,
-    gathering_placements: set[GatheringPlacement] | None = None,
+    gathering_placements: dict[GatheringPlacement, int] | None = None,
     report_gaps: bool = True,
 ) -> tuple[list[ExpandedPlacement], list[AnimatedObjectPlacement], list[ModelData]]:
     """Process raw placements into expanded vertex data ready for rendering.
@@ -1326,7 +1327,7 @@ def process_placements(
     skipped = 0
     model_miss = 0
     dynamic_behaviors = dynamic_behaviors or {}
-    gathering_placements = gathering_placements or set()
+    gathering_placements = gathering_placements or {}
 
     def prepare_model_set(loc: LocDef, model_ids: tuple[int, ...]) -> ModelData | None:
         nonlocal model_miss
@@ -1520,6 +1521,8 @@ def process_placements(
             po.obj_type, po.rotation,
         )
         is_gathering_placement = gathering_identity in gathering_placements
+        if is_gathering_placement and gathering_placements[gathering_identity] >= 0:
+            next_stage = gathering_placements[gathering_identity]  # stump / empty rock
         is_resource = dynamic_behavior is not None \
             and bool(dynamic_behavior.flags & OBHV_RESOURCE)
         if is_gathering_placement and not is_resource:
@@ -1666,7 +1669,7 @@ def _build_and_write(
     atlas: TextureAtlas | None = None,
     model_geom_cache: dict[int, ModelData] | None = None,
     dynamic_behaviors: dict[int, DynamicObjectBehavior] | None = None,
-    gathering_placements: set[GatheringPlacement] | None = None,
+    gathering_placements: dict[GatheringPlacement, int] | None = None,
     prebuilt_heightmaps: dict[
         int, tuple[int, int, int, int, list[float]]
     ] | None = None,

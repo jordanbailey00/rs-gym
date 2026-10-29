@@ -32,6 +32,7 @@
 #include "traversal.h"
 #include "varbits.h"
 #include "world_state.h"
+#include "players.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,8 +73,7 @@ static void init_player_defaults(RcPlayer *p) {
     p->interact_option = -1;
     p->storage_target = -1;
     p->storage_option = -1;
-    p->skill_target_x = -1;
-    p->skill_target_y = -1;
+    p->shop_open = -1;
     rc_traversal_clear(p);
     rc_interaction_clear(p);
     p->combat_style = COMBAT_MELEE_CRUSH;
@@ -136,8 +136,15 @@ static int init_world_state(RcWorld *world) {
     world->next_ground_item_uid = 0;
     world->next_npc_uid = 0;
     world->next_dynamic_object_key = UINT64_MAX;
-    world->player_commands.next_sequence = 0;
-    world->player_commands.last_result = RC_COMMAND_RESULT_NONE;
+    if (world->player_count < 1) world->player_count = 1;
+    for (int i = 0; i < world->player_count; i++) {
+        RcPlayer *p = &world->players[i];
+        p->index = (uint8_t)i;
+        p->active = true;
+        p->commands.next_sequence = 0;
+        p->commands.last_result = RC_COMMAND_RESULT_NONE;
+    }
+    world->player = &world->players[0];
     rc_events_init(&world->events);
     if ((world->enabled & RC_SUB_SLAYER) && rc_slayer_init(world) != 0)
         return 0;
@@ -149,7 +156,8 @@ static int init_world_state(RcWorld *world) {
                 || rc_encounter_use_specs(world, specs, spec_count) != 0)
             return 0;
     }
-    init_player_defaults(&world->player);
+    for (int i = 0; i < world->player_count; i++)
+        init_player_defaults(&world->players[i]);
     return rc_interaction_install_world_defaults(world);
 }
 
@@ -208,6 +216,15 @@ RcWorld *rc_world_create_with_data(RcGameData *data,
     world->members_world = cfg->members_world;
     world->streaming = cfg->streaming;
     rc_world_streaming_config_sanitize(&world->streaming);
+    world->player_count = cfg->player_count > 0 ? cfg->player_count : 1;
+    world->pin_area = cfg->pin_area;
+    world->pinned_min_rx = (int16_t)cfg->pinned_min_rx;
+    world->pinned_min_ry = (int16_t)cfg->pinned_min_ry;
+    world->pinned_max_rx = (int16_t)cfg->pinned_max_rx;
+    world->pinned_max_ry = (int16_t)cfg->pinned_max_ry;
+    world->respawn_x = cfg->respawn_x;
+    world->respawn_y = cfg->respawn_y;
+    world->respawn_plane = cfg->respawn_plane;
     copy_world_path(world->npc_spawns_path, sizeof(world->npc_spawns_path),
                     cfg->spawns_path);
     copy_world_path(world->ground_item_spawns_path,
@@ -258,6 +275,11 @@ int rc_world_reset(RcWorld *world) {
     bool members_world = world->members_world;
     RcWorldStreamingConfig streaming = world->streaming;
     RcWorldContentInstaller installer = world->content_installer;
+    int player_count = world->player_count;
+    bool pin_area = world->pin_area;
+    int16_t pinned[4] = {world->pinned_min_rx, world->pinned_min_ry,
+                         world->pinned_max_rx, world->pinned_max_ry};
+    int respawn[3] = {world->respawn_x, world->respawn_y, world->respawn_plane};
     char spawns_path[sizeof(world->npc_spawns_path)];
     memcpy(spawns_path, world->npc_spawns_path, sizeof(spawns_path));
     char ground_spawns_path[sizeof(world->ground_item_spawns_path)];
@@ -274,6 +296,15 @@ int rc_world_reset(RcWorld *world) {
     world->enabled = enabled;
     world->members_world = members_world;
     world->streaming = streaming;
+    world->player_count = player_count;
+    world->pin_area = pin_area;
+    world->pinned_min_rx = pinned[0];
+    world->pinned_min_ry = pinned[1];
+    world->pinned_max_rx = pinned[2];
+    world->pinned_max_ry = pinned[3];
+    world->respawn_x = respawn[0];
+    world->respawn_y = respawn[1];
+    world->respawn_plane = respawn[2];
     memcpy(world->npc_spawns_path, spawns_path, sizeof(spawns_path));
     memcpy(world->ground_item_spawns_path, ground_spawns_path,
            sizeof(ground_spawns_path));
@@ -282,12 +313,20 @@ int rc_world_reset(RcWorld *world) {
     return !installer || rc_world_install_content(world, installer);
 }
 
+int rc_world_reset_seeded(RcWorld *world, uint32_t seed) {
+    if (!world) return 0;
+    world->initial_seed = seed ? seed : RC_DEFAULT_SEED;
+    if (!rc_world_reset(world)) return 0;
+    world->next_npc_uid = 0;  // NPCs respawn on the next activation, as in a new world
+    return 1;
+}
+
 const RcGameData *rc_world_get_game_data(const RcWorld *world) {
     return world ? world->game_data : NULL;
 }
 
 const RcPlayer *rc_get_player(const RcWorld *world) {
-    return world ? &world->player : NULL;
+    return world ? world->player : NULL;
 }
 
 RcTick rc_world_get_tick(const RcWorld *world) {
@@ -297,24 +336,38 @@ RcTick rc_world_get_tick(const RcWorld *world) {
 RcPlayerCommandResult rc_player_last_command_result(const RcWorld *world,
                                                      uint64_t *sequence) {
     if (sequence) {
-        *sequence = world ? world->player_commands.last_sequence : 0;
+        *sequence = world ? world->player->commands.last_sequence : 0;
     }
-    return world ? world->player_commands.last_result
+    return world ? world->player->commands.last_result
                  : RC_COMMAND_RESULT_REJECTED_INVALID;
 }
 
 int rc_player_pending_command_count(const RcWorld *world) {
-    return world ? world->player_commands.count : 0;
+    return world ? world->player->commands.count : 0;
+}
+
+int rc_world_select_player(RcWorld *world, int idx) {
+    if (!world || world->in_tick || !rc_world_player_at(world, idx)) return -1;
+    int previous = rc_player_slot(world, world->player);
+    world->player = &world->players[idx];
+    return previous;
+}
+
+static int pinned_contains(const RcWorld *world, int x, int y) {
+    int rx = x / RC_MAPSQUARE_SIZE, ry = y / RC_MAPSQUARE_SIZE;
+    return rx >= world->pinned_min_rx && rx <= world->pinned_max_rx
+        && ry >= world->pinned_min_ry && ry <= world->pinned_max_ry;
 }
 
 int rc_world_relocate_player(RcWorld *world, int x, int y, int plane) {
     if (!world || !rc_world_tile_valid(x, y, plane)) {
         return 0;
     }
+    if (world->pin_area && !pinned_contains(world, x, y)) return 0;
     if (rc_world_activate_area_around(world, x, y, plane, NULL) < 0)
         return 0;
     rc_player_cancel_action(world, RC_ACTION_CANCEL_RELOCATED);
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     player->prev_x = player->x;
     player->prev_y = player->y;
     player->x = x;
@@ -324,12 +377,12 @@ int rc_world_relocate_player(RcWorld *world, int x, int y, int plane) {
 }
 
 int rc_world_respawn_player(RcWorld *world, int x, int y, int plane) {
-    if (!world || !world->player.is_dead) return 0;
+    if (!world || !world->player->is_dead) return 0;
     if (!rc_world_relocate_player(world, x, y, plane)) return 0;
     rc_combat_reset_player_life(world);
-    world->player.current_hp = world->player.max_hp;
-    world->player.is_dead = false;
-    world->player.death_tick = 0;
+    world->player->current_hp = world->player->max_hp;
+    world->player->is_dead = false;
+    world->player->death_tick = 0;
     return 1;
 }
 
@@ -411,6 +464,7 @@ static RcWorld *clone_area_stage(const RcWorld *world) {
     RcWorld *stage = malloc(sizeof(*stage));
     if (!stage) return NULL;
     memcpy(stage, world, sizeof(*stage));
+    stage->player = &stage->players[rc_player_slot(world, world->player)];
     stage->npcs = calloc((size_t)world->npc_capacity, sizeof(*stage->npcs));
     if (!stage->npcs) {
         free(stage);
@@ -706,6 +760,18 @@ fail:
 int rc_world_activate_area_around(RcWorld *world, int x, int y, int plane,
                                   RcActiveAreaStats *stats) {
     if (!world || !rc_world_tile_valid(x, y, plane)) return -1;
+    if (world->pin_area) {
+        RcActiveAreaRequest pinned = {
+            .origin_x = world->pinned_min_rx * RC_MAPSQUARE_SIZE,
+            .origin_y = world->pinned_min_ry * RC_MAPSQUARE_SIZE,
+            .width = (world->pinned_max_rx - world->pinned_min_rx + 1) * RC_MAPSQUARE_SIZE,
+            .height = (world->pinned_max_ry - world->pinned_min_ry + 1) * RC_MAPSQUARE_SIZE,
+            .min_plane = 0,
+            .max_plane = RC_MAX_PLANES - 1,
+            .options = RC_ACTIVE_AREA_INCLUDE_INSTANCE_NPCS,
+        };
+        return rc_world_activate_area(world, &pinned, stats);
+    }
     int radius = world->streaming.active_radius_regions;
     int center_x = x / RC_MAPSQUARE_SIZE;
     int center_y = y / RC_MAPSQUARE_SIZE;

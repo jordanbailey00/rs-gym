@@ -1,3 +1,4 @@
+#include "players.h"
 #include "world_state.h"
 #include "items.h"
 
@@ -164,9 +165,10 @@ int rc_world_state_restore_npcs(RcWorld *world) {
     return restored;
 }
 
-static void clear_player_combat(RcNpc *npc) {
+static void clear_player_combat(RcNpc *npc, int slot) {
+    if (npc->target_uid != slot) return;
     npc->target_uid = -1;
-    if (npc->facing_entity == 0) npc->facing_entity = -1;
+    npc->facing_entity = -1;
     if (npc->route_mode == RC_NPC_ROUTE_CHASE)
         rc_npc_route_clear(npc, RC_MOVEMENT_NONE);
     npc->combat.active = false;
@@ -180,10 +182,11 @@ static void clear_player_combat(RcNpc *npc) {
 
 void rc_world_state_clear_player_combat(RcWorld *world) {
     if (!world) return;
+    int slot = world->player->index;
     for (int i = 0; i < world->npc_count; i++)
-        clear_player_combat(&world->npcs[i]);
+        clear_player_combat(&world->npcs[i], slot);
     for (int i = 0; i < world->dormant_npc_count; i++)
-        clear_player_combat(&world->dormant_npcs[i].npc);
+        clear_player_combat(&world->dormant_npcs[i].npc, slot);
 }
 
 static int ground_compare(bool static_a, uint64_t key_a,

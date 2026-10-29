@@ -21,7 +21,7 @@ int runec_ui_spell_runtime_id(const RuneCUiState *ui, int slot) {
 
 int runec_ui_sync_spellbook(RuneCUiState *ui, const RcWorld *world) {
     if (!ui || !world) return 0;
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     if (ui->current_spellbook != p->current_spellbook) {
         if (!runec_ui_set_spellbook(ui, p->current_spellbook)) return 0;
     }

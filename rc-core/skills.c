@@ -662,12 +662,12 @@ static int recipe_static_requirements_met(const RcWorld *world,
     for (int i = 0; i < recipe->req_count; i++) {
         int skill = recipe->reqs[i].skill;
         if (skill >= SKILL_COUNT ||
-                world->player.skills.base_level[skill] < recipe->reqs[i].level) {
+                world->player->skills.base_level[skill] < recipe->reqs[i].level) {
             return 0;
         }
     }
     for (int i = 0; i < recipe->tool_count; i++) {
-        if (rc_inv_find(world->player.inventory, (int)recipe->tools[i]) < 0) {
+        if (rc_inv_find(world->player->inventory, (int)recipe->tools[i]) < 0) {
             return 0;
         }
     }
@@ -700,6 +700,25 @@ int rc_recipe_player_can_make(const RcWorld *world, const RcRecipe *recipe) {
     return result.code == RC_ITEM_RESULT_OK;
 }
 
+int rc_recipe_commit(RcWorld *world, const RcRecipe *recipe,
+                     int with_output) {
+    if (!world || !recipe) return 0;
+    RcItemTransaction tx;
+    RcItemActionResult result = rc_item_tx_begin(&tx, world);
+    for (int i = 0; result.code == RC_ITEM_RESULT_OK
+            && i < recipe->input_count; i++) {
+        result = rc_item_tx_remove_item(
+            &tx, (int)recipe->inputs[i].item_id, recipe->inputs[i].quantity);
+    }
+    if (with_output && result.code == RC_ITEM_RESULT_OK
+            && recipe->output_item > 0 && recipe->output_qty > 0) {
+        result = rc_item_tx_add(&tx, (int)recipe->output_item,
+                                recipe->output_qty, 0);
+    }
+    return result.code == RC_ITEM_RESULT_OK
+        && rc_item_tx_commit(&tx).code == RC_ITEM_RESULT_OK;
+}
+
 int rc_recipe_index_of(const RcRecipe *recipe) {
     if (!recipe || !g_active_recipes || recipe < g_active_recipes
             || recipe >= g_active_recipes + g_active_recipe_count) {
@@ -727,12 +746,12 @@ int rc_player_apply_recipe(RcWorld *world, const RcRecipe *recipe) {
     for (int i = 0; i < recipe->req_count; i++) {
         int xp = (recipe->reqs[i].xp_q1 + 5) / 10;
         if (xp > 0 && recipe->reqs[i].skill < SKILL_COUNT) {
-            rc_add_xp(&world->player.skills,
+            rc_add_xp(&world->player->skills,
                       (RcSkill)recipe->reqs[i].skill, xp);
         }
     }
-    world->player.skill_action = (int)recipe->output_item;
-    world->player.skill_ready_tick = world->tick + recipe->ticks;
+    world->player->skill_action = (int)recipe->output_item;
+    world->player->skill_ready_tick = world->tick + recipe->ticks;
     return 1;
 }
 

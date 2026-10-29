@@ -25,9 +25,9 @@ int runec_prayer_ui_sync(RuneCPrayerUiState *state, const RcWorld *world) {
     if (!state || !world) return 0;
     state->count = 0;
     state->available = 0;
-    state->active = world->player.active_prayers;
-    state->quick = world->player.quick_prayers;
-    state->quick_active = world->player.quick_prayers_active;
+    state->active = world->player->active_prayers;
+    state->quick = world->player->quick_prayers;
+    state->quick_active = world->player->quick_prayers_active;
     for (int i = 0; i < RC_MAX_PRAYER_DEFS; i++) {
         const RcPrayerDef *def = rc_prayer_def_get(i);
         if (!def) continue;

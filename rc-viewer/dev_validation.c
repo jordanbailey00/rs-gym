@@ -25,7 +25,7 @@ static int env_bool_local(const char *key, int fallback) {
 }
 
 int runec_dev_validation_enabled(void) {
-    return env_bool_local("RUNEC_DEV_VALIDATION", 1);
+    return env_bool_local("RUNEC_DEV_VALIDATION", 0);
 }
 
 int runec_dev_validation_set_spellbook(RcWorld *world, int book) {
@@ -33,7 +33,7 @@ int runec_dev_validation_set_spellbook(RcWorld *world, int book) {
             book < RC_SPELL_BOOK_STANDARD || book > RC_SPELL_BOOK_ARCEUUS)
         return 0;
     rc_player_set_spellbook(world, book);
-    return world->player_commands.last_result == RC_COMMAND_RESULT_QUEUED;
+    return world->player->commands.last_result == RC_COMMAND_RESULT_QUEUED;
 }
 
 int runec_dev_validation_seed_prayers(RcWorld *world) {
@@ -52,7 +52,7 @@ int runec_dev_validation_seed_prayers(RcWorld *world) {
                 && rc_varbit_set(world, def->unlock_varbit, def->unlock_value) != 0)
             return 0;
     }
-    rc_prayer_recharge(&world->player);
+    rc_prayer_recharge(world->player);
     return 1;
 }
 
@@ -61,7 +61,7 @@ static void preserve_player_life(RcWorld *world, int event,
     (void)event;
     (void)payload;
     (void)ctx;
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (p->current_hp < 10) p->current_hp = 10;
     p->skills.boosted_level[SKILL_HITPOINTS] = (p->current_hp + 9) / 10;
     p->combat.hp_current = p->current_hp;
@@ -74,8 +74,8 @@ int runec_dev_validation_set_god_mode(RcWorld *world, bool enabled) {
                                     preserve_player_life, NULL) == 0;
     if (rc_event_subscribe(world, RC_EVT_PLAYER_DAMAGED,
                            preserve_player_life, NULL) != 0) return 0;
-    if (world->player.is_dead && !rc_world_respawn_player(world,
-            world->player.x, world->player.y, world->player.plane)) {
+    if (world->player->is_dead && !rc_world_respawn_player(world,
+            world->player->x, world->player->y, world->player->plane)) {
         rc_event_unsubscribe(world, RC_EVT_PLAYER_DAMAGED, preserve_player_life, NULL);
         return 0;
     }
@@ -84,9 +84,15 @@ int runec_dev_validation_set_god_mode(RcWorld *world, bool enabled) {
 }
 
 // The gym has no boss arenas yet, so the panel only returns to the start.
-static const RuneCDevTransport g_dev_transports[] = {
-    {"start", "Start", RS_GYM_START_X, RS_GYM_START_Y, 0, -1, 1},
+static RuneCDevTransport g_dev_transports[] = {
+    {"start", "Start", 0, 0, 0, -1, 1},
 };
+
+void runec_dev_validation_set_start(int x, int y, int plane) {
+    g_dev_transports[0].target_x = x;
+    g_dev_transports[0].target_y = y;
+    g_dev_transports[0].plane = plane;
+}
 
 const RuneCDevTransport *runec_dev_validation_transports(int *count) {
     if (count)
@@ -249,12 +255,12 @@ static void seed_bank_names(RcWorld *world, int tab,
                              validation_quantity(item_id, quantity), tab);
         // Validation stock starts charged; ordinary items must be charged in-game.
         if (slot >= 0 && item_id == 28922)
-            world->player.bank[slot].state_id = 1000;
+            world->player->bank[slot].state_id = 1000;
         if (slot >= 0 && (item_id == 20714 || item_id == 25574 || item_id == 30064 || item_id == 22370))
-            world->player.bank[slot].state_id = 100;
+            world->player->bank[slot].state_id = 100;
         uint32_t charges = rc_content_magic_charge_capacity(item_id);
         if (slot >= 0 && charges)
-            world->player.bank[slot].state_id = charges;
+            world->player->bank[slot].state_id = charges;
     }
 }
 
@@ -507,9 +513,9 @@ void runec_dev_validation_seed_bank(RcWorld *world) {
 
     int fire_blast = rc_spell_find("Fire Blast");
     if (fire_blast >= 0)
-        world->player.selected_spell = fire_blast;
-    rc_recalc_bonuses(&world->player);
-    rc_refresh_player_combat_style(&world->player);
+        world->player->selected_spell = fire_blast;
+    rc_recalc_bonuses(world->player);
+    rc_refresh_player_combat_style(world->player);
 }
 
 int runec_dev_validation_spawn_start_dummy(RcWorld *world) {
@@ -522,12 +528,12 @@ int runec_dev_validation_spawn_start_dummy(RcWorld *world) {
     static const int offsets[][2] = {
         {-3, -3}, {-2, -3}, {-3, -2}, {3, -3}, {-4, -3}, {0, -4},
     };
-    int dummy_x = RS_GYM_START_X + offsets[0][0];
-    int dummy_y = RS_GYM_START_Y + offsets[0][1];
+    int dummy_x = g_dev_transports[0].target_x + offsets[0][0];
+    int dummy_y = g_dev_transports[0].target_y + offsets[0][1];
     int found_tile = 0;
     for (int i = 0; i < ARRAY_COUNT(offsets); i++) {
-        int x = RS_GYM_START_X + offsets[i][0];
-        int y = RS_GYM_START_Y + offsets[i][1];
+        int x = g_dev_transports[0].target_x + offsets[i][0];
+        int y = g_dev_transports[0].target_y + offsets[i][1];
         if (rc_tile_blocked(&world->map, x, y, 0))
             continue;
         dummy_x = x;
@@ -539,7 +545,7 @@ int runec_dev_validation_spawn_start_dummy(RcWorld *world) {
         return -1;
 
     int existing = rc_world_find_npc_near(world, DUMMY_NPC_ID,
-                                          RS_GYM_START_X, RS_GYM_START_Y, 0, 8);
+                                          g_dev_transports[0].target_x, g_dev_transports[0].target_y, 0, 8);
     int idx = existing;
     if (idx < 0) {
         int def_idx = rc_npc_def_find(DUMMY_NPC_ID);

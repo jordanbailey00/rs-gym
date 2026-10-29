@@ -432,9 +432,9 @@ RcObjectMutationResult rc_world_object_replace(
         change_object_collision(world, base, 0);
     }
     state->flags = (uint8_t)(RC_OBJECT_STATE_DYNAMIC | state_flags);
-    if (world->player.storage_session
-            && world->player.storage_source.kind == RC_INTERACTION_OBJECT
-            && world->player.storage_source.placement_key == base->key)
+    if (world->player->storage_session
+            && world->player->storage_source.kind == RC_INTERACTION_OBJECT
+            && world->player->storage_source.placement_key == base->key)
         rc_storage_close(world);
     set_state_active(state, replacement);
     state->revert_tick = expiry_tick(world, duration);
@@ -521,9 +521,9 @@ RcObjectMutationResult rc_world_object_revert(RcWorld *world, uint64_t key) {
         }
     }
     if (index < 0) return RC_OBJECT_MUTATION_NOT_FOUND;
-    if (world->player.storage_session
-            && world->player.storage_source.kind == RC_INTERACTION_OBJECT
-            && world->player.storage_source.placement_key == key)
+    if (world->player->storage_session
+            && world->player->storage_source.kind == RC_INTERACTION_OBJECT
+            && world->player->storage_source.placement_key == key)
         rc_storage_close(world);
     RcObjectState *state = &world->object_states[index];
     RcObjectPlacement object;

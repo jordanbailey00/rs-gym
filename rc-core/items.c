@@ -1,3 +1,4 @@
+#include "players.h"
 #include "items.h"
 #include "assets.h"
 #include "combat.h"
@@ -401,7 +402,7 @@ static RcItemActionResult item_result(RcItemResultCode code, int item_id,
 
 static RcItemActionResult record_item_result(RcWorld *world,
                                              RcItemActionResult result) {
-    if (world) world->player.last_item_action = result;
+    if (world) world->player->last_item_action = result;
     return result;
 }
 
@@ -633,12 +634,12 @@ RcItemActionResult rc_item_tx_begin(RcItemTransaction *tx, RcWorld *world) {
     if (!tx || !world) return item_result(RC_ITEM_RESULT_INVALID, -1, -1);
     memset(tx, 0, sizeof(*tx));
     tx->world = world;
-    memcpy(tx->inventory, world->player.inventory, sizeof(tx->inventory));
-    memcpy(tx->equipment, world->player.equipment, sizeof(tx->equipment));
-    memcpy(tx->rune_pouch, world->player.rune_pouch, sizeof(tx->rune_pouch));
+    memcpy(tx->inventory, world->player->inventory, sizeof(tx->inventory));
+    memcpy(tx->equipment, world->player->equipment, sizeof(tx->equipment));
+    memcpy(tx->rune_pouch, world->player->rune_pouch, sizeof(tx->rune_pouch));
     memcpy(tx->original_rune_pouch, tx->rune_pouch, sizeof(tx->rune_pouch));
-    tx->inventory_revision = world->player.inventory_revision;
-    tx->equipment_revision = world->player.equipment_revision;
+    tx->inventory_revision = world->player->inventory_revision;
+    tx->equipment_revision = world->player->equipment_revision;
     tx->valid = true;
     return item_result(RC_ITEM_RESULT_OK, -1, -1);
 }
@@ -786,7 +787,7 @@ RcItemActionResult rc_item_tx_remove_equipment(RcItemTransaction *tx,
 RcItemActionResult rc_item_tx_commit(RcItemTransaction *tx) {
     if (!tx || !tx->world || !tx->valid)
         return item_result(RC_ITEM_RESULT_CONFLICT, -1, -1);
-    RcPlayer *player = &tx->world->player;
+    RcPlayer *player = tx->world->player;
     if (player->inventory_revision != tx->inventory_revision
             || player->equipment_revision != tx->equipment_revision
             || memcmp(player->rune_pouch, tx->original_rune_pouch,
@@ -907,7 +908,7 @@ RcItemActionResult rc_player_move_inventory_item(RcWorld *world,
                                                  int from_slot, int to_slot) {
     if (rc_player_command_should_queue(world)) {
         uint32_t generation = valid_inv_slot(from_slot)
-                            ? world->player.inventory[from_slot].generation : 0;
+                            ? world->player->inventory[from_slot].generation : 0;
         int args[8] = {from_slot, to_slot, (int)generation, 0, 0, 0, 0, 0};
         RcItemResultCode code = rc_player_command_submit(
             world, RC_PLAYER_COMMAND_MOVE_INVENTORY,
@@ -960,12 +961,12 @@ RcItemActionResult rc_player_equip_expected(RcWorld *world, int inv_slot,
     if (!item_player_equippable(def))
         return record_item_result(world, item_result(
             RC_ITEM_RESULT_NOT_EQUIPPABLE, item.item_id, inv_slot));
-    RcItemActionResult result = requirements_result(&world->player, def);
+    RcItemActionResult result = requirements_result(world->player, def);
     if (result.code != RC_ITEM_RESULT_OK)
         return record_item_result(world, result);
     if (world->item_equip_requirement_hook) {
         result = world->item_equip_requirement_hook(
-            world, &world->player, item.item_id,
+            world, world->player, item.item_id,
             world->item_equip_requirement_ctx);
         if (result.code != RC_ITEM_RESULT_OK)
             return record_item_result(world, result);
@@ -1028,7 +1029,7 @@ RcItemActionResult rc_player_equip_expected(RcWorld *world, int inv_slot,
 RcItemActionResult rc_player_equip(RcWorld *world, int inv_slot) {
     if (rc_player_command_should_queue(world)) {
         uint32_t generation = valid_inv_slot(inv_slot)
-                            ? world->player.inventory[inv_slot].generation : 0;
+                            ? world->player->inventory[inv_slot].generation : 0;
         int args[8] = {inv_slot, (int)generation, 0, 0, 0, 0, 0, 0};
         RcItemResultCode code = rc_player_command_submit(
             world, RC_PLAYER_COMMAND_EQUIP, RC_ACTION_CATEGORY_BACKGROUND,
@@ -1075,7 +1076,7 @@ RcItemActionResult rc_player_unequip_expected(RcWorld *world, int equip_slot,
 RcItemActionResult rc_player_unequip(RcWorld *world, int equip_slot) {
     if (rc_player_command_should_queue(world)) {
         uint32_t generation = valid_equip_slot(equip_slot)
-                            ? world->player.equipment[equip_slot].generation : 0;
+                            ? world->player->equipment[equip_slot].generation : 0;
         int args[8] = {equip_slot, (int)generation, 0, 0, 0, 0, 0, 0};
         RcItemResultCode code = rc_player_command_submit(
             world, RC_PLAYER_COMMAND_UNEQUIP, RC_ACTION_CATEGORY_BACKGROUND,
@@ -1114,10 +1115,10 @@ int rc_ground_item_visible(const RcGroundItem *g, int owner_uid) {
 }
 
 int rc_ground_item_reachable(const RcWorld *world, int x, int y, int plane) {
-    if (!world || world->player.plane != plane) return 0;
+    if (!world || world->player->plane != plane) return 0;
     RcRouteTarget target = rc_route_target_rectangle(x, y, 1, 1, 0, 1, true, false);
     return rc_route_target_reached(&world->map, plane,
-        world->player.x, world->player.y, 1, 1, &target);
+        world->player->x, world->player->y, 1, 1, &target);
 }
 
 static int inventory_can_add(const RcInvSlot *inv, int item_id,
@@ -1546,7 +1547,7 @@ RcItemActionResult rc_player_drop_item_expected(RcWorld *world, int inv_slot,
     if (!rc_player_action_allowed(world->enabled, RC_PLAYER_ACTION_DROP_ITEM))
         return record_item_result(world, item_result(
             RC_ITEM_RESULT_ACTION_DENIED, -1, inv_slot));
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     RcInvSlot item = player->inventory[inv_slot];
     if (item.item_id < 0 || item.quantity <= 0)
         return record_item_result(world, item_result(
@@ -1569,7 +1570,7 @@ RcItemActionResult rc_player_drop_item_expected(RcWorld *world, int inv_slot,
     RcGroundPolicy policy = {RC_GROUND_ITEM_REVEAL_TICKS,
         RC_GROUND_ITEM_DESPAWN_TICKS, 0, RC_GROUND_ITEM_DESPAWN_TICKS};
     RcGroundGrantResult ground = rc_item_tx_commit_ground(&tx, &grant, 1,
-        player->x, player->y, player->plane, RC_GROUND_ITEM_LOCAL_OWNER, policy);
+        player->x, player->y, player->plane, player->index, policy);
     if (ground != RC_GROUND_GRANT_OK) {
         return record_item_result(world, item_result(
             ground == RC_GROUND_GRANT_CAPACITY ? RC_ITEM_RESULT_CAPACITY
@@ -1590,7 +1591,7 @@ RcItemActionResult rc_player_drop_item_expected(RcWorld *world, int inv_slot,
 RcItemActionResult rc_player_drop_item(RcWorld *world, int inv_slot) {
     if (rc_player_command_should_queue(world)) {
         uint32_t generation = valid_inv_slot(inv_slot)
-                            ? world->player.inventory[inv_slot].generation : 0;
+                            ? world->player->inventory[inv_slot].generation : 0;
         int args[8] = {inv_slot, (int)generation, 0, 0, 0, 0, 0, 0};
         RcItemResultCode code = rc_player_command_submit(
             world, RC_PLAYER_COMMAND_DROP_ITEM, RC_ACTION_CATEGORY_NORMAL,
@@ -1610,10 +1611,10 @@ int rc_player_take_ground_item(RcWorld *world, int ground_item_idx,
         return RC_GROUND_TAKE_INVALID;
     }
     RcGroundItem *g = &world->ground_items[ground_item_idx];
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     if (!g->active || g->item_id < 0 || g->quantity <= 0)
         return RC_GROUND_TAKE_INVALID;
-    if (!rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER))
+    if (!rc_ground_item_visible(g, player->index))
         return RC_GROUND_TAKE_INVALID;
     if ((expected_uid >= 0 && g->uid != expected_uid) ||
             (expected_version >= 0 && g->version != expected_version)) {
@@ -1689,9 +1690,9 @@ RcItemActionResult rc_player_pickup_item_expected(RcWorld *world,
             RC_ITEM_RESULT_DISABLED, -1, ground_item_idx));
     }
     RcGroundItem *g = &world->ground_items[ground_item_idx];
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     if (!g->active || g->item_id < 0 || g->quantity <= 0
-            || !rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER)
+            || !rc_ground_item_visible(g, player->index)
             || g->plane != player->plane)
         return record_item_result(world, item_result(
             RC_ITEM_RESULT_INVALID, g->item_id, ground_item_idx));
@@ -1720,7 +1721,7 @@ RcItemActionResult rc_player_pickup_item_expected(RcWorld *world,
     }
     int take = rc_player_take_ground_item(
         world, ground_item_idx, g->uid, g->version);
-    RcItemActionResult result = world->player.last_item_action;
+    RcItemActionResult result = world->player->last_item_action;
     if (take == RC_GROUND_TAKE_OK) result.code = RC_ITEM_RESULT_OK;
     else if (take == RC_GROUND_TAKE_FULL) result.code = RC_ITEM_RESULT_CAPACITY;
     else if (take == RC_GROUND_TAKE_STALE) result.code = RC_ITEM_RESULT_STALE;

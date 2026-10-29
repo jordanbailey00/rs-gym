@@ -10,7 +10,7 @@
 // NPC IDs are world-local durable identities and must be resolved through
 // rc_npc_resolve(). They are not array slots and are not reused while a world
 // is alive. Item and ground-item handles remain owner-array slots:
-//   RcItemSlot     → world->player.inventory[slot] / equipment[slot]
+//   RcItemSlot     → world->player->inventory[slot] / equipment[slot]
 //   RcGroundItemId → world->ground_items[id]
 //
 // Sentinels for "none / unset":

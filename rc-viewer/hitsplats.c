@@ -1,3 +1,4 @@
+#include "../rc-core/players.h"
 #include "hitsplats.h"
 
 #include "../rc-core/assets.h"
@@ -136,11 +137,11 @@ const RuneCHitsplatDef *runec_hitsplat_def(
 }
 
 int runec_hitsplat_basic_definition(const RcCombatRecentHit *hit,
-                                    int local_target) {
+                                    int local_target, int local_slot) {
     if (!hit) return -1;
     if (hit->source_uid == RC_HIT_SOURCE_STATUS && hit->damage > 0)
         return HITSPLAT_POISON_LIT;
-    int lit = local_target || hit->source_uid == RC_HIT_SOURCE_PLAYER;
+    int lit = local_target || rc_hit_source_player_slot(hit->source_uid) == local_slot;
     if (hit->hit_type == RC_HIT_TYPE_MISS || hit->damage <= 0)
         return lit ? HITSPLAT_ZERO_LIT : HITSPLAT_ZERO_TINT;
     if (lit && hit->hit_type == RC_HIT_TYPE_MAX)
@@ -229,7 +230,7 @@ int runec_hitsplat_state_add(RuneCHitsplatState *state,
 void runec_hitsplat_state_sync(RuneCHitsplatState *state,
                                const RuneCHitsplatCatalog *catalog,
                                const RcCombatRecentHit *hits, int hit_count,
-                               int local_target) {
+                               int local_target, int local_slot) {
     if (!state || !catalog || !hits || hit_count <= 0) return;
     if (hit_count > RUNEC_HITSPLAT_SLOT_COUNT)
         hit_count = RUNEC_HITSPLAT_SLOT_COUNT;
@@ -238,7 +239,7 @@ void runec_hitsplat_state_sync(RuneCHitsplatState *state,
         if (hit->sequence == 0 || hit->sequence <= state->last_sequence)
             continue;
         state->last_sequence = hit->sequence;
-        int definition_id = runec_hitsplat_basic_definition(hit, local_target);
+        int definition_id = runec_hitsplat_basic_definition(hit, local_target, local_slot);
         const RuneCHitsplatDef *definition =
             runec_hitsplat_def(catalog, definition_id);
         if (definition)

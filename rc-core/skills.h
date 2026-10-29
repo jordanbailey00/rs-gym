@@ -104,6 +104,9 @@ const RcGatheringNode *rc_gathering_node_find(int obj_id, int x, int y,
                                               int plane);
 int rc_recipe_player_can_make(const RcWorld *world, const RcRecipe *recipe);
 int rc_player_apply_recipe(RcWorld *world, const RcRecipe *recipe);
+// Takes the recipe's inputs from the acting player's inventory and, when
+// with_output is set, adds its output. XP is left to the caller.
+int rc_recipe_commit(RcWorld *world, const RcRecipe *recipe, int with_output);
 
 // Level from XP (binary search)
 int rc_level_for_xp(int xp);

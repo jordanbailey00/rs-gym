@@ -27,6 +27,10 @@
 struct RcWorld;
 int rc_content_consumables_register(struct RcWorld *world);
 int rc_content_storage_register(struct RcWorld *world);
+// Gym skilling rules and their object/NPC/item handlers (rc-content/skilling.c).
+int rc_content_skilling_register(struct RcWorld *world);
+// Gym world rules: town shops and death rules (rc-content/gym.c).
+int rc_content_gym_register(struct RcWorld *world);
 
 // Aggregate entry point — calls every content module register fn
 // that's linked in. Isolated-sim builds link a subset of content

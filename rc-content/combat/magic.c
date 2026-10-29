@@ -1,3 +1,4 @@
+#include "../../rc-core/players.h"
 #include "magic.h"
 #include "items.h"
 #include "combat_formula.h"
@@ -65,7 +66,7 @@ uint32_t rc_content_magic_charge_capacity(int id) {
 }
 
 int rc_content_magic_consume_charge(RcWorld *world, int id) {
-    if (world->player.combat_style != COMBAT_MAGIC)
+    if (world->player->combat_style != COMBAT_MAGIC)
         return rc_content_ralos_consume_charge(world, id);
     uint32_t capacity = rc_content_magic_charge_capacity(id);
     if (!capacity) return rc_content_ralos_consume_charge(world, id);
@@ -120,7 +121,7 @@ int rc_content_can_autocast(const RcPlayer *p, const RcSpellDef *spell) {
 int rc_content_prepare_magic(RcWorld *world, const RcNpc *target,
                               const RcSpellDef *spell, RcCombatCalc *calc,
                               int *speed, const char **failure) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     const RcInvSlot *held = &p->equipment[EQUIP_WEAPON];
     const RcItemDef *weapon = rc_item_def_get(held->item_id);
     int level = p->skills.boosted_level[SKILL_MAGIC];
@@ -226,7 +227,7 @@ int rc_content_prepare_magic(RcWorld *world, const RcNpc *target,
 
 int rc_content_player_hit_delay(const RcWorld *world, const RcNpc *target,
                                 const RcSpellDef *spell, int hit_index) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     const RcNpcDef *npc = rc_npc_def_for_npc(world, target);
     int size = npc && npc->size > 0 ? npc->size : 1;
     int dx = p->x - (target->x + size / 2), dy = p->y - (target->y + size / 2);
@@ -259,7 +260,7 @@ void rc_content_magic_hit(RcWorld *world, RcNpc *target,
         if ((spell->effect_flags & RC_SPELL_EFFECT_POISON)
                 && rc_npc_apply_poison(world, target, strstr(spell->name, "Blitz") ||
                     strstr(spell->name, "Barrage") ? 4 : 2))
-            target->player_loot_credit = true;
+            if (!target->player_damage[world->player->index]) target->player_damage[world->player->index] = 1;
         if (spell->effect_flags & RC_SPELL_EFFECT_FREEZE) {
             int ticks = !strcmp(spell->name, "Bind") ? 8 :
                 !strcmp(spell->name, "Snare") ? 16 :
@@ -292,8 +293,8 @@ void rc_content_magic_hit(RcWorld *world, RcNpc *target,
         }
     } else if ((hit->weapon_id == 22323 || hit->weapon_id == 25731) &&
             rc_rng_range(&world->rng_state, 5) == 0) heal = damage / 2;
-    if (heal > 0 && world->player.current_hp < world->player.max_hp) {
-        RcPlayer *p = &world->player;
+    if (heal > 0 && world->player->current_hp < world->player->max_hp) {
+        RcPlayer *p = world->player;
         p->current_hp += heal * 10;
         if (p->current_hp > p->max_hp) p->current_hp = p->max_hp;
     }

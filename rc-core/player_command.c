@@ -1,4 +1,7 @@
+#include "players.h"
 #include "player_command.h"
+#include "shops.h"
+#include "skilling.h"
 
 #include "api.h"
 #include "combat.h"
@@ -15,7 +18,7 @@
 static int command_args_valid(RcPlayerCommandKind kind,
                               RcActionCategory category) {
     return kind > RC_PLAYER_COMMAND_NONE
-        && kind <= RC_PLAYER_COMMAND_CONSUME
+        && kind <= RC_PLAYER_COMMAND_SHOP_SELL
         && category >= RC_ACTION_CATEGORY_SOFT
         && category <= RC_ACTION_CATEGORY_STRONG;
 }
@@ -28,15 +31,15 @@ int rc_player_command_submit(RcWorld *world, RcPlayerCommandKind kind,
                              RcActionCategory category,
                              const int args[8], uint64_t key) {
     if (!world || !command_args_valid(kind, category)) return 0;
-    RcPlayerCommandQueue *queue = &world->player_commands;
-    if (world->player.is_dead || world->player.current_hp <= 0) {
+    RcPlayerCommandQueue *queue = &world->player->commands;
+    if (world->player->is_dead || world->player->current_hp <= 0) {
         queue->last_result = RC_COMMAND_RESULT_REJECTED_DEAD;
         queue->rejected_count++;
         return 0;
     }
-    if (world->player_action.active
-            && world->player_action.category == RC_ACTION_CATEGORY_STRONG
-            && world->player_action.ready_tick > world->tick
+    if (world->player->action.active
+            && world->player->action.category == RC_ACTION_CATEGORY_STRONG
+            && world->player->action.ready_tick > world->tick
             && category != RC_ACTION_CATEGORY_SOFT) {
         queue->last_result = RC_COMMAND_RESULT_REJECTED_BUSY;
         queue->rejected_count++;
@@ -48,7 +51,7 @@ int rc_player_command_submit(RcWorld *world, RcPlayerCommandKind kind,
         return 0;
     }
     RcPlayerCommand *command =
-        &world->player_command_storage[queue->count++];
+        &world->player->command_storage[queue->count++];
     memset(command, 0, sizeof(*command));
     command->kind = (uint8_t)kind;
     command->category = (uint8_t)category;
@@ -61,7 +64,7 @@ int rc_player_command_submit(RcWorld *world, RcPlayerCommandKind kind,
 }
 
 static void stop_player_combat(RcWorld *world) {
-    RcCombatActorRef player = {RC_COMBAT_ACTOR_PLAYER, 0};
+    RcCombatActorRef player = {RC_COMBAT_ACTOR_PLAYER, world->player->index};
     rc_combat_stop_actor(world, player, RC_COMBAT_STATE_CANCELLED);
 }
 
@@ -69,26 +72,27 @@ static void cancel_player_activity(RcWorld *world,
                                    RcPlayerActionCancelReason reason,
                                    int clear_route) {
     if (!world) return;
-    RcPlayerCommandQueue *queue = &world->player_commands;
+    RcPlayerCommandQueue *queue = &world->player->commands;
     if (queue->count > 0) {
         queue->rejected_count += queue->count;
         queue->count = 0;
         queue->last_result = RC_COMMAND_RESULT_REJECTED_CANCELLED;
     }
-    RcPlayer *player = &world->player;
+    RcPlayer *player = world->player;
     if (clear_route) rc_player_route_clear(player, RC_MOVEMENT_NONE);
     rc_interaction_cancel(player, RC_INTERACTION_FAIL_CANCELLED);
     stop_player_combat(world);
     player->manual_spell_cast = -1;
     rc_traversal_cancel(world, reason);
-    player->skill_action = 0;
-    player->skill_ready_tick = 0;
+    rc_skilling_stop(player);
+    rc_skilling_close_make(player);
+    rc_shop_close(player);
     rc_storage_close(world);
-    world->player_action.active = false;
-    world->player_action.owner = RC_ACTION_OWNER_NONE;
-    world->player_action.category = RC_ACTION_CATEGORY_SOFT;
-    world->player_action.ready_tick = world->tick;
-    world->player_action.last_cancel_reason = reason;
+    world->player->action.active = false;
+    world->player->action.owner = RC_ACTION_OWNER_NONE;
+    world->player->action.category = RC_ACTION_CATEGORY_SOFT;
+    world->player->action.ready_tick = world->tick;
+    world->player->action.last_cancel_reason = reason;
 }
 
 void rc_player_cancel_action(RcWorld *world,
@@ -103,7 +107,7 @@ void rc_player_replace_action_with_movement(
 
 static void set_action(RcWorld *world, RcPlayerActionOwner owner,
                        RcActionCategory category, RcTick ready_tick) {
-    RcPlayerActionState *action = &world->player_action;
+    RcPlayerActionState *action = &world->player->action;
     if (!action->active || action->owner != owner)
         action->started_tick = world->tick;
     action->active = true;
@@ -117,10 +121,10 @@ static int reject_stale_item_command(RcWorld *world, int slot,
     int item_id = -1;
     if (world) {
         if (equipment && slot >= 0 && slot < RC_EQUIP_COUNT)
-            item_id = world->player.equipment[slot].item_id;
+            item_id = world->player->equipment[slot].item_id;
         else if (!equipment && slot >= 0 && slot < RC_INVENTORY_SIZE)
-            item_id = world->player.inventory[slot].item_id;
-        world->player.last_item_action = (RcItemActionResult){
+            item_id = world->player->inventory[slot].item_id;
+        world->player->last_item_action = (RcItemActionResult){
             .code = RC_ITEM_RESULT_STALE,
             .item_id = item_id,
             .slot = slot,
@@ -133,9 +137,9 @@ static int reject_stale_item_command(RcWorld *world, int slot,
 static int inventory_reference_matches(RcWorld *world, int slot,
                                        uint32_t generation) {
     if (!world || slot < 0 || slot >= RC_INVENTORY_SIZE
-            || world->player.inventory[slot].item_id < 0
-            || world->player.inventory[slot].quantity <= 0
-            || world->player.inventory[slot].generation != generation) {
+            || world->player->inventory[slot].item_id < 0
+            || world->player->inventory[slot].quantity <= 0
+            || world->player->inventory[slot].generation != generation) {
         return reject_stale_item_command(world, slot, 0);
     }
     return 1;
@@ -144,9 +148,9 @@ static int inventory_reference_matches(RcWorld *world, int slot,
 static int equipment_reference_matches(RcWorld *world, int slot,
                                        uint32_t generation) {
     if (!world || slot < 0 || slot >= RC_EQUIP_COUNT
-            || world->player.equipment[slot].item_id < 0
-            || world->player.equipment[slot].quantity <= 0
-            || world->player.equipment[slot].generation != generation) {
+            || world->player->equipment[slot].item_id < 0
+            || world->player->equipment[slot].quantity <= 0
+            || world->player->equipment[slot].generation != generation) {
         return reject_stale_item_command(world, slot, 1);
     }
     return 1;
@@ -178,8 +182,8 @@ static int command_uses_interaction_admission(RcPlayerCommandKind kind) {
 
 void rc_player_action_refresh(RcWorld *world) {
     if (!world) return;
-    RcPlayer *player = &world->player;
-    RcPlayerActionState *action = &world->player_action;
+    RcPlayer *player = world->player;
+    RcPlayerActionState *action = &world->player->action;
     RcPlayerActionCancelReason last_reason = action->last_cancel_reason;
     if (player->traversal.active
             && player->traversal.phase != RC_TRAVERSAL_PHASE_APPROACH) {
@@ -220,6 +224,16 @@ static int execute_command(RcWorld *world, const RcPlayerCommand *command) {
     case RC_PLAYER_COMMAND_CONSUME:
         return rc_consume_accepted(rc_player_consume_expected(
             world, a[0], (uint32_t)a[1], a[2]));
+    case RC_PLAYER_COMMAND_SKILL_MAKE:
+        return rc_skilling_make(world, a[0], a[1]);
+    case RC_PLAYER_COMMAND_LIGHT_FIRE:
+        return inventory_reference_matches(world, a[0], (uint32_t)a[1])
+            && rc_skilling_start_firemaking(world, a[0]);
+    case RC_PLAYER_COMMAND_SHOP_BUY:
+        return rc_shop_buy_expected(world, a[0], a[1], a[2]) > 0;
+    case RC_PLAYER_COMMAND_SHOP_SELL:
+        return inventory_reference_matches(world, a[0], (uint32_t)a[1])
+            && rc_shop_sell(world, a[0], a[2]) > 0;
     case RC_PLAYER_COMMAND_WALK_TO:
         if (!rc_world_coord_valid(a[0]) || !rc_world_coord_valid(a[1]))
             return 0;
@@ -263,9 +277,9 @@ static int execute_command(RcWorld *world, const RcPlayerCommand *command) {
         return rc_item_result_accepted(
             rc_player_unequip_expected(world, a[0], (uint32_t)a[1]));
     case RC_PLAYER_COMMAND_INTERACT_NPC: {
-        uint64_t generation = world->player.next_interaction_generation;
+        uint64_t generation = world->player->next_interaction_generation;
         rc_player_interact_npc(world, a[0], a[1]);
-        return world->player.next_interaction_generation != generation;
+        return world->player->next_interaction_generation != generation;
     }
     case RC_PLAYER_COMMAND_INTERACT_OBJECT:
         return rc_player_interact_object_placement(
@@ -345,7 +359,7 @@ static int execute_command(RcWorld *world, const RcPlayerCommand *command) {
         if (a[0] < 0 || a[0] >= world->ground_item_count
                 || world->ground_items[a[0]].uid != a[1]
                 || world->ground_items[a[0]].version != a[2]) {
-            world->player.last_item_action = (RcItemActionResult){
+            world->player->last_item_action = (RcItemActionResult){
                 .code = RC_ITEM_RESULT_STALE,
                 .item_id = -1,
                 .slot = a[0],
@@ -382,16 +396,16 @@ static int execute_command(RcWorld *world, const RcPlayerCommand *command) {
 
 void rc_player_command_process(RcWorld *world) {
     if (!world) return;
-    RcPlayerCommandQueue *queue = &world->player_commands;
+    RcPlayerCommandQueue *queue = &world->player->commands;
     RcPlayerCommand pending[RC_MAX_PLAYER_COMMANDS];
     int count = queue->count;
-    if (count > 0) memcpy(pending, world->player_command_storage,
+    if (count > 0) memcpy(pending, world->player->command_storage,
                           (size_t)count * sizeof(*pending));
     queue->count = 0;
     for (int i = 0; i < count; i++) {
-        if (world->player_action.active
-                && world->player_action.category == RC_ACTION_CATEGORY_STRONG
-                && world->player_action.ready_tick > world->tick
+        if (world->player->action.active
+                && world->player->action.category == RC_ACTION_CATEGORY_STRONG
+                && world->player->action.ready_tick > world->tick
                 && pending[i].kind != RC_PLAYER_COMMAND_CONSUME
                 && pending[i].category != RC_ACTION_CATEGORY_SOFT) {
             queue->last_sequence = pending[i].sequence;
@@ -410,14 +424,14 @@ void rc_player_command_process(RcWorld *world) {
             rc_player_cancel_action(world, RC_ACTION_CANCEL_REPLACED);
         }
         uint64_t outcome_sequence =
-            world->player.interaction_outcome.sequence;
+            world->player->interaction_outcome.sequence;
         int ok = execute_command(world, &pending[i]);
         if (!ok && command_uses_interaction_admission(
                 (RcPlayerCommandKind)pending[i].kind)
-                && world->player.interaction_outcome.sequence
+                && world->player->interaction_outcome.sequence
                     == outcome_sequence) {
             rc_interaction_reject(
-                &world->player, RC_INTERACTION_FAIL_INVALID_TARGET,
+                world->player, RC_INTERACTION_FAIL_INVALID_TARGET,
                 "That action is no longer available.");
         }
         queue->last_sequence = pending[i].sequence;

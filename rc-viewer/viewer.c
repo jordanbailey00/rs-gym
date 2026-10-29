@@ -6,6 +6,7 @@
 #include "../rc-core/config.h"
 #include "../rc-core/consumables.h"
 #include "../rc-core/encounter.h"
+#include "../rc-core/interaction.h"
 #include "../rc-core/items.h"
 #include "../rc-core/objects.h"
 #include "../rc-core/pathfinding.h"
@@ -32,6 +33,12 @@
 #include "spotanims.h"
 #include "combat_visuals.h"
 #include "dev_validation.h"
+#include "../rc-core/layout.h"
+#include "../rc-core/players.h"
+#include "../rc-env/env.h"
+#include "../rc-core/shops.h"
+#include "../rc-core/skilling.h"
+#include "../rc-core/skills.h"
 #include "minimap.h"
 #include "hitsplats.h"
 #include "health_bars.h"
@@ -57,8 +64,6 @@
 // The gym's exported tiles (island plus ocean ring) span world tiles 64..383.
 #define DEFAULT_WORLD_ORIGIN_X 64
 #define DEFAULT_WORLD_ORIGIN_Y 64
-#define DEFAULT_PLAYER_START_X RS_GYM_START_X
-#define DEFAULT_PLAYER_START_Y RS_GYM_START_Y
 #define DEFAULT_WORLD_W \
     ((RC_WORLD_STREAMING_DEFAULT_ACTIVE_RADIUS * 2 + 1) * RC_REGION_SIZE)
 #define DEFAULT_WORLD_H DEFAULT_WORLD_W
@@ -549,6 +554,12 @@ typedef struct {
     char initial_terrain_path[1024];
     char initial_objects_path[1024];
     char active_scene_prefix[1024];
+    // Replay of a recorded rc-env episode (rc-viewer --replay FILE).
+    RcEnv *replay_env;
+    FILE *replay_file;
+    RcReplayHeader replay_header;
+    uint32_t replay_tick;
+    int follow_agent;
 } ViewerState;
 
 static const char *object_action_label(const ViewerState *v,
@@ -597,12 +608,12 @@ static void viewer_update_combat_overlays(ViewerState *v,
     runec_health_bar_advance(&v->player_overlay.health_bar, client_cycles);
     runec_hitsplat_state_sync(
         &v->player_overlay.hitsplats, &v->hitsplat_catalog,
-        v->world->player.combat.recent_hits,
-        v->world->player.combat.recent_hit_count, 1);
+        v->world->player->combat.recent_hits,
+        v->world->player->combat.recent_hit_count, 1, v->world->player->index);
     runec_health_bar_sync(
-        &v->player_overlay.health_bar, v->world->player.combat.recent_hits,
-        v->world->player.combat.recent_hit_count,
-        v->world->player.current_hp, v->world->player.max_hp);
+        &v->player_overlay.health_bar, v->world->player->combat.recent_hits,
+        v->world->player->combat.recent_hit_count,
+        v->world->player->current_hp, v->world->player->max_hp);
 
     for (int i = 0; i < v->world->npc_count; i++) {
         const RcNpc *npc = &v->world->npcs[i];
@@ -618,7 +629,8 @@ static void viewer_update_combat_overlays(ViewerState *v,
                                  client_cycles);
         runec_hitsplat_state_sync(
             &v->npc_overlays[i].hitsplats, &v->hitsplat_catalog,
-            npc->combat.recent_hits, npc->combat.recent_hit_count, 0);
+            npc->combat.recent_hits, npc->combat.recent_hit_count, 0,
+            v->world->player->index);
         const RcNpcDef *def = rc_npc_def_for_npc(v->world, npc);
         int maximum_hp = npc->spawn_hp > 0 ? npc->spawn_hp
                          : def ? def->hitpoints : 0;
@@ -693,9 +705,10 @@ static ViewerWorldTransform g_world_transform = {
 };
 #define g_world_origin_x (g_world_transform.origin_x)
 #define g_world_origin_y (g_world_transform.origin_y)
-static int g_player_start_x = DEFAULT_PLAYER_START_X;
-static int g_player_start_y = DEFAULT_PLAYER_START_Y;
-static int g_player_start_plane = 0;
+static RcGymLayout g_gym_layout;  // start, respawn and pinned area from data/regions/gym.cfg
+static int g_player_start_x;
+static int g_player_start_y;
+static int g_player_start_plane;
 static int g_world_w = DEFAULT_WORLD_W;
 static int g_world_h = DEFAULT_WORLD_H;
 
@@ -1086,9 +1099,9 @@ static int viewer_presented_player_tile(const ViewerState *v, int *x, int *y,
             &v->mapsquare_load.player_transition, x, y, plane)) {
         return 1;
     }
-    *x = v->world->player.x;
-    *y = v->world->player.y;
-    *plane = v->world->player.plane;
+    *x = v->world->player->x;
+    *y = v->world->player->y;
+    *plane = v->world->player->plane;
     return 1;
 }
 
@@ -1106,7 +1119,7 @@ static int viewer_scene_plane(const ViewerState *v) {
 static void viewer_set_scene_plane_delta(ViewerState *v, int delta) {
     if (!v || !v->world) return;
     int plane = v->scene_plane_override >= 0
-              ? v->scene_plane_override : v->world->player.plane;
+              ? v->scene_plane_override : v->world->player->plane;
     v->scene_plane_override = clamp_plane(plane + delta);
     ensure_active_scene_plane(v, v->scene_plane_override);
 }
@@ -1476,7 +1489,7 @@ static void viewer_refresh_streaming_telemetry(ViewerState *v,
         }
     }
     if (v->world) {
-        if (v->world->player.plane == scene_plane)
+        if (v->world->player->plane == scene_plane)
             draw_calls++;
         for (int i = 0; i < v->world->npc_count; i++)
             if (v->world->npcs[i].active && !v->world->npcs[i].is_dead
@@ -2977,7 +2990,7 @@ static int reload_scene_around_player(ViewerState *v, int center_x,
     if (!v || !v->world)
         return 0;
     double load_started_ms = viewer_begin_streaming_load(v);
-    int required_plane = clamp_plane(v->world->player.plane);
+    int required_plane = clamp_plane(v->world->player->plane);
     int mapsquare_ready = viewer_prepare_mapsquare_window(
         v, center_x, center_y, required_plane);
     if (mapsquare_ready > 0) {
@@ -3143,7 +3156,7 @@ static int load_generated_startup_scene(ViewerState *v, int required) {
                                           &world_w, &world_h))
         return 0;
 
-    int required_plane = clamp_plane(v->world->player.plane);
+    int required_plane = clamp_plane(v->world->player->plane);
     if (!ensure_scene_slice_plane_assets(v, g_player_start_x, g_player_start_y,
                                          prefix, 0)) {
         if (required)
@@ -3201,11 +3214,11 @@ static int load_startup_scene(ViewerState *v, ViewerSceneMode mode,
     double load_started_ms = viewer_begin_streaming_load(v);
     int loaded = 0;
     int mapsquare_ready = viewer_prepare_mapsquare_window(
-        v, g_player_start_x, g_player_start_y, v->world->player.plane);
+        v, g_player_start_x, g_player_start_y, v->world->player->plane);
     if (mapsquare_ready > 0) {
         loaded = viewer_request_mapsquare_window(
             v, g_player_start_x, g_player_start_y,
-            v->world->player.plane, VIEWER_STREAMING_REQUEST_ACTIVATE,
+            v->world->player->plane, VIEWER_STREAMING_REQUEST_ACTIVATE,
             "startup-scene");
         while (loaded == 2 && !WindowShouldClose()) {
             int processed = viewer_process_mapsquare_loading(v);
@@ -3242,39 +3255,11 @@ static int load_startup_scene(ViewerState *v, ViewerSceneMode mode,
 }
 
 static const char *startup_npc_models_path(ViewerState *v) {
+    (void)v;
     if (env_has_value("RUNEC_NPC_MODELS"))
         return env_path("RUNEC_NPC_MODELS", "data/models/npcs.models");
-
     const char *override = getenv("RUNEC_STARTUP_NPC_MODELS");
-    if (override && override[0])
-        return override;
-
-    const char *varrock_candidate = "data/models/npcs_varrock.models";
-    if (v && !v->active_scene_prefix[0]
-            && !env_has_value("RUNEC_TERRAIN")
-            && !env_has_value("RUNEC_OBJECTS")
-            && !env_has_value("RUNEC_WORLD_ORIGIN_X")
-            && !env_has_value("RUNEC_WORLD_ORIGIN_Y")
-            && !env_has_value("RUNEC_WORLD_W")
-            && !env_has_value("RUNEC_WORLD_H")
-            && !env_has_value("RUNEC_NPC_SPAWNS")
-            && g_world_origin_x == DEFAULT_WORLD_ORIGIN_X
-            && g_world_origin_y == DEFAULT_WORLD_ORIGIN_Y
-            && g_world_w == DEFAULT_WORLD_W
-            && g_world_h == DEFAULT_WORLD_H
-            && rc_asset_exists(varrock_candidate)) {
-        return varrock_candidate;
-    }
-
-    const char *candidate = "data/models/npcs_varrock_bank.models";
-    if (v && v->active_scene_prefix[0]
-            && v->streaming.preload_radius_regions == 0
-            && g_player_start_x == DEFAULT_PLAYER_START_X
-            && g_player_start_y == DEFAULT_PLAYER_START_Y
-            && rc_asset_exists(candidate)) {
-        return candidate;
-    }
-    return "data/models/npcs.models";
+    return override && override[0] ? override : "data/models/npcs.models";
 }
 
 static void ensure_active_scene_plane(ViewerState *v, int plane) {
@@ -3286,7 +3271,7 @@ static void ensure_active_scene_plane(ViewerState *v, int plane) {
     if (v->mapsquare_streaming_active) {
         if (viewer_mapsquare_plane_loaded(v, plane))
             return;
-        RcPlayer *p = &v->world->player;
+        RcPlayer *p = v->world->player;
         int mapsquare_ready = viewer_prepare_mapsquare_window(
             v, p->x, p->y, plane);
         int requested = mapsquare_ready > 0
@@ -3332,7 +3317,7 @@ static void ensure_active_scene_plane(ViewerState *v, int plane) {
     if (!v->active_scene_prefix[0])
         return;
 
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     if (!ensure_scene_slice_plane_assets(v, p->x, p->y,
                                          v->active_scene_prefix, plane)) {
         return;
@@ -3360,7 +3345,7 @@ static void viewer_sync_scene_plane_ui(ViewerState *v) {
     if (!v || !v->world)
         return;
     runec_ui_set_scene_plane_state(&v->ui, viewer_scene_plane(v),
-                                   v->world->player.plane,
+                                   v->world->player->plane,
                                    v->scene_plane_override >= 0);
 }
 
@@ -3509,7 +3494,7 @@ static void viewer_dev_transport_to(ViewerState *v,
                                     const RuneCDevTransport *d) {
     if (!v || !v->world || !d)
         return;
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     int old_plane = p->plane;
 
     viewer_clear_player_activity(v);
@@ -3540,7 +3525,7 @@ static void viewer_finish_dev_transport(ViewerState *v,
                                         const RuneCDevTransport *d) {
     if (!v || !v->world || !d)
         return;
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
 
     int player_x = d->target_x;
     int player_y = d->target_y;
@@ -3591,8 +3576,8 @@ static Color minimap_tile_color(const ViewerState *v, int wx, int wy) {
 }
 
 static int route_player_to(ViewerState *v, int tx, int ty) {
-    RcPlayer *player = &v->world->player;
-    int accepted = v->world->player.running
+    RcPlayer *player = v->world->player;
+    int accepted = v->world->player->running
         ? rc_player_run_to(v->world, tx, ty)
         : rc_player_walk_to(v->world, tx, ty);
     v->route_preview_active = 0;
@@ -3650,7 +3635,7 @@ static int viewer_tile_in_loaded_scene(int x, int y) {
 
 static void viewer_defer_player_scene_transition(ViewerState *v, int old_x,
                                                  int old_y, int old_plane) {
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     viewer_streaming_player_transition_begin(
         &v->mapsquare_load.player_transition,
         v->traversal_generation,
@@ -3672,13 +3657,13 @@ static void viewer_commit_player_scene_transition(ViewerState *v) {
     int plane = 0;
     if (!viewer_streaming_player_transition_commit(
             &v->mapsquare_load.player_transition, v->traversal_generation,
-            v->world->player.x, v->world->player.y,
-            v->world->player.plane, &x, &y, &plane)) {
+            v->world->player->x, v->world->player->y,
+            v->world->player->plane, &x, &y, &plane)) {
         memset(&v->mapsquare_load.player_transition, 0,
                sizeof(v->mapsquare_load.player_transition));
         return;
     }
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     runec_actor_motion_place(&v->player_motion, p->x, p->y, 1,
                              v->player_motion.yaw);
     v->tick_frac = 0.0f;
@@ -3696,7 +3681,7 @@ static void handle_player_scene_transition(ViewerState *v, int old_x,
             && v->mapsquare_load.player_transition.active) {
         return;
     }
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     int large_step = abs(p->x - old_x) > 2 || abs(p->y - old_y) > 2;
     if (old_plane != p->plane || large_step)
         v->scene_plane_override = -1;
@@ -3751,7 +3736,7 @@ static void viewer_update_movement_prefetch(ViewerState *v) {
     if (!v || !v->world || !v->mapsquare_streaming_active)
         return;
     ViewerPendingMapsquareLoad *load = &v->mapsquare_load;
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     if (load->active
             && load->request_kind
                 == VIEWER_STREAMING_REQUEST_TRANSPORT_PREFETCH) {
@@ -3806,7 +3791,7 @@ static int selected_spell_id_for_viewer(const ViewerState *v) {
         return -1;
     if (v->ui.selected_target.kind == RUNEC_UI_SELECTED_SPELL)
         return runec_ui_spell_runtime_id(&v->ui, v->ui.selected_target.source_slot);
-    return v->world->player.selected_spell;
+    return v->world->player->selected_spell;
 }
 
 static int item_display_id_for_quantity(const ViewerState *v, int item_id, int quantity);
@@ -3855,8 +3840,14 @@ static void sync_ui_slot(const ViewerState *v, RuneCUiSlot *dst,
     dst->enabled = 1;
     if (container_kind == UI_ITEM_CONTAINER_INVENTORY) {
         for (int i = 0; def && i < RC_ITEM_ACTION_COUNT; i++) {
-            if (rc_consumable_action(src->item_id, i))
-                ui_slot_add_action(dst, def->inventory_actions[i], i);
+            RcInteractionDispatchKey key = rc_interaction_dispatch_key_any();
+            key.kind = RC_INTERACTION_INVENTORY_ITEM;
+            key.op = rc_interaction_op_from_option(i);
+            key.definition_id = src->item_id;
+            if (rc_consumable_action(src->item_id, i)
+                    || (def->inventory_actions[i][0]
+                        && rc_interaction_has_specific_world_handler(v->world, &key)))
+                ui_slot_add_action(dst, def->inventory_actions[i], i);  // Eat, Drink, Bury ...
         }
         if (def && def->equippable && def->equipable_by_player) {
             for (int i = 0; i < RC_ITEM_ACTION_COUNT; i++) {
@@ -3885,7 +3876,7 @@ static void sync_ui_slot(const ViewerState *v, RuneCUiSlot *dst,
 }
 
 static void sync_ui_items(ViewerState *v) {
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     for (int i = 0; i < RUNEC_UI_INV_SLOT_COUNT; i++)
         sync_ui_slot(v, &v->ui.inventory[i], &p->inventory[i],
                      UI_ITEM_CONTAINER_INVENTORY);
@@ -3926,10 +3917,27 @@ static void sync_ui_items(ViewerState *v) {
         sync_ui_slot(v, &v->ui.bank[i], &p->bank[i], UI_ITEM_CONTAINER_BANK);
         v->ui.bank[i].category = p->bank_tab[i];
     }
+    // An open shop takes over the bank panel: its stock fills bank[].
+    v->ui.shop_open = p->shop_open >= 0 && p->shop_open < v->world->shop_count;
+    if (!v->ui.shop_open) return;
+    const RcShopState *shop = &v->world->shops[p->shop_open];
+    snprintf(v->ui.shop_title, sizeof(v->ui.shop_title), "%s", shop->name);
+    v->ui.bank_open = 1;
+    v->ui.bank_kind = RC_STORAGE_BANK;
+    v->ui.bank_active_tab = 0;
+    if (v->ui.active_tab != RUNEC_UI_TAB_INVENTORY)
+        runec_ui_set_active_tab(&v->ui, RUNEC_UI_TAB_INVENTORY);
+    for (int i = 0; i < RUNEC_UI_BANK_SLOT_COUNT; i++) {
+        memset(&v->ui.bank[i], 0, sizeof(v->ui.bank[i]));
+        if (i >= shop->slot_count) continue;
+        RcInvSlot stock = {.item_id = shop->slots[i].item_id, .quantity = 1};
+        sync_ui_slot(v, &v->ui.bank[i], &stock, UI_ITEM_CONTAINER_BANK);
+        v->ui.bank[i].quantity = shop->slots[i].stock;
+    }
 }
 
 static void sync_ui_player_status(ViewerState *v) {
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     if (v->bank_outcome_seen != p->bank_result.sequence) {
         v->bank_outcome_seen = p->bank_result.sequence;
         const char *message = rc_bank_result_message(&p->bank_result);
@@ -4007,7 +4015,7 @@ static void viewer_sync_interaction_outcome(ViewerState *v) {
     if (!v || !v->world)
         return;
     const RcInteractionOutcome *outcome =
-        rc_interaction_last_outcome(&v->world->player);
+        rc_interaction_last_outcome(v->world->player);
     if (!outcome || outcome->sequence == 0
             || outcome->sequence == v->interaction_outcome_seen) {
         return;
@@ -4020,7 +4028,7 @@ static void viewer_sync_interaction_outcome(ViewerState *v) {
 static void viewer_sync_traversal_outcome(ViewerState *v) {
     if (!v || !v->world) return;
     const RcTraversalOutcome *outcome =
-        rc_traversal_last_outcome(&v->world->player);
+        rc_traversal_last_outcome(v->world->player);
     if (!outcome || outcome->sequence == 0
             || outcome->sequence == v->traversal_outcome_seen) {
         return;
@@ -4059,7 +4067,7 @@ static int ground_item_at_tile_plane(const ViewerState *v, int x, int y,
                                      int plane) {
     for (int i = 0; i < v->world->ground_item_count; i++) {
         const RcGroundItem *g = &v->world->ground_items[i];
-        if (rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER)
+        if (rc_ground_item_visible(g, v->world->player->index)
                 && g->x == x && g->y == y && g->plane == plane) {
             return i;
         }
@@ -4320,7 +4328,7 @@ static void viewer_start_player_action_anim(ViewerState *v, int anim_id,
 }
 
 static void viewer_sync_consumption(ViewerState *v) {
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     if (v->consume_outcome_seen != p->consume_outcome_sequence) {
         v->consume_outcome_seen = p->consume_outcome_sequence;
         if (p->consume_result != RC_CONSUME_OK)
@@ -4330,6 +4338,93 @@ static void viewer_sync_consumption(ViewerState *v) {
         v->consume_sequence_seen = p->consume_sequence;
         viewer_start_player_action_anim(v, p->consume_kind == RC_CONSUME_DRINK ? 830 : 829, 3);
     }
+}
+
+// Player animation while a skilling job runs (OSRS sequence ids, by tool).
+static int skilling_anim(const RcWorld *world, const RcPlayer *p) {
+    const RcSkillJob *job = &p->skill_job;
+    switch ((RcSkillJobKind)job->kind) {
+    case RC_SKILL_JOB_GATHER: {
+        const RcGatherRule *rule = rc_skilling_gather_rule(world, job->target);
+        const RcSkillTool *tool = rule
+            ? rc_skilling_best_tool(world, p, rule->skill) : NULL;
+        if (!tool) return -1;
+        static const int axes[][2] = {
+            {1351, 879}, {1349, 877}, {1353, 875}, {1361, 873}, {1355, 871},
+            {1357, 869}, {1359, 867}, {6739, 2846}};
+        static const int picks[][2] = {
+            {1265, 625}, {1267, 626}, {1269, 627}, {12297, 3873}, {1273, 629},
+            {1271, 628}, {1275, 624}, {11920, 7139}};
+        const int (*table)[2] = rule->skill == SKILL_WOODCUTTING ? axes : picks;
+        for (int i = 0; i < 8; i++)
+            if (table[i][0] == (int)tool->item_id) return table[i][1];
+        return -1;
+    }
+    case RC_SKILL_JOB_FISH: {
+        const RcFishRule *rule = &world->skilling->fish[job->rule];
+        switch (rule->tool) {
+        case 303: return 621;   // small net
+        case 311: return 618;   // harpoon
+        case 301: return 619;   // lobster pot
+        default:  return 622;   // rods
+        }
+    }
+    case RC_SKILL_JOB_FIREMAKING: return 733;
+    case RC_SKILL_JOB_COOK:
+        return job->target == (int)world->skilling->fire_obj_id ? 897 : 896;
+    case RC_SKILL_JOB_MAKE:
+        return world->make_options[job->rule].facility == RC_MAKE_MENU_FURNACE
+            ? 899 : 898;
+    default: return -1;
+    }
+}
+
+static void viewer_sync_skilling(ViewerState *v) {
+    const RcPlayer *p = v->world->player;
+    if (p->skill_action && p->skill_job.kind != RC_SKILL_JOB_NONE
+            && v->player_action_anim_timer <= 1) {
+        int anim = skilling_anim(v->world, p);
+        if (anim >= 0) viewer_start_player_action_anim(v, anim, 2);
+    }
+    RuneCUiMakeMenu *menu = &v->ui.make;
+    menu->open = p->make_menu != RC_MAKE_MENU_NONE;
+    menu->count = 0;
+    if (!menu->open) return;
+    snprintf(menu->title, sizeof(menu->title), "%s",
+             p->make_menu == RC_MAKE_MENU_FURNACE
+                 ? "What would you like to smelt? (right-click: one)"
+                 : "What would you like to make? (right-click: one)");
+    for (int i = 0; i < v->world->make_option_count
+            && menu->count < RUNEC_UI_MAKE_MAX; i++) {
+        if (!rc_skilling_make_option_ready(v->world, i)) continue;
+        const RcRecipe *recipe = rc_recipe_get(v->world->make_options[i].recipe);
+        menu->option[menu->count] = i;
+        snprintf(menu->label[menu->count], sizeof(menu->label[0]), "%s",
+                 recipe ? recipe->name : "?");
+        menu->count++;
+    }
+}
+
+static void viewer_report_shop_value(ViewerState *v, int slot, int inventory) {
+    const RcPlayer *p = v->world->player;
+    int shop = p->shop_open;
+    if (shop < 0 || shop >= v->world->shop_count) return;
+    int item = inventory
+        ? (slot >= 0 && slot < RC_INVENTORY_SIZE ? p->inventory[slot].item_id : -1)
+        : (slot >= 0 && slot < v->world->shops[shop].slot_count
+               ? v->world->shops[shop].slots[slot].item_id : -1);
+    const RcItemDef *def = item >= 0 ? rc_item_def_get(item) : NULL;
+    if (!def) return;
+    int price = inventory ? rc_shop_sell_price(v->world, shop, item)
+                          : rc_shop_buy_price(v->world, shop, slot);
+    char line[96];
+    if (inventory && price < 0)
+        snprintf(line, sizeof(line), "The shop will not buy %.40s.", def->name);
+    else if (inventory)
+        snprintf(line, sizeof(line), "%.40s: the shop will buy for %d coins.", def->name, price);
+    else
+        snprintf(line, sizeof(line), "%.40s: currently costs %d coins.", def->name, price);
+    runec_ui_add_chat_message(&v->ui, line);
 }
 
 static void viewer_start_object_action_visual(ViewerState *v,
@@ -4389,7 +4484,7 @@ static int viewer_interact_object(ViewerState *v, ViewerPickedObject object,
 static void viewer_sync_traversal_event(ViewerState *v) {
     if (!v || !v->world) return;
     const RcTraversalEvent *event =
-        rc_traversal_last_event(&v->world->player);
+        rc_traversal_last_event(v->world->player);
     if (!event || event->sequence == 0
             || event->sequence == v->traversal_event_seen) {
         return;
@@ -4683,7 +4778,7 @@ static int resolve_scene_hover_target(ViewerState *v, ViewerHoverTarget *out) {
             viewer_selected_target_text(v, viewer_ground_item_name(v, ground_idx),
                                         out->action_text,
                                         sizeof(out->action_text));
-        } else if (v->world->player.x == tx && v->world->player.y == ty) {
+        } else if (v->world->player->x == tx && v->world->player->y == ty) {
             snprintf(out->action_text, sizeof(out->action_text), "Take %.64s",
                      viewer_ground_item_name(v, ground_idx));
         } else {
@@ -4801,7 +4896,7 @@ static void build_scene_context_page(ViewerState *v, int page) {
     }
     for (int i = 0; i < v->world->ground_item_count; i++) {
         const RcGroundItem *g = &v->world->ground_items[i];
-        if (!rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER)
+        if (!rc_ground_item_visible(g, v->world->player->index)
                 || g->x != v->context_tile_x || g->y != v->context_tile_y
                 || g->plane != v->context_plane) continue;
         ViewerContextEntry entry = {.kind = VIEWER_CONTEXT_GROUND_ITEM,
@@ -4873,7 +4968,7 @@ static void handle_context_intent(ViewerState *v) {
                 ? &v->world->ground_items[entry.ground_index] : NULL;
             if (g && g->uid == entry.ground_uid && g->version == entry.ground_version
                     && g->plane == v->context_plane
-                    && rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER))
+                    && rc_ground_item_visible(g, v->world->player->index))
                 rc_player_examine_ground_item(v->world, entry.ground_index);
         }
     } else if (entry.kind == VIEWER_CONTEXT_TILE) {
@@ -4900,7 +4995,7 @@ static void draw_hover_action_label(ViewerState *v, int ui_capture) {
 }
 
 static void pickup_current_tile(ViewerState *v) {
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     int idx = ground_item_at_tile_plane(v, p->x, p->y, p->plane);
     if (idx >= 0)
         rc_player_pickup_item(v->world, idx);
@@ -5026,7 +5121,7 @@ static void build_ui_icon_for_item(ViewerState *v, int item_id, int quantity) {
 
 static void build_ui_item_icons(ViewerState *v) {
     int before_count = v->ui.item_icon_count;
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     for (int i = 0; i < RC_INVENTORY_SIZE; i++) {
         if (p->inventory[i].item_id >= 0 && p->inventory[i].quantity > 0)
             build_ui_icon_for_item(v, p->inventory[i].item_id,
@@ -6219,7 +6314,7 @@ static int stale_mapsquare_chunk_index(
     int plan_count, int plane) {
     if (!v)
         return -1;
-    int player_plane = v->world ? clamp_plane(v->world->player.plane) : plane;
+    int player_plane = v->world ? clamp_plane(v->world->player->plane) : plane;
     for (int i = v->mapsquare_chunk_count - 1; i >= 0; i--) {
         const ViewerMapsquareChunk *chunk = &v->mapsquare_chunks[i];
         if (!viewer_streaming_chunk_retained(
@@ -6398,7 +6493,7 @@ static int viewer_request_mapsquare_window(ViewerState *v, int center_x,
         }
     }
 
-    int player_plane = clamp_plane(v->world->player.plane);
+    int player_plane = clamp_plane(v->world->player->plane);
     int retained_count = 0;
     for (int i = 0; i < v->mapsquare_chunk_count; i++) {
         ViewerMapsquareChunk *chunk = &v->mapsquare_chunks[i];
@@ -6803,8 +6898,8 @@ static int viewer_process_mapsquare_loading(ViewerState *v) {
     if (load->player_transition.active
             && !viewer_streaming_player_transition_current(
                 &load->player_transition, v->traversal_generation,
-                v->world->player.x, v->world->player.y,
-                v->world->player.plane)) {
+                v->world->player->x, v->world->player->y,
+                v->world->player->plane)) {
         fprintf(stderr,
                 "viewer scene: discarded stale visual transition "
                 "generation=%llu\n",
@@ -8699,7 +8794,7 @@ static int viewer_sequence_skeleton(AnimCache *cache, int seq_id);
 static void player_pose_set(ViewerState *v, RuneCActorPoseSet *poses) {
     for (int i = 0; i < RUNEC_ACTOR_POSE_COUNT; i++) poses->seq[i] = -1;
     const RuneCItemRenderRecord *weapon =
-        equipped_weapon_render_record(v, &v->world->player);
+        equipped_weapon_render_record(v, v->world->player);
     poses->seq[RUNEC_ACTOR_POSE_IDLE] = weapon
         ? player_anim_or_fallback(v, weapon->ready_anim_id, ANIM_IDLE)
         : ANIM_IDLE;
@@ -8754,7 +8849,7 @@ enum {
 // The player's primary sequence: an action's, else an attack's not yet
 // played out; -1 when neither.
 static int player_primary_anim_id(ViewerState *v, int *one_shot_kind) {
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     if (one_shot_kind) *one_shot_kind = PLAYER_ONE_SHOT_NONE;
     if (v->player_action_anim_timer > 0 && v->player_action_anim_id > 0)
     {
@@ -8894,7 +8989,7 @@ static void viewer_sync_npc_motion(ViewerState *v) {
 static void viewer_sync_player_motion(ViewerState *v, int old_x, int old_y,
                                       int old_plane) {
     if (!v || !v->world) return;
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     RuneCActorMotion *motion = &v->player_motion;
     int steps = p->movement_step_count;
     int stepped = steps > 0 && steps <= 2
@@ -8933,7 +9028,7 @@ static void viewer_sync_player_motion(ViewerState *v, int old_x, int old_y,
 // One 20 ms client cycle: the player, then each NPC, as the client updates
 // them. A face entity is followed at its current fine centre.
 static void viewer_run_motion_cycle(ViewerState *v) {
-    const RcPlayer *p = &v->world->player;
+    const RcPlayer *p = v->world->player;
     int target[2];
     const int *face = NULL;
     int slot = p->facing_entity >= 0
@@ -8990,7 +9085,7 @@ static void viewer_update_actor_motion(ViewerState *v, float dt) {
 }
 
 static void sync_ui_minimap(ViewerState *v) {
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     int scene_plane = viewer_scene_plane(v);
     if (!v->minimap_tiles || v->minimap_tiles_plane != scene_plane)
         build_minimap_tiles(v);
@@ -9100,7 +9195,7 @@ static void sync_ui_minimap(ViewerState *v) {
 }
 
 static void handle_input(ViewerState *v, int ui_capture) {
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     const ViewerStreamingPlayerTransition *transition =
         &v->mapsquare_load.player_transition;
     int remote_transition = v->pending_dev_transport != NULL
@@ -9661,8 +9756,33 @@ static void draw_health_bar(const RuneCHealthBarState *state,
     }
 }
 
+// The other agents in a multi-agent world: the base player model at their tile,
+// facing their way, with their equipment. They share the local player's pose.
+static void draw_other_players(ViewerState *v, int scene_plane) {
+    const RcWorld *w = v->world;
+    ModelEntry *pe = v->player_model && v->player_model->loaded
+                   ? &v->player_model->entries[0] : NULL;
+    for (int i = 0; w && i < w->player_count; i++) {
+        const RcPlayer *o = &w->players[i];
+        if (o == w->player || !o->active || o->is_dead || o->plane != scene_plane
+                || !viewer_actor_in_draw_range(v, (float)o->x, (float)o->y, 2.0f))
+            continue;
+        Vector3 pos = {
+            (float)(o->x - g_world_origin_x) + 0.5f,
+            ground_yf_plane(v, scene_plane, (float)o->x, (float)o->y),
+            -((float)(o->y - g_world_origin_y) + 0.5f),
+        };
+        float angle = -(float)o->face_angle * (360.0f / 2048.0f);
+        if (pe && pe->loaded)
+            DrawModelEx(pe->model, pos, (Vector3){0, 1, 0}, angle, (Vector3){1, 1, 1}, WHITE);
+        else
+            DrawCube((Vector3){pos.x, pos.y + 1.0f, pos.z}, 0.8f, 2.0f, 0.8f, BLUE);
+        draw_raw_equipped_item_models(v, o, pos, angle);
+    }
+}
+
 static void draw_scene(ViewerState *v, int ui_capture) {
-    RcPlayer *p = &v->world->player;
+    RcPlayer *p = v->world->player;
     int scene_plane = viewer_scene_plane(v);
     int presented_x = p->x;
     int presented_y = p->y;
@@ -9722,6 +9842,7 @@ static void draw_scene(ViewerState *v, int ui_capture) {
     // body part is hidden, keep the original exported player base and layer the
     // equipped render model on top; this preserves the known-good default body
     // for partial hats and weapons.
+    draw_other_players(v, scene_plane);
     if (presented_plane == scene_plane) {
         ModelEntry *pe = (v->player_model && v->player_model->loaded)
                        ? &v->player_model->entries[0] : NULL;
@@ -9807,7 +9928,7 @@ static void draw_scene(ViewerState *v, int ui_capture) {
 
     for (int i = 0; i < v->world->ground_item_count; i++) {
         const RcGroundItem *g = &v->world->ground_items[i];
-        if (!rc_ground_item_visible(g, RC_GROUND_OWNER_LOCAL_PLAYER)
+        if (!rc_ground_item_visible(g, v->world->player->index)
                 || g->plane != scene_plane) continue;
         if (g->x < g_world_origin_x || g->x >= g_world_origin_x + g_world_w
                 || g->y < g_world_origin_y
@@ -9937,8 +10058,8 @@ static void draw_scene(ViewerState *v, int ui_capture) {
     Vector2 ps = GetWorldToScreen(
         (Vector3){px, py + player_mid_y, pz}, v->camera);
     draw_health_bar(&v->player_overlay.health_bar, player_head);
-    const char *overhead = runec_prayer_overhead_asset(v->world->player.active_prayers);
-    if (overhead && !v->world->player.is_dead) {
+    const char *overhead = runec_prayer_overhead_asset(v->world->player->active_prayers);
+    if (overhead && !v->world->player->is_dead) {
         const Texture2D *icon = runec_ui_asset(&v->ui.assets, overhead);
         if (icon) {
             int bar_gap = runec_health_bar_visible(&v->player_overlay.health_bar) ? 9 : 0;
@@ -10003,61 +10124,44 @@ static void draw_streaming_telemetry_overlay(ViewerState *v) {
 
 static RcWorldConfig viewer_world_config(
     RcWorldStreamingConfig backend_streaming, const char *combat_visuals_path) {
-    RcWorldConfig cfg = rc_preset_base_only();
+    RcWorldConfig cfg = rc_gym_world_config(&g_gym_layout, 1);
     cfg.streaming = backend_streaming;
-    cfg.npc_capacity = RC_WORLD_NPC_CAPACITY_FULL;
-    cfg.subsystems = RC_SUB_INVENTORY | RC_SUB_EQUIPMENT | RC_SUB_LOOT |
-                     RC_SUB_COMBAT | RC_SUB_PRAYER | RC_SUB_OBJECTS |
-                     RC_SUB_REGIONS | RC_SUB_TRAVERSAL | RC_SUB_STORAGE |
-                     RC_SUB_ENCOUNTER | RC_SUB_CONSUMABLES;
-    cfg.npc_defs_path = env_path("RUNEC_NPC_DEFS", "data/defs/npc_defs.bin");
-    cfg.items_path = env_path("RUNEC_ITEMS", "data/defs/items.bin");
-    cfg.drops_path = env_path("RUNEC_DROPS", "data/defs/drops.bin");
-    cfg.rdt_path = env_path("RUNEC_RDT", "data/defs/rdt.bin");
-    cfg.gdt_path = env_path("RUNEC_GDT", "data/defs/gdt.bin");
-    cfg.mrdt_path = env_path("RUNEC_MRDT", "data/defs/mrdt.bin");
-    cfg.prayers_path = env_path("RUNEC_PRAYERS", "data/defs/prayers.bin");
-    cfg.varbits_path = env_path("RUNEC_VARBITS", "data/defs/varbits.bin");
-    cfg.varps_path = env_path("RUNEC_VARPS", "data/defs/varps.bin");
-    cfg.spells_path = env_path("RUNEC_SPELLS", "data/defs/spells.bin");
     cfg.combat_profiles_path = env_path("RUNEC_COMBAT_PROFILES",
         combat_visuals_path);
-    cfg.monster_mechanics_path = env_path("RUNEC_MONSTER_MECHANICS",
-        "data/defs/regular_npc_mechanics.bin");
-    cfg.activity_schemas_path = env_path("RUNEC_ACTIVITY_SCHEMAS",
-        "data/defs/activity_schemas.bin");
-    cfg.activity_spawns_path = env_path("RUNEC_ACTIVITY_SPAWNS",
-        "data/defs/activity_spawns.bin");
-    cfg.activity_mechanics_path = env_path("RUNEC_ACTIVITY_MECHANICS",
-        "data/defs/activity_mechanics.bin");
-    cfg.activity_states_path = env_path("RUNEC_ACTIVITY_STATES",
-        "data/defs/activity_states.bin");
-    cfg.encounters_path = env_path("RUNEC_ENCOUNTERS",
-        "data/defs/encounters.bin");
-    cfg.player_actions_path = env_path("RUNEC_PLAYER_ACTIONS",
-        "data/defs/player_actions.bin");
-    cfg.object_defs_path = env_path("RUNEC_OBJECT_DEFS",
-        "data/defs/object_defs.bin");
-    cfg.object_placements_path = env_path("RUNEC_OBJECT_PLACEMENTS",
-        "data/regions/world.object-placements.indexed.bin");
-    cfg.object_behaviors_path = env_path("RUNEC_OBJECT_BEHAVIORS",
-        "data/defs/object_behaviors.bin");
-    cfg.collision_tiles_path = env_path("RUNEC_COLLISION_TILES",
-        "data/regions/world.collision-tiles.indexed.bin");
-    cfg.spawns_path = env_path("RUNEC_NPC_SPAWNS",
-        "data/spawns/world.npc-spawns.indexed.bin");
-    cfg.ground_item_spawns_path = env_path("RUNEC_GROUND_ITEM_SPAWNS",
-        "data/spawns/world.ground-items.indexed.bin");
-    cfg.area_flags_path = env_path("RUNEC_AREA_FLAGS",
-        "data/defs/area_flags.bin");
-    cfg.traversal_edges_path = env_path("RUNEC_TRAVERSAL_EDGES",
-        "data/defs/traversal_edges.bin");
-    cfg.seed = 12345;
     return cfg;
 }
 
+// Advances the replay one tick with the recorded actions; 0 when it is over.
+// Commands queued by clicks are dropped first so the replay stays exact.
+static int viewer_replay_step(ViewerState *v) {
+    int actions[RC_ENV_MAX_AGENTS];
+    if (!rc_env_replay_next(v->replay_file, &v->replay_header, actions)) return 0;
+    for (int i = 0; i < v->world->player_count; i++) v->world->players[i].commands.count = 0;
+    for (int i = 0; i < v->replay_header.num_agents; i++)
+        rc_env_set_action(v->replay_env, i, actions[i]);
+    rc_env_step(v->replay_env);
+    (void)rc_world_select_player(v->world, v->follow_agent);
+    v->replay_tick++;
+    return 1;
+}
+
+// Keys 1-9 follow another agent during a replay.
+static void viewer_replay_keys(ViewerState *v) {
+    for (int k = 0; k < 9 && k < v->replay_header.num_agents; k++) {
+        if (!IsKeyPressed(KEY_ONE + k) || v->ui.chat_focused) continue;
+        v->follow_agent = k;
+        (void)rc_world_select_player(v->world, k);
+        char line[96];
+        snprintf(line, sizeof(line), "Replay: following agent %d of %d (tick %u/%u).", k + 1,
+                 v->replay_header.num_agents, v->replay_tick, v->replay_header.ticks);
+        runec_ui_add_chat_message(&v->ui, line);
+    }
+}
+
 int main(int argc, char **argv) {
-    (void)argc;
+    const char *replay_path = NULL;
+    for (int i = 1; i + 1 < argc; i++)
+        if (strcmp(argv[i], "--replay") == 0) replay_path = argv[i + 1];
     double startup_started_ms = viewer_streaming_now_ms();
     // Static, not on the stack: per-NPC presentation state for
     // RC_MAX_NPCS slots puts it past the default 8 MB stack.
@@ -10095,10 +10199,13 @@ int main(int argc, char **argv) {
     v.minimap_tiles_plane = -1;
     g_world_origin_x = env_int("RUNEC_WORLD_ORIGIN_X", DEFAULT_WORLD_ORIGIN_X);
     g_world_origin_y = env_int("RUNEC_WORLD_ORIGIN_Y", DEFAULT_WORLD_ORIGIN_Y);
-    g_player_start_x = env_int("RUNEC_PLAYER_START_X", DEFAULT_PLAYER_START_X);
-    g_player_start_y = env_int("RUNEC_PLAYER_START_Y", DEFAULT_PLAYER_START_Y);
+    if (!rc_gym_layout_load(RC_GYM_LAYOUT_PATH, &g_gym_layout)) return 1;
+    g_player_start_x = env_int("RUNEC_PLAYER_START_X", g_gym_layout.start_x);
+    g_player_start_y = env_int("RUNEC_PLAYER_START_Y", g_gym_layout.start_y);
     g_player_start_plane = clamp_plane(
-        env_int("RUNEC_PLAYER_START_PLANE", 0));
+        env_int("RUNEC_PLAYER_START_PLANE", g_gym_layout.start_plane));
+    runec_dev_validation_set_start(g_gym_layout.start_x, g_gym_layout.start_y,
+                                   g_gym_layout.start_plane);
     int default_world_side =
         (backend_streaming.active_radius_regions * 2 + 1) * RC_REGION_SIZE;
     g_world_w = env_int("RUNEC_WORLD_W", default_world_side);
@@ -10163,7 +10270,29 @@ int main(int argc, char **argv) {
             v.streaming.preload_radius_regions,
             v.streaming.max_cpu_chunks, v.streaming.max_gpu_chunks,
             v.streaming.upload_budget_mb_per_frame);
-    v.world = rc_world_create_config(&cfg);
+    if (replay_path) {
+        v.replay_file = rc_env_replay_open(replay_path, &v.replay_header);
+        if (!v.replay_file) {
+            fprintf(stderr, "viewer: %s is not an rc-env replay\n", replay_path);
+            return 1;
+        }
+        RcEnvConfig replay_cfg = {
+            .num_agents = v.replay_header.num_agents, .task = v.replay_header.task,
+            .episode_ticks = v.replay_header.episode_ticks, .seed = v.replay_header.seed,
+        };
+        v.replay_env = rc_env_create(&replay_cfg);
+        v.world = rc_env_world(v.replay_env);
+        if (v.world) {
+            g_player_start_x = v.world->player->x;
+            g_player_start_y = v.world->player->y;
+            g_player_start_plane = v.world->player->plane;
+        }
+        fprintf(stderr, "viewer: replaying %s: %d agents, task %s, %u ticks\n", replay_path,
+                v.replay_header.num_agents, rc_env_task(v.replay_header.task)->name,
+                v.replay_header.ticks);
+    } else {
+        v.world = rc_world_create_config(&cfg);
+    }
     if (!v.world) { fprintf(stderr, "Failed to create world\n"); return 1; }
     v.npc_overlays = calloc(RC_MAX_NPCS, sizeof(*v.npc_overlays));
     if (!v.npc_overlays) {
@@ -10187,11 +10316,11 @@ int main(int argc, char **argv) {
                                      cfg.object_behaviors_path);
     // Register all OSRS content modules (boss scripts, etc.). See
     // rc-content/README.md for the engine/content split.
-    if (!rc_world_install_content(v.world, rc_content_register_all))
+    if (!v.replay_env && !rc_world_install_content(v.world, rc_content_register_all))
         fprintf(stderr, "content: registration failed; see messages above\n");
 
-    if (!rc_world_relocate_player(v.world, g_player_start_x,
-                                  g_player_start_y, g_player_start_plane)) {
+    if (!v.replay_env && !rc_world_relocate_player(v.world, g_player_start_x,
+                                                   g_player_start_y, g_player_start_plane)) {
         fprintf(stderr, "viewer: cannot place the player at start %d,%d,%d; "
                 "check the gym's collision and spawn files\n",
                 g_player_start_x, g_player_start_y, g_player_start_plane);
@@ -10202,10 +10331,18 @@ int main(int argc, char **argv) {
     v.player_motion.turn_speed = RUNEC_ACTOR_TURN_SPEED;
     v.player_motion.rotation_flag = true;
     runec_actor_motion_place(&v.player_motion, g_player_start_x,
-                             g_player_start_y, 1, v.world->player.face_angle);
-    v.player_face_angle_seq = v.world->player.face_angle_seq;
+                             g_player_start_y, 1, v.world->player->face_angle);
+    v.player_face_angle_seq = v.world->player->face_angle_seq;
     v.primary_anim_id = -1;
-    set_viewer_demo_stats(&v.world->player);
+    // A fresh gym player with the starter kit; dev validation mode starts at 99
+    // with the dev bank instead. A replay keeps the recorded agents as they are.
+    if (v.replay_env) {
+        // agents were placed and equipped by rc-env
+    } else if (runec_dev_validation_enabled()) {
+        set_viewer_demo_stats(v.world->player);
+    } else {
+        rc_env_give_task_kit(v.world, RC_TASK_TOTAL);
+    }
     if (!runec_dev_validation_seed_prayers(v.world)
             || !runec_prayer_ui_sync(&v.ui.prayers, v.world)) {
         fprintf(stderr, "viewer: prayer definitions/unlocks/UI mapping are incomplete\n");
@@ -10213,7 +10350,7 @@ int main(int argc, char **argv) {
         rc_world_destroy(v.world);
         return 1;
     }
-    runec_dev_validation_seed_bank(v.world);
+    if (!v.replay_env) runec_dev_validation_seed_bank(v.world);
 
     if (viewer_smoke) {
         int combat_visual_count = rc_load_combat_visuals(combat_visuals_path);
@@ -10237,10 +10374,10 @@ int main(int argc, char **argv) {
         if (env_bool("RUNEC_VIEWER_SMOKE_MAPSQUARES", 0)) {
             int prepared = viewer_prepare_mapsquare_window(
                 &v, g_player_start_x, g_player_start_y,
-                v.world->player.plane);
+                v.world->player->plane);
             if (prepared <= 0 || validate_mapsquare_window_assets(
                     &v, g_player_start_x, g_player_start_y,
-                    v.world->player.plane) < 0) {
+                    v.world->player->plane) < 0) {
                 free(v.npc_overlays);
                 rc_world_destroy(v.world);
                 return 1;
@@ -10337,7 +10474,7 @@ int main(int argc, char **argv) {
         viewer_mapsquare_cache_allowed()
             && viewer_mapsquare_center_available(
                 &v, g_player_start_x, g_player_start_y,
-                v.world->player.plane)
+                v.world->player->plane)
         ? "mapsquare" : viewer_scene_mode_name(scene_mode);
     fprintf(stderr,
             "viewer scene mode: %s auto_export=%s startup_radius=%d "
@@ -10356,7 +10493,7 @@ int main(int argc, char **argv) {
     }
     if (v.scene_plane_override >= 0)
         ensure_active_scene_plane(&v, v.scene_plane_override);
-    if (loaded_scene_contains_tile(RS_GYM_START_X, RS_GYM_START_Y))
+    if (loaded_scene_contains_tile(g_gym_layout.start_x, g_gym_layout.start_y))
         runec_dev_validation_spawn_start_dummy(v.world);
     build_minimap_tiles(&v);
 
@@ -10460,15 +10597,15 @@ int main(int argc, char **argv) {
             for (int y = 0; y < max_y; y++)
                 if (rc_get_flags(&v.world->map, g_world_origin_x + x,
                                  g_world_origin_y + y,
-                                 v.world->player.plane) & 0x200000)
+                                 v.world->player->plane) & 0x200000)
                     blocked++;
         fprintf(stderr, "Collision check: first %dx%d tiles have %d blocked tiles\n",
                 max_x, max_y, blocked);
     }
 
     fprintf(stderr, "Viewer ready. Player at world (%d, %d), local (%d, %d)\n",
-            v.world->player.x, v.world->player.y,
-            LOCAL_X(v.world->player.x), LOCAL_Y(v.world->player.y));
+            v.world->player->x, v.world->player->y,
+            LOCAL_X(v.world->player->x), LOCAL_Y(v.world->player->y));
     v.telemetry.startup_ms = viewer_streaming_now_ms() - startup_started_ms;
     viewer_log_streaming_telemetry(&v, "startup-ready");
 
@@ -10509,7 +10646,7 @@ int main(int argc, char **argv) {
         runec_input_feedback_advance(&v.input_feedback, GetFrameTime());
         viewer_process_deferred_mapsquare_eviction(&v);
         viewer_process_mapsquare_loading(&v);
-        RcPlayer *p = &v.world->player;
+        RcPlayer *p = v.world->player;
         runec_ui_sync_status(&v.ui, p->x, p->y, LOCAL_X(p->x), LOCAL_Y(p->y),
                              (uint32_t)v.world->tick, p->running, v.paused);
         sync_ui_items(&v);
@@ -10518,6 +10655,20 @@ int main(int argc, char **argv) {
         int ui_capture = runec_ui_handle_input(&v.ui, GetScreenWidth(), GetScreenHeight());
         if (v.ui.last_intent.kind == RUNEC_UI_INTENT_RUN_TOGGLE) {
             (void)rc_player_set_running(v.world, !p->running);
+        } else if (v.ui.shop_open
+                && (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_WITHDRAW
+                    || v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_DEPOSIT)) {
+            int amount = v.ui.last_intent.secondary > 0 ? v.ui.last_intent.secondary : 10;
+            if (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_WITHDRAW)
+                (void)rc_shop_buy(v.world, v.ui.last_intent.primary, amount);
+            else
+                (void)rc_shop_sell(v.world, v.ui.last_intent.primary, amount);
+        } else if (v.ui.shop_open
+                && v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_CLOSE) {
+            rc_shop_close(v.world->player);
+        } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_SHOP_VALUE) {
+            viewer_report_shop_value(&v, v.ui.last_intent.primary,
+                                     v.ui.last_intent.secondary);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_WITHDRAW
                 || v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_WITHDRAW_ALL_BUT_ONE) {
             rc_bank_withdraw_slot_mode(v.world, v.ui.last_intent.primary,
@@ -10530,6 +10681,11 @@ int main(int argc, char **argv) {
             rc_bank_deposit_all(v.world, v.ui.last_intent.primary != 0);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_CLOSE) {
             rc_player_close_storage(v.world);
+        } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_MAKE) {
+            (void)rc_skilling_make(v.world, v.ui.last_intent.primary,
+                                   v.ui.last_intent.secondary);
+        } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_MAKE_CLOSE) {
+            rc_skilling_close_make(v.world->player);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_BANK_EXAMINE) {
             const RcItemDef *def = rc_item_def_get(v.ui.last_intent.primary);
             if (def) runec_ui_add_chat_message(&v.ui, def->examine[0]
@@ -10628,7 +10784,7 @@ int main(int argc, char **argv) {
             if (!rc_combat_set_auto_retaliate(v.world,
                                               v.ui.last_intent.primary != 0))
                 fprintf(stderr, "auto-retaliate: command rejected (%d)\n",
-                        v.world->player_commands.last_result);
+                        v.world->player->commands.last_result);
         } else if (v.ui.last_intent.kind == RUNEC_UI_INTENT_SPECIAL_ATTACK) {
             if ((p->combat.special_pending ? 1 : 0) != v.ui.last_intent.primary)
                 rc_combat_toggle_special(v.world);
@@ -10694,6 +10850,7 @@ int main(int argc, char **argv) {
         if (v.ui.context_dismissed)
             reset_viewer_context(&v);
         handle_input(&v, ui_capture);
+        if (v.replay_env) viewer_replay_keys(&v);
         viewer_update_movement_prefetch(&v);
 
         // Animation (runs every frame, independent of ticks)
@@ -10704,10 +10861,16 @@ int main(int argc, char **argv) {
             int ticks_due = rc_viewer_tick_pacing_advance(
                 &v.tick_pacing, GetFrameTime(), 1.0 / TPS);
             for (int tick_idx = 0; tick_idx < ticks_due; tick_idx++) {
-                int old_x = v.world->player.x;
-                int old_y = v.world->player.y;
-                int old_plane = v.world->player.plane;
-                rc_world_tick(v.world);
+                int old_x = v.world->player->x;
+                int old_y = v.world->player->y;
+                int old_plane = v.world->player->plane;
+                if (!v.replay_env) {
+                    rc_world_tick(v.world);
+                } else if (!viewer_replay_step(&v)) {
+                    v.paused = 1;
+                    runec_ui_add_chat_message(&v.ui, "Replay finished.");
+                    break;
+                }
                 // Feed every authoritative tick, including catch-up ticks,
                 // to the client motion before its attack sequences start.
                 viewer_sync_player_motion(&v, old_x, old_y, old_plane);
@@ -10728,6 +10891,7 @@ int main(int argc, char **argv) {
         }
         viewer_sync_interaction_outcome(&v);
         viewer_sync_consumption(&v);
+        viewer_sync_skilling(&v);
         viewer_sync_traversal_event(&v);
         viewer_sync_traversal_outcome(&v);
         float presentation_dt = v.paused ? 0.0f : GetFrameTime();
@@ -10798,7 +10962,12 @@ cleanup:
         anim_model_state_free(v.npc_anim_state[i]);
     anim_cache_free(v.anims);
     anim_cache_free(v.object_anim_cache);
-    rc_world_destroy(v.world);
+    if (v.replay_env) {
+        rc_env_destroy(v.replay_env);  // owns the world
+        fclose(v.replay_file);
+    } else {
+        rc_world_destroy(v.world);
+    }
     free(v.npc_overlays);
     viewer_unload_hitsplat_textures(&v);
     runec_ui_shutdown(&v.ui);

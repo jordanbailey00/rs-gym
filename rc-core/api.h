@@ -59,6 +59,9 @@ RcWorld *rc_world_create_with_data(RcGameData *data,
                                    const RcWorldConfig *cfg);
 RcWorld *rc_world_create(uint32_t seed);
 int      rc_world_reset(RcWorld *world);
+// Resets as a freshly created world seeded with `seed`: the RNG and NPC ids
+// start over, so an episode replays from its seed and actions alone.
+int  rc_world_reset_seeded(RcWorld *world, uint32_t seed);
 // Runs a content installer (hooks, handlers, encounter scripts) now and again
 // after every rc_world_reset, so a reset world keeps its content. Returns the
 // installer's result: 1 on success, 0 on failure.

@@ -1,3 +1,4 @@
+#include "players.h"
 #include "encounter.h"
 #include "api.h"
 #include "assets.h"
@@ -414,7 +415,7 @@ static void land_drop(RcWorld *world, RcEncounterEffect *e) {
 // Hazard damage bypasses prayer and never applies attack effects.
 static void queue_hazard_hit(RcWorld *world, const RcEncounterEffect *e,
                              int damage, int max_hit) {
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (damage <= 0 || p->is_dead || p->current_hp <= 0) return;
     (void)rc_queue_hit_meta(p->pending_hits, &p->num_pending_hits, damage, 0,
                             e->style ? e->style : COMBAT_MAGIC,
@@ -423,7 +424,7 @@ static void queue_hazard_hit(RcWorld *world, const RcEncounterEffect *e,
 }
 
 static void tick_pool(RcWorld *world, RcEncounterEffect *e) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     if (!e->damage_per_tick || p->plane != e->plane || p->x != e->x
             || p->y != e->y) return;
     int damage = 1 + rc_rng_range(&world->rng_state, e->damage_per_tick - 1);
@@ -439,7 +440,7 @@ static void tick_pool(RcWorld *world, RcEncounterEffect *e) {
 
 // Warned strikes are judged where the player stands on impact.
 static void resolve_strike(RcWorld *world, const RcEncounterEffect *e) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     if (p->plane != e->plane) return;
     int distance = chebyshev(p->x, p->y, e->x, e->y);
     if (distance > 1 || (distance == 1 && !e->adjacent_pct)) return;
@@ -487,7 +488,7 @@ void rc_encounter_tick_effects(RcWorld *world) {
 
 static void end_window(RcWorld *world, RcActiveEncounter *a) {
     if (a->run_flags & RC_ENC_RUN_PLAYER_FROZEN)
-        world->player.freeze_expire_tick = world->tick;
+        world->player->freeze_expire_tick = world->tick;
     a->run_flags &= (uint8_t)~(RC_ENC_RUN_BOSS_IMMUNE
                                | RC_ENC_RUN_PLAYER_FROZEN
                                | RC_ENC_RUN_BOSS_IDLE);
@@ -556,9 +557,9 @@ static void stop_boss_combat(RcWorld *world, RcNpc *boss) {
     rc_combat_stop_actor(world, actor, RC_COMBAT_STATE_CANCELLED);
     boss->target_uid = -1;
     boss->combat.attack_prepared = false;
-    if (world->player.attack_target == boss->uid) {
-        world->player.attack_target = -1;
-        world->player.attack_target_def_id = -1;
+    if (world->player->attack_target == boss->uid) {
+        world->player->attack_target = -1;
+        world->player->attack_target_def_id = -1;
     }
 }
 
@@ -775,9 +776,9 @@ static void forget_helper(RcWorld *world, int slot, int helper_at) {
 // ---- Tick --------------------------------------------------------------
 
 static bool player_fighting_boss(const RcWorld *world, const RcNpc *boss) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     if (p->is_dead || p->plane != boss->plane) return false;
-    return boss->target_uid == 0 || p->attack_target == boss->uid;
+    return boss->target_uid == p->index || p->attack_target == boss->uid;
 }
 
 static void tick_phase_thresholds(RcWorld *world, int slot,
@@ -825,7 +826,7 @@ static void tick_run(RcWorld *world, int slot) {
         enter_form(world, slot, next, a->transition_hp);
         if (!spec->forms[next].dormant) engage_run(world, slot);
         // A woken boss turns on the player that woke it.
-        if (woke && a->engaged) rc_combat_start_npc_vs_player(world, boss->uid, 0);
+        if (woke && a->engaged) rc_combat_start_npc_vs_player(world, boss->uid, world->player->index);
         return;
     }
     const RcEncounterForm *form = &spec->forms[a->form];
@@ -841,7 +842,7 @@ static void tick_run(RcWorld *world, int slot) {
         engage_run(world, slot);
         if (!a->active || !a->engaged) return;
     }
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     a->calm_ticks = fighting ? 0 : (uint8_t)(a->calm_ticks + 1);
     if (p->is_dead || p->plane != boss->plane
             || footprint_distance(world, boss, p->x, p->y) > RC_ENC_LEASH_TILES
@@ -874,11 +875,31 @@ static void tick_run(RcWorld *world, int slot) {
     }
 }
 
+// The player a run is about: the boss's target, else a player attacking the boss, else slot 0
+// (then nobody is fighting and the run calms down and disengages).
+static RcPlayer *run_player(RcWorld *world, int slot) {
+    RcActiveEncounter *a = &world->encounter.active[slot];
+    const RcEncounterSpec *spec = run_spec(world, a);
+    const RcNpc *boss = spec ? run_boss(world, a) : NULL;
+    if (boss) {
+        RcPlayer *target = rc_world_player_at(world, boss->target_uid);
+        if (target) return target;
+        for (int i = 0; i < world->player_count; i++) {
+            RcPlayer *p = rc_world_player_at(world, i);
+            if (p && !p->is_dead && p->attack_target == boss->uid) return p;
+        }
+    }
+    return &world->players[0];
+}
+
 void rc_encounter_tick(RcWorld *world) {
     if (!world || !(world->enabled & RC_SUB_ENCOUNTER)) return;
     flush_helper_removals(world);
     for (int i = 0; i < RC_ENC_MAX_ACTIVE; i++) {
-        if (world->encounter.active_mask & (1u << i)) tick_run(world, i);
+        if (world->encounter.active_mask & (1u << i)) {
+            world->player = run_player(world, i);
+            tick_run(world, i);
+        }
     }
 }
 
@@ -979,7 +1000,7 @@ static bool attack_eligible(const RcWorld *world, const RcActiveEncounter *a,
         return false;
     if (atk->npc_id && atk->npc_id != a->def_id) return false;
     return !(atk->flags & RC_ENC_ATTACK_NEEDS_FREE_SLOT)
-        || player_has_free_slot(&world->player);
+        || player_has_free_slot(world->player);
 }
 
 static const RcEncounterMechanic *special_rotation(const RcEncounterSpec *spec) {
@@ -1142,7 +1163,7 @@ bool rc_encounter_npc_may_engage(const RcWorld *world, uint32_t def_id,
         if (!in_arena(spec, spawn_x, spawn_y, spawn_plane)
                 || (!spec_has_form(spec, def_id) && !spec_has_guard(spec, def_id)))
             continue;
-        const RcPlayer *p = &world->player;
+        const RcPlayer *p = world->player;
         return in_arena(spec, p->x, p->y, p->plane);
     }
     return true;
@@ -1180,9 +1201,9 @@ int rc_encounter_intercept_lethal(RcWorld *world, RcNpcId npc_uid) {
     end_window(world, a);
     release_run_effects(world, slot);
     npc->combat.attack_prepared = false;
-    if (world->player.attack_target == npc->uid) {
-        world->player.attack_target = -1;
-        world->player.attack_target_def_id = -1;
+    if (world->player->attack_target == npc->uid) {
+        world->player->attack_target = -1;
+        world->player->attack_target_def_id = -1;
     }
     record_form(world, npc, RC_ENC_FORM_LEAVE_KEY, form->transition_ticks);
     if (form->transition_ticks == 0) {
@@ -1216,7 +1237,7 @@ int rc_encounter_wake(RcWorld *world, RcNpcId npc_uid) {
     }
     enter_form(world, slot, form->next_form, form->next_hp);
     engage_run(world, slot);
-    rc_combat_start_npc_vs_player(world, npc->uid, 0);
+    rc_combat_start_npc_vs_player(world, npc->uid, world->player->index);
     return 1;
 }
 
@@ -1256,7 +1277,7 @@ static void drain_all_stats(RcPlayer *p, int levels) {
 // attacker's footprint; does nothing when no such tile is found.
 static void teleport_away(RcWorld *world, const RcNpc *boss, int min_d,
                           int max_d) {
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     if (!boss || max_d <= 0 || min_d > max_d) return;
     for (int tries = 0; tries < 32; tries++) {
         int x = p->x + rc_rng_range(&world->rng_state, max_d * 2) - max_d;
@@ -1273,7 +1294,7 @@ static void teleport_away(RcWorld *world, const RcNpc *boss, int min_d,
 // Unequips up to `count` items, weapon first. Each needs a free inventory
 // slot, so space limits the result.
 static void unequip_items(RcWorld *world, int count) {
-    RcPlayer *p = &world->player;
+    RcPlayer *p = world->player;
     int removed = 0;
     for (int pass = 0; pass < 2; pass++) {
         for (int slot = 0; slot < RC_EQUIP_COUNT && removed < count; slot++) {
@@ -1311,7 +1332,7 @@ static void apply_attack_effect(RcWorld *world, const RcNpc *boss,
             rc_prayer_drain_points(world, atk->effect_a);
             break;
         case RC_ENC_ATTACK_EFFECT_DRAIN_ALL_STATS:
-            drain_all_stats(&world->player, atk->effect_a);
+            drain_all_stats(world->player, atk->effect_a);
             break;
         case RC_ENC_ATTACK_EFFECT_FREEZE:
             rc_player_apply_freeze(world, atk->effect_b);
@@ -1388,7 +1409,11 @@ void rc_encounter_on_player_died(RcWorld *world, int evt, const void *payload,
     (void)payload;
     (void)ctx;
     if (!world) return;
-    for (int i = 0; i < RC_ENC_MAX_ACTIVE; i++) disengage_run(world, i);
+    // Fired while the dying player acts: only that player's fights end.
+    for (int i = 0; i < RC_ENC_MAX_ACTIVE; i++) {
+        if ((world->encounter.active_mask & (1u << i)) && run_player(world, i) == world->player)
+            disengage_run(world, i);
+    }
 }
 
 void rc_encounter_on_player_damaged(RcWorld *world, int evt,

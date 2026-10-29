@@ -44,6 +44,7 @@ struct RcObjectPlacementStore {
     uint32_t resident_pages;
     uint32_t resident_rows;
     uint64_t use_clock;
+    bool frozen;  // read-only: no LRU bookkeeping, no loads (see rc_object_placements_freeze)
 };
 
 RcObjectDef g_rc_object_defs[RC_MAX_OBJECT_ID];
@@ -651,10 +652,11 @@ static int object_placement_page_get(RcObjectPlacementStore *store,
 
     RcObjectPlacementPage *page = cached_placement_page(store, mapsquare);
     if (page) {
-        page->last_used = ++store->use_clock;
+        if (!store->frozen) page->last_used = ++store->use_clock;
         if (out) *out = page;
         return 1;
     }
+    if (store->frozen) return 1;  // not resident: reads as empty
 
     int close_reader = 0;
     if (!reader) {
@@ -938,6 +940,13 @@ static RcObjectPlacementStore *active_placement_store(void) {
     if (g_active_object_data && g_active_object_data->placement_store)
         return g_active_object_data->placement_store;
     return g_global_placement_store;
+}
+
+int rc_object_placements_freeze(void) {
+    RcObjectPlacementStore *store = active_placement_store();
+    if (!store) return 0;
+    store->frozen = true;
+    return 1;
 }
 
 int rc_object_placements_set_cache_limit(int max_pages) {

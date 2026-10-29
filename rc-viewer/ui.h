@@ -83,7 +83,10 @@ typedef enum RuneCUiIntentKind {
     RUNEC_UI_INTENT_SCENE_PLANE,
     RUNEC_UI_INTENT_DEV_TRANSPORT,
     RUNEC_UI_INTENT_DEV_SPELLBOOK,
-    RUNEC_UI_INTENT_DEV_NPC_TILES
+    RUNEC_UI_INTENT_DEV_NPC_TILES,
+    RUNEC_UI_INTENT_MAKE,          // primary: make option, secondary: count (0 = all)
+    RUNEC_UI_INTENT_MAKE_CLOSE,
+    RUNEC_UI_INTENT_SHOP_VALUE     // primary: slot, secondary: 1 for an inventory item
 } RuneCUiIntentKind;
 
 typedef struct RuneCUiIntent {
@@ -206,6 +209,17 @@ typedef struct RuneCUiComponentEventMask {
     uint32_t mask;
 } RuneCUiComponentEventMask;
 
+#define RUNEC_UI_MAKE_MAX 40
+
+// Furnace/anvil product list shown in the chatbox while a make menu is open.
+typedef struct RuneCUiMakeMenu {
+    int open;
+    char title[64];
+    int count;
+    int option[RUNEC_UI_MAKE_MAX];
+    char label[RUNEC_UI_MAKE_MAX][64];
+} RuneCUiMakeMenu;
+
 typedef struct RuneCUiState {
     RuneCUiTab active_tab;
     RuneCUiIntent last_intent;
@@ -321,6 +335,9 @@ typedef struct RuneCUiState {
     int item_container_override_count;
     RuneCUiComponentEventMask event_masks[RUNEC_UI_EVENT_MASKS];
     int event_mask_count;
+    RuneCUiMakeMenu make;
+    int shop_open;        // the bank panel shows a shop: bank[] holds its stock
+    char shop_title[48];
 } RuneCUiState;
 
 void runec_ui_init(RuneCUiState *ui);

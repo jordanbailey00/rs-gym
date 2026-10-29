@@ -88,6 +88,26 @@ int rc_world_config_validate(const RcWorldConfig *config,
                      config->npc_capacity, RC_MAX_NPCS);
         return 0;
     }
+    if (config->player_count < 0 || config->player_count > RC_MAX_PLAYERS) {
+        if (message && message_capacity > 0)
+            snprintf(message, message_capacity, "world player count %d is outside 1..%d",
+                     config->player_count, RC_MAX_PLAYERS);
+        return 0;
+    }
+    if (config->pin_area) {
+        int w = config->pinned_max_rx - config->pinned_min_rx + 1;
+        int h = config->pinned_max_ry - config->pinned_min_ry + 1;
+        if (config->pinned_min_rx < 0 || config->pinned_min_ry < 0 || w <= 0 || h <= 0
+                || config->pinned_max_rx >= RC_MAPSQUARE_AXIS
+                || config->pinned_max_ry >= RC_MAPSQUARE_AXIS || w * h > RC_MAX_REGIONS) {
+            if (message && message_capacity > 0)
+                snprintf(message, message_capacity,
+                         "pinned area %d,%d..%d,%d must be a mapsquare rect of at most %d squares",
+                         config->pinned_min_rx, config->pinned_min_ry, config->pinned_max_rx,
+                         config->pinned_max_ry, RC_MAX_REGIONS);
+            return 0;
+        }
+    }
 #define RC_REQUIRE_PATH(bits, field, label) \
     do { \
         if ((config->subsystems & (bits)) != 0 \

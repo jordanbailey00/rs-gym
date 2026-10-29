@@ -1,3 +1,4 @@
+#include "../../rc-core/players.h"
 #include "ammunition.h"
 
 #include "items.h"
@@ -101,7 +102,7 @@ int rc_content_consume_ammunition(RcWorld *world, int slot, int count,
         *failure = "Invalid ammunition payment.";
         return 0;
     }
-    RcInvSlot ammo = world->player.equipment[slot];
+    RcInvSlot ammo = world->player->equipment[slot];
     RcItemTransaction tx;
     if (rc_item_tx_begin(&tx, world).code != RC_ITEM_RESULT_OK
             || rc_item_tx_remove_equipment(&tx, slot, count, ammo.generation).code
@@ -122,7 +123,7 @@ int rc_content_consume_ammunition(RcWorld *world, int slot, int count,
         RcGroundGrant grant = {ammo.item_id, recovered, ammo.state_id};
         RcGroundPolicy policy = {100, 200, delay, 300};
         RcGroundGrantResult result = rc_item_tx_commit_ground(&tx, &grant, 1,
-            x, y, plane, RC_GROUND_OWNER_LOCAL_PLAYER, policy);
+            x, y, plane, world->player->index, policy);
         if (result == RC_GROUND_GRANT_OK) return 1;
     }
     world->rng_state = rng;
@@ -191,7 +192,7 @@ int rc_content_ranged_resource_slot(const RcPlayer *player, const char **failure
 }
 
 void rc_content_ranged_calc(const RcWorld *world, const RcNpc *target, RcCombatCalc *calc) {
-    const RcPlayer *p = &world->player;
+    const RcPlayer *p = world->player;
     const RcItemDef *weapon = rc_item_def_get(p->equipment[EQUIP_WEAPON].item_id);
     if (!weapon) return;
     if (!strcmp(weapon->name, "Eclipse atlatl")) {

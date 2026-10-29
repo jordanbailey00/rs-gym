@@ -162,6 +162,18 @@ RcInteractionHandlerResult rc_interaction_result_failure(
     return result;
 }
 
+RcInteractionHandlerResult rc_interaction_result_after(
+    const RcPlayer *player, uint64_t outcome_sequence, int ok) {
+    const char *said = player
+            && player->interaction_outcome.sequence != outcome_sequence
+        ? player->interaction_outcome.message : NULL;
+    if (ok) return said && said[0] ? rc_interaction_result_message(said)
+                                   : rc_interaction_result_complete();
+    return rc_interaction_result_failure(
+        RC_INTERACTION_FAIL_INVALID_TARGET,
+        said && said[0] ? said : "Nothing interesting happens.");
+}
+
 RcInteractionHandlerResult rc_interaction_result_handoff(void) {
     RcInteractionHandlerResult result;
     memset(&result, 0, sizeof(result));

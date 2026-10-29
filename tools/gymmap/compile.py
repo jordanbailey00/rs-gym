@@ -1,7 +1,9 @@
-"""Compile a gym map spec (TOML) into mapsquares built from source-cache content.
+"""Compile a gym map spec (TOML) into mapsquares and spatial tables built from source-cache content.
 
-Spec coordinates are tiles relative to the playable area's south-west corner.
-Pipeline: island terrain -> paths -> stamps (real-world rects, rotated) -> locs -> scatter.
+A spec names its areas: an island surface and void areas such as a dungeon. Coordinates in a table
+are tiles relative to its area's south-west corner (`area` defaults to "surface"); `[[stamp]]
+source` coordinates are real b237 tiles.
+Order: terrain -> rivers -> paths -> stamps -> locs -> scatter -> links, zones, spawns, items.
 """
 
 from __future__ import annotations
@@ -10,29 +12,77 @@ import math
 import random
 import tomllib
 from collections import deque
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from export_terrain import calculate_height
 from rc_cache import RcCacheStore, read_map_region_file
 from rc_cache.definitions import decode_location_definition, decode_npc_definition
 
-from .mapformat import PLANES, PROCEDURAL, SIZE, Loc, Tile, decode_locs, decode_terrain, encode_locs, encode_terrain
+from .mapformat import PLANES, PROCEDURAL, SIZE, Loc, Tile, decode_locs, decode_terrain, empty_tiles, encode_locs, encode_terrain
+from .spatial import (AREA_MULTICOMBAT, AREA_WILDERNESS, AREA_WILDERNESS_LEVEL, TRAVERSAL_OBJECT, Edge, Zone,
+                      read_traversal)
 
 OBJECT_CONFIG_GROUP = 6
 NPC_CONFIG_GROUP = 9
 SCENERY_TYPES = (10, 11)  # locs whose width/length occupy tiles
 WANDER_FROM_DEF = 255
+DEFAULT_ITEM_RESPAWN = 100
+TRAVERSAL_ACTIONS = {"Climb-up", "Climb-down", "Climb", "Pull", "Enter", "Exit", "Go-up", "Go-down",
+                     "Walk-up", "Walk-down", "Cross", "Squeeze-through", "Climb-over"}
+
+
+@dataclass(frozen=True)
+class Area:
+    name: str
+    kind: str  # "island" or "void"
+    rx: int
+    ry: int
+    w: int  # mapsquares
+    h: int
+    ring: int  # all-water mapsquares around an island
+
+    @property
+    def bounds(self) -> tuple[int, int, int, int]:
+        return self.rx * SIZE, self.ry * SIZE, (self.rx + self.w) * SIZE, (self.ry + self.h) * SIZE
+
+    def squares(self) -> set[tuple[int, int]]:
+        return {(x, y) for x in range(self.rx - self.ring, self.rx + self.w + self.ring)
+                for y in range(self.ry - self.ring, self.ry + self.h + self.ring)}
 
 
 @dataclass
 class Gym:
-    """Compiled map: encoded mapsquares plus what the build step writes beside them."""
+    """Compiled map: encoded mapsquares plus the tables the build step writes beside them."""
     name: str
     mapsquares: dict[tuple[int, int], tuple[bytes, bytes]]
-    area: tuple[int, int, int, int]  # playable world tiles x0, y0, x1, y1 (exclusive)
+    areas: dict[str, Area]
     start: tuple[int, int, int]  # world x, y, plane
-    npc_spawns: list[tuple[int, int, int, int, int, int, int]]  # npc_id, x, y, plane, direction, wander, flags
+    respawn: tuple[int, int, int]  # where dead players return
+    npc_spawns: list[tuple[int, ...]]  # npc_id, x, y, plane, direction, wander, flags
+    ground_items: list[tuple[int, ...]]  # item_id, quantity, x, y, plane, flags, respawn_ticks
+    edges: list[Edge]
+    zones: list[Zone]
+    landmarks: list[tuple[str, int, int, int]] = field(default_factory=list)  # name, world x, y, plane
+
+
+@dataclass(frozen=True)
+class Stamp:
+    """Where a real-world rect landed: maps source tiles to gym tiles."""
+    sx: int
+    sy: int
+    w: int
+    h: int
+    dx: int
+    dy: int
+    r: int
+
+    def contains(self, x: int, y: int) -> bool:
+        return self.sx <= x < self.sx + self.w and self.sy <= y < self.sy + self.h
+
+    def tile(self, x: int, y: int) -> tuple[int, int]:
+        ti, tj = _rotate_tile(x - self.sx, y - self.sy, self.w, self.h, self.r)
+        return self.dx + ti, self.dy + tj
 
 
 class Source:
@@ -104,19 +154,25 @@ def _absolute_heights(tiles: list, base_x: int, base_y: int) -> list:
 
 
 class Canvas:
-    """Every exported tile (playable area plus ocean ring), addressed in world tiles."""
+    """Every exported mapsquare, addressed in world tiles."""
 
-    def __init__(self, x0: int, y0: int, w: int, h: int):
-        self.x0, self.y0, self.w, self.h = x0, y0, w, h
-        self.tiles = [[[Tile() for _ in range(h)] for _ in range(w)] for _ in range(PLANES)]
+    def __init__(self, squares: set[tuple[int, int]]):
+        self.squares = {sq: empty_tiles() for sq in squares}
         self.locs: list[Loc] = []
         self.reserved: list[tuple[int, int, int, int]] = []  # stamp rects, world x0, y0, x1, y1
+        self.stamps: list[Stamp] = []
 
     def inside(self, x: int, y: int) -> bool:
-        return self.x0 <= x < self.x0 + self.w and self.y0 <= y < self.y0 + self.h
+        return (x >> 6, y >> 6) in self.squares
 
     def tile(self, x: int, y: int, plane: int = 0) -> Tile:
-        return self.tiles[plane][x - self.x0][y - self.y0]
+        return self.squares[(x >> 6, y >> 6)][plane][x & 63][y & 63]
+
+    def put(self, x: int, y: int, plane: int, tile: Tile) -> None:
+        self.squares[(x >> 6, y >> 6)][plane][x & 63][y & 63] = tile
+
+    def tiles_of(self, squares) -> list[tuple[int, int]]:
+        return [(sx * SIZE + x, sy * SIZE + y) for sx, sy in squares for x in range(SIZE) for y in range(SIZE)]
 
 
 def _rotate_tile(i: int, j: int, w: int, h: int, r: int) -> tuple[int, int]:
@@ -139,62 +195,6 @@ def _clamp_height(h: float) -> int:
     return 2 if h == 1 else h  # height byte 1 decodes as 0
 
 
-def _island(canvas: Canvas, area: tuple[int, int, int, int], spec: dict, mats: dict, seed: int) -> None:
-    rng = random.Random(seed)
-    x0, y0, x1, y1 = area
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    radius = spec["radius"]
-    wobble = [(spec["wobble"] / k, k, rng.uniform(0, 2 * math.pi)) for k in range(2, 7)]
-
-    land = set()
-    for x in range(x0, x1):
-        for y in range(y0, y1):
-            angle = math.atan2(y - cy, x - cx)
-            edge = radius * (1 + sum(a * math.sin(k * angle + p) for a, k, p in wobble))
-            if math.hypot(x - cx, y - cy) < edge:
-                land.add((x, y))
-
-    # Distance (in tiles) from the coast, over land and water separately.
-    dist = {}
-    queue = deque()
-    for x in range(canvas.x0, canvas.x0 + canvas.w):
-        for y in range(canvas.y0, canvas.y0 + canvas.h):
-            if (x, y) in land and any(n not in land for n in _neighbours(x, y)):
-                dist[(x, y)] = 0
-                queue.append((x, y))
-    water_dist = {}
-    wq = deque()
-    for x, y in list(queue):
-        for n in _neighbours(x, y):
-            if n not in land and canvas.inside(*n) and n not in water_dist:
-                water_dist[n] = 1
-                wq.append(n)
-    for q, d, inside_land in ((queue, dist, True), (wq, water_dist, False)):
-        while q:
-            x, y = q.popleft()
-            for n in _neighbours(x, y):
-                if canvas.inside(*n) and ((n in land) == inside_land) and n not in d:
-                    d[n] = d[(x, y)] + 1
-                    q.append(n)
-
-    sea, beach, ramp, scale = spec["sea_height"], spec["beach_width"], spec["ramp_tiles"], spec["height_scale"]
-    depths = spec["water_depths"]  # [max distance, overlay] pairs, nearest first
-    for x in range(canvas.x0, canvas.x0 + canvas.w):
-        for y in range(canvas.y0, canvas.y0 + canvas.h):
-            t = canvas.tile(x, y)
-            if (x, y) in land:
-                d = dist[(x, y)]
-                hill = (calculate_height(x + 7919, y + 3571) - 10) * scale
-                t.height = _clamp_height(sea + 2 + min(1.0, d / ramp) * hill)
-                patch = calculate_height(x + 1013, y + 2027) > 40  # smooth blobs of the second grass
-                mat = mats["sand"] if d < beach else mats["grass_alt"] if patch else mats["grass"]
-            else:
-                d = water_dist.get((x, y), 99)
-                t.height = sea
-                mat = next((mats[name] for limit, name in depths if d <= limit), mats[depths[-1][1]])
-            _paint(t, mat)
-
-
 def _neighbours(x: int, y: int):
     return ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
 
@@ -207,17 +207,79 @@ def _paint(t: Tile, mat: dict) -> None:
     t.settings = mat.get("settings", 0)
 
 
-def _paths(canvas: Canvas, paths: list, origin: tuple[int, int], mats: dict) -> None:
-    for path in paths:
-        mat, half = mats[path.get("material", "path")], path.get("width", 2) / 2
-        pts = [(origin[0] + px, origin[1] + py) for px, py in path["points"]]
-        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
-            for x in range(min(ax, bx) - 3, max(ax, bx) + 4):
-                for y in range(min(ay, by) - 3, max(ay, by) + 4):
-                    if canvas.inside(x, y) and _segment_distance(x, y, ax, ay, bx, by) < half:
-                        t = canvas.tile(x, y)
-                        if not t.settings & 1:  # never pave water
-                            _paint(t, mat)
+def _distances(seeds: list, passable) -> dict:
+    """Breadth-first tile distance from the seeds, over tiles where passable(tile) holds."""
+    dist = {s: 0 for s in seeds}
+    queue = deque(seeds)
+    while queue:
+        p = queue.popleft()
+        for n in _neighbours(*p):
+            if n not in dist and passable(n):
+                dist[n] = dist[p] + 1
+                queue.append(n)
+    return dist
+
+
+def _island(canvas: Canvas, area: Area, spec: dict, mats: dict, seed: int) -> None:
+    rng = random.Random(seed)
+    x0, y0, x1, y1 = area.bounds
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    radius = spec["radius"]
+    wobble = [(spec["wobble"] / k, k, rng.uniform(0, 2 * math.pi)) for k in range(2, 7)]
+    squares = area.squares()
+    tiles = canvas.tiles_of(squares)
+
+    land = set()
+    for x, y in tiles:
+        if x0 <= x < x1 and y0 <= y < y1:
+            angle = math.atan2(y - cy, x - cx)
+            edge = radius * (1 + sum(a * math.sin(k * angle + p) for a, k, p in wobble))
+            if math.hypot(x - cx, y - cy) < edge:
+                land.add((x, y))
+
+    in_area = lambda p: (p[0] >> 6, p[1] >> 6) in squares  # noqa: E731
+    coast = [p for p in land if any(n not in land for n in _neighbours(*p))]
+    dist = _distances(coast, lambda p: p in land)
+    shore = [n for p in coast for n in _neighbours(*p) if n not in land and in_area(n)]
+    water_dist = _distances(list(set(shore)), lambda p: p not in land and in_area(p))
+
+    sea, beach, ramp, scale = spec["sea_height"], spec["beach_width"], spec["ramp_tiles"], spec["height_scale"]
+    depths = spec["water_depths"]  # [max distance, material] pairs, nearest first
+    for x, y in tiles:
+        t = canvas.tile(x, y)
+        if (x, y) in land:
+            d = dist[(x, y)]
+            hill = (calculate_height(x + 7919, y + 3571) - 10) * scale
+            t.height = _clamp_height(sea + 2 + min(1.0, d / ramp) * hill)
+            patch = calculate_height(x + 1013, y + 2027) > 40  # smooth blobs of the second grass
+            mat = mats["sand"] if d < beach else mats["grass_alt"] if patch else mats["grass"]
+        else:
+            d = water_dist.get((x, y), 99) + 1
+            t.height = sea
+            mat = next((mats[name] for limit, name in depths if d <= limit), mats[depths[-1][1]])
+        _paint(t, mat)
+
+
+def _paint_zones(canvas: Canvas, zones: list, areas: dict, mats: dict) -> None:
+    """Repaint open land in a rect (water, beach and paths keep their floors); `alt` adds noise blobs."""
+    for zone in zones:
+        x0, y0, x1, y1 = _rect(zone, areas)
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                if not canvas.inside(x, y):
+                    continue
+                t = canvas.tile(x, y)
+                if t.settings & 1 or t.overlay:
+                    continue
+                alt = "alt" in zone and calculate_height(x + 4441, y + 7703) > 40
+                _paint(t, mats[zone["alt"] if alt else zone["material"]])
+
+
+def _void(canvas: Canvas, area: Area, mats: dict) -> None:
+    for x, y in canvas.tiles_of(area.squares()):
+        t = canvas.tile(x, y)
+        _paint(t, mats["void"])
+        t.height = 0
 
 
 def _segment_distance(px, py, ax, ay, bx, by) -> float:
@@ -226,31 +288,72 @@ def _segment_distance(px, py, ax, ay, bx, by) -> float:
     return math.hypot(px - ax - k * dx, py - ay - k * dy)
 
 
-def _stamp(canvas: Canvas, source: Source, stamp: dict, origin: tuple[int, int]) -> None:
+def _polyline_tiles(canvas: Canvas, points: list, half: float) -> set:
+    out = set()
+    pad = int(half) + 2
+    for (ax, ay), (bx, by) in zip(points, points[1:]):
+        for x in range(min(ax, bx) - pad, max(ax, bx) + pad + 1):
+            for y in range(min(ay, by) - pad, max(ay, by) + pad + 1):
+                if canvas.inside(x, y) and _segment_distance(x, y, ax, ay, bx, by) < half:
+                    out.add((x, y))
+    return out
+
+
+def _rivers(canvas: Canvas, rivers: list, areas: dict, mats: dict) -> None:
+    """Carve rivers and lower the land beside them so banks slope into the water."""
+    for river in rivers:
+        area = _area(river, areas)
+        pts = [(area.rx * SIZE + x, area.ry * SIZE + y) for x, y in river["points"]]
+        water = {p for p in _polyline_tiles(canvas, pts, river["width"] / 2)
+                 if not canvas.tile(*p).settings & 1}  # the sea keeps its own water at the mouth
+        level, bank = river.get("height", 2), river.get("bank", 5)
+        for x, y in water:
+            t = canvas.tile(x, y)
+            _paint(t, mats[river.get("material", "shallow")])
+            t.height = level
+        near = _distances(list(water), lambda p: canvas.inside(*p) and p not in water
+                          and not canvas.tile(*p).settings & 1)
+        for (x, y), d in near.items():
+            if 0 < d <= bank:
+                t = canvas.tile(x, y)
+                t.height = _clamp_height(level + (t.height - level) * d / (bank + 1))
+
+
+def _paths(canvas: Canvas, paths: list, areas: dict, mats: dict) -> None:
+    for path in paths:
+        area = _area(path, areas)
+        mat = mats[path.get("material", "path")]
+        pts = [(area.rx * SIZE + x, area.ry * SIZE + y) for x, y in path["points"]]
+        for x, y in _polyline_tiles(canvas, pts, path.get("width", 2) / 2):
+            t = canvas.tile(x, y)
+            if not t.settings & 1:  # never pave water
+                _paint(t, mat)
+
+
+def _stamp(canvas: Canvas, source: Source, stamp: dict, areas: dict) -> Stamp:
     sx, sy = stamp["source"]
     w, h = stamp["size"]
     r = stamp.get("rotation", 0) % 4
-    dx, dy = origin[0] + stamp["at"][0], origin[1] + stamp["at"][1]
+    dx, dy, _ = _at(stamp, areas)
     dw, dh = (w, h) if r % 2 == 0 else (h, w)
     if not (canvas.inside(dx, dy) and canvas.inside(dx + dw - 1, dy + dh - 1)):
         raise SystemExit(f"stamp {stamp['name']!r} falls outside the map")
+    placed = Stamp(sx, sy, w, h, dx, dy, r)
 
     # Fit plane-0 heights: shift the copy so its border matches the ground it lands on.
     border = [(i, j) for i in range(w) for j in range(h) if i in (0, w - 1) or j in (0, h - 1)]
     src_mean = sum(source.height(sx + i, sy + j) for i, j in border) / len(border)
-    dst_mean = sum(canvas.tile(dx + ti, dy + tj).height
-                   for ti, tj in (_rotate_tile(i, j, w, h, r) for i, j in border)) / len(border)
-    offset = dst_mean - src_mean
+    dst_mean = sum(canvas.tile(*placed.tile(sx + i, sy + j)).height for i, j in border) / len(border)
+    offset = stamp.get("height_offset", dst_mean - src_mean)
 
     for plane in range(PLANES):
         for i in range(w):
             for j in range(h):
                 src = source.tile(sx + i, sy + j, plane)
-                ti, tj = _rotate_tile(i, j, w, h, r)
                 t = replace(src, rotation=(src.rotation + r) & 3 if src.overlay or src.shape else src.rotation)
                 if plane == 0:
                     t.height = _clamp_height(source.height(sx + i, sy + j) + offset)
-                canvas.tiles[plane][dx + ti - canvas.x0][dy + tj - canvas.y0] = t
+                canvas.put(*placed.tile(sx + i, sy + j), plane, t)
 
     drop = set(stamp.get("drop_ids", []))
     canvas.locs = [l for l in canvas.locs if not (dx <= l.x < dx + dw and dy <= l.y < dy + dh)]
@@ -261,7 +364,10 @@ def _stamp(canvas: Canvas, source: Source, stamp: dict, origin: tuple[int, int])
         ni, nj = _rotate_loc(loc.x - sx, loc.y - sy, fw, fh, w, h, r)
         canvas.locs.append(Loc(loc.id, loc.plane, dx + ni, dy + nj, loc.type, (loc.rotation + r) & 3))
     canvas.reserved.append((dx, dy, dx + dw, dy + dh))
-    _feather(canvas, (dx, dy, dx + dw, dy + dh), stamp.get("feather", 4))
+    canvas.stamps.append(placed)
+    if _area(stamp, areas).kind == "island":
+        _feather(canvas, (dx, dy, dx + dw, dy + dh), stamp.get("feather", 4))
+    return placed
 
 
 def _feather(canvas: Canvas, rect: tuple[int, int, int, int], tiles: int) -> None:
@@ -279,6 +385,33 @@ def _feather(canvas: Canvas, rect: tuple[int, int, int, int], tiles: int) -> Non
             t.height = _clamp_height(canvas.tile(ex, ey).height * (1 - k) + t.height * k)
 
 
+def _stamp_edges(canvas: Canvas, source: Source, stamps: list[tuple[Stamp, set[int]]],
+                 source_edges: list[Edge]) -> list[Edge]:
+    """Real stairs, ladders and levers that start and end inside a stamp move with it.
+
+    The source table also holds rows that are not movement (e.g. "Mine" on rocks) and rows whose
+    loc is elsewhere; only movement actions next to a stamped loc with the row's id are kept.
+    """
+    near = {}
+    for loc in canvas.locs:
+        fw, fh = _footprint(source, loc)
+        for i in range(-1, fw + 1):
+            for j in range(-1, fh + 1):
+                near.setdefault((loc.x + i, loc.y + j, loc.plane), set()).add(loc.id)
+    out = []
+    for edge in source_edges:
+        if edge.kind != TRAVERSAL_OBJECT or edge.flags or edge.action not in TRAVERSAL_ACTIONS:
+            continue
+        for stamp, dropped in stamps:
+            if edge.source_id in dropped or not (stamp.contains(*edge.start[:2]) and stamp.contains(*edge.dest[:2])):
+                continue
+            moved = replace(edge, start=(*stamp.tile(*edge.start[:2]), edge.start[2]),
+                            dest=(*stamp.tile(*edge.dest[:2]), edge.dest[2]))
+            if edge.source_id in near.get(moved.start, ()):
+                out.append(moved)
+    return out
+
+
 def _occupied(canvas: Canvas, source: Source) -> set[tuple[int, int]]:
     taken = set()
     for loc in canvas.locs:
@@ -288,15 +421,15 @@ def _occupied(canvas: Canvas, source: Source) -> set[tuple[int, int]]:
     return taken
 
 
-def _scatter(canvas: Canvas, source: Source, spec: dict, origin: tuple[int, int], rng: random.Random) -> None:
+def _scatter(canvas: Canvas, source: Source, spec: dict, areas: dict, rng: random.Random) -> None:
     taken = _occupied(canvas, source)
-    ax0, ay0, ax1, ay1 = spec["area"]
+    ax0, ay0, ax1, ay1 = _rect(spec, areas)
     spacing = spec.get("spacing", 1)
     placed, tries = 0, 0
     while placed < spec["count"] and tries < spec["count"] * 200:
         tries += 1
         loc_id = rng.choice(spec["ids"])
-        x, y = origin[0] + rng.randrange(ax0, ax1), origin[1] + rng.randrange(ay0, ay1)
+        x, y = rng.randrange(ax0, ax1), rng.randrange(ay0, ay1)
         loc = Loc(loc_id, 0, x, y, spec.get("type", 10), rng.randrange(4))
         fw, fh = _footprint(source, loc)
         cells = [(x + i, y + j) for i in range(-spacing, fw + spacing) for j in range(-spacing, fh + spacing)]
@@ -311,71 +444,188 @@ def _scatter(canvas: Canvas, source: Source, spec: dict, origin: tuple[int, int]
         taken.update((x + i, y + j) for i in range(fw) for j in range(fh))
         placed += 1
     if placed < spec["count"]:
-        raise SystemExit(f"scatter {spec['ids']} placed {placed}/{spec['count']}; widen its area")
+        raise SystemExit(f"scatter {spec['ids']} placed {placed}/{spec['count']}; widen its rect")
 
 
-def _npcs(canvas: Canvas, source: Source, groups: list, origin: tuple[int, int], rng: random.Random) -> list:
-    """Place NPC groups on open land: no water, no blocked tiles, no scenery, no stacking."""
+def _links(canvas: Canvas, source: Source, links: list, areas: dict) -> list[Edge]:
+    """Authored traversals, such as a town ladder down into the dungeon."""
+    taken = _occupied(canvas, source)
+    edges = []
+    for link in links:
+        x, y, plane = _at(link, areas)
+        loc = next((l for l in canvas.locs if l.id == link["loc"] and (l.x, l.y, l.plane) == (x, y, plane)), None)
+        if loc is None:
+            raise SystemExit(f"link: loc {link['loc']} is not placed at {link['at']} in {link.get('area', 'surface')}")
+        d = source.loc_def(loc.id)
+        if link["option"] not in d.actions:
+            raise SystemExit(f"link: loc {loc.id} has no {link['option']!r} option ({d.actions})")
+        fw, fh = _footprint(source, loc)
+        if "stand" in link:
+            stand = _at({"area": link.get("area", "surface"), "at": link["stand"]}, areas)[:2]
+        else:
+            ring = ([(x + i, y - 1) for i in range(fw)] + [(x + fw, y + j) for j in range(fh)]
+                    + [(x - 1, y + j) for j in range(fh)] + [(x + i, y + fh) for i in range(fw)])
+            stand = next((p for p in ring if canvas.inside(*p) and not canvas.tile(*p, plane).settings & 1
+                          and p not in taken), None)
+            if stand is None:
+                raise SystemExit(f"link: no open tile beside loc {loc.id} at {link['at']}")
+        to = _at({"area": link.get("to_area", link.get("area", "surface")), "at": link["to"]}, areas)
+        edges.append(Edge(TRAVERSAL_OBJECT, d.actions.index(link["option"]), loc.id, (*stand, plane), to, 0,
+                          link["option"], d.name))
+    return edges
+
+
+def _zones(zones: list, areas: dict) -> list[Zone]:
+    out = []
+    for z in zones:
+        x0, y0, x1, y1 = _rect(z, areas)
+        planes = z.get("planes", [0, 1, 2, 3])
+        rows = []
+        if z.get("multi"):
+            rows.append(Zone(0, AREA_MULTICOMBAT, (x0, y0, x1 - 1, y1 - 1)))
+        if "wilderness" in z:
+            lo, hi = z["wilderness"]
+            rows.append(Zone(0, AREA_WILDERNESS, (x0, y0, x1 - 1, y1 - 1)))
+            band = math.ceil((y1 - y0) / (hi - lo + 1))  # levels rise northward
+            for k, level in enumerate(range(lo, hi + 1)):
+                b0 = y0 + k * band
+                if b0 < y1:
+                    rows.append(Zone(0, AREA_WILDERNESS_LEVEL, (x0, b0, x1 - 1, min(y1, b0 + band) - 1), level))
+        out += [replace(row, plane=p) for row in rows for p in planes]
+    return out
+
+
+def _npcs(canvas: Canvas, source: Source, groups: list, areas: dict, rng: random.Random) -> list:
+    """Place NPC groups: fixed `at` tiles, or random open tiles in `rect` (no water, scenery or stacking).
+
+    `placement = "shore"` instead picks sea or river tiles beside walkable land, for fishing spots.
+    """
     blocked = _occupied(canvas, source)
     rows = []
+
+    def water(p):
+        return canvas.inside(*p) and canvas.tile(*p).settings & 1 and canvas.tile(*p).overlay
+
     for group in groups:
-        ax0, ay0, ax1, ay1 = group["area"]
+        plane = group.get("plane", 0)
+        shore = group.get("placement") == "shore"
+        if "at" in group:
+            x, y, plane = _at(group, areas)
+            candidates = [(x, y)]
+            count = 1
+        else:
+            ax0, ay0, ax1, ay1 = _rect(group, areas)
+            candidates = None
+            count = group["count"]
         placed, tries = 0, 0
-        while placed < group["count"] and tries < group["count"] * 200:
+        while placed < count and tries < count * 300:
             tries += 1
             npc_id = rng.choice(group["ids"])
             size = max(1, source.npc_def(npc_id).size)
-            x, y = origin[0] + rng.randrange(ax0, ax1), origin[1] + rng.randrange(ay0, ay1)
+            x, y = candidates[0] if candidates else (rng.randrange(ax0, ax1), rng.randrange(ay0, ay1))
             cells = [(x + i, y + j) for i in range(size) for j in range(size)]
-            if any(not canvas.inside(cx, cy) or (cx, cy) in blocked or canvas.tile(cx, cy).settings & 1
-                   for cx, cy in cells):
+            if any(not canvas.inside(cx, cy) or (cx, cy) in blocked for cx, cy in cells):
+                if candidates:
+                    break
                 continue
-            rows.append((npc_id, x, y, 0, rng.randrange(8), group.get("wander", WANDER_FROM_DEF), 0))
+            if shore:
+                ok = water((x, y)) and any(not canvas.tile(*n).settings & 1 for n in _neighbours(x, y)
+                                           if canvas.inside(*n))
+            else:
+                ok = not any(canvas.tile(cx, cy, plane).settings & 1 for cx, cy in cells)
+            if not ok:
+                if candidates:
+                    break
+                continue
+            rows.append((npc_id, x, y, plane, rng.randrange(8), group.get("wander", WANDER_FROM_DEF), 0))
             blocked.update(cells)
             placed += 1
-        if placed < group["count"]:
-            raise SystemExit(f"npc group {group['ids']} placed {placed}/{group['count']}; widen its area")
+        if placed < count:
+            where = group.get("at", group.get("rect"))
+            raise SystemExit(f"npc group {group['ids']} placed {placed}/{count} at {where}; move or widen it")
     return rows
 
 
-def compile_gym(spec_path: Path, source_cache: Path) -> Gym:
+def _items(items: list, areas: dict) -> list:
+    return [(i["id"], i.get("quantity", 1), *_at(i, areas), 0, i.get("respawn", DEFAULT_ITEM_RESPAWN))
+            for i in items]
+
+
+def _area(item: dict, areas: dict) -> Area:
+    name = item.get("area", "surface")
+    if name not in areas:
+        raise SystemExit(f"unknown area {name!r}")
+    return areas[name]
+
+
+def _at(item: dict, areas: dict, key: str = "at") -> tuple[int, int, int]:
+    area = _area(item, areas)
+    at = item[key]
+    plane = at[2] if len(at) > 2 else item.get("plane", 0)
+    return area.rx * SIZE + at[0], area.ry * SIZE + at[1], plane
+
+
+def _rect(item: dict, areas: dict) -> tuple[int, int, int, int]:
+    area = _area(item, areas)
+    x0, y0, x1, y1 = item["rect"]
+    return area.rx * SIZE + x0, area.ry * SIZE + y0, area.rx * SIZE + x1, area.ry * SIZE + y1
+
+
+def compile_gym(spec_path: Path, source_cache: Path, source_edges_path: Path | None = None) -> Gym:
     spec = tomllib.loads(spec_path.read_text())
     m = spec["map"]
-    (rx0, ry0), (sw, sh), ring = m["origin"], m["size"], m["ocean_ring"]
-    area = (rx0 * SIZE, ry0 * SIZE, (rx0 + sw) * SIZE, (ry0 + sh) * SIZE)
-    origin = area[:2]
-    canvas = Canvas((rx0 - ring) * SIZE, (ry0 - ring) * SIZE, (sw + 2 * ring) * SIZE, (sh + 2 * ring) * SIZE)
+    areas = {a["name"]: Area(a["name"], a["kind"], *a["origin"], *a["size"], a.get("ocean_ring", 0))
+             for a in spec["area"]}
+    squares = [sq for a in areas.values() for sq in a.squares()]
+    if len(squares) != len(set(squares)):
+        raise SystemExit("areas overlap")
+    canvas = Canvas(set(squares))
     source = Source(RcCacheStore(source_cache))
     mats = spec["materials"]
     rng = random.Random(m["seed"])
 
-    _island(canvas, area, spec["island"], mats, m["seed"])
-    _paths(canvas, spec.get("path", []), origin, mats)
-    for stamp in spec.get("stamp", []):
-        _stamp(canvas, source, stamp, origin)
+    for area in areas.values():
+        if area.kind == "island":
+            _island(canvas, area, spec["island"], mats, m["seed"])
+        elif area.kind == "void":
+            _void(canvas, area, mats)
+        else:
+            raise SystemExit(f"area {area.name}: unknown kind {area.kind!r}")
+    _paint_zones(canvas, spec.get("paint", []), areas, mats)
+    _rivers(canvas, spec.get("river", []), areas, mats)
+    _paths(canvas, spec.get("path", []), areas, mats)
+    stamps = [(_stamp(canvas, source, s, areas), set(s.get("drop_ids", []))) for s in spec.get("stamp", [])]
     for loc in spec.get("loc", []):
-        canvas.locs.append(Loc(loc["id"], loc.get("plane", 0), origin[0] + loc["at"][0], origin[1] + loc["at"][1],
-                               loc.get("type", 10), loc.get("rotation", 0)))
+        x, y, plane = _at(loc, areas)
+        canvas.locs.append(Loc(loc["id"], plane, x, y, loc.get("type", 10), loc.get("rotation", 0)))
     for scatter in spec.get("scatter", []):
-        _scatter(canvas, source, scatter, origin, rng)
+        _scatter(canvas, source, scatter, areas, rng)
 
     for loc in canvas.locs:
         if not canvas.inside(loc.x, loc.y):
             raise SystemExit(f"loc {loc} falls outside the map")
         if not source.loc_def(loc.id).complete:
             raise SystemExit(f"loc id {loc.id} does not decode cleanly; the minimap exporter would fail")
-    sx, sy = m["start"]
-    start = (origin[0] + sx, origin[1] + sy, 0)
-    if canvas.tile(start[0], start[1]).settings & 1 or start[:2] in _occupied(canvas, source):
-        raise SystemExit(f"start tile {m['start']} is blocked")
-    npc_spawns = _npcs(canvas, source, spec.get("npc", []), origin, rng)
+    start = _at({"area": m.get("start_area", "surface"), "at": m["start"]}, areas)
+    respawn = _at({"area": m.get("respawn_area", "surface"), "at": m.get("respawn", m["start"])}, areas)
+    for name, tile in (("start", start), ("respawn", respawn)):
+        if canvas.tile(tile[0], tile[1]).settings & 1 or tile[:2] in _occupied(canvas, source):
+            raise SystemExit(f"{name} tile {tile} is blocked")
+
+    edges = _links(canvas, source, spec.get("link", []), areas)
+    if source_edges_path is not None:
+        edges += _stamp_edges(canvas, source, stamps, read_traversal(source_edges_path))
+    zones = _zones(spec.get("zone", []), areas)
+    npc_spawns = _npcs(canvas, source, spec.get("npc", []), areas, rng)
+    ground_items = _items(spec.get("item", []), areas)
 
     mapsquares = {}
-    for rx in range(rx0 - ring, rx0 + sw + ring):
-        for ry in range(ry0 - ring, ry0 + sh + ring):
-            bx, by = rx * SIZE - canvas.x0, ry * SIZE - canvas.y0
-            tiles = [[canvas.tiles[p][bx + x][by:by + SIZE] for x in range(SIZE)] for p in range(PLANES)]
-            locs = [replace(l, x=l.x - rx * SIZE, y=l.y - ry * SIZE) for l in canvas.locs
-                    if l.x >> 6 == rx and l.y >> 6 == ry]
-            mapsquares[(rx, ry)] = (encode_terrain(tiles), encode_locs(locs))
-    return Gym(m["name"], mapsquares, area, start, npc_spawns)
+    for (rx, ry), tiles in canvas.squares.items():
+        locs = [replace(l, x=l.x - rx * SIZE, y=l.y - ry * SIZE) for l in canvas.locs
+                if l.x >> 6 == rx and l.y >> 6 == ry]
+        mapsquares[(rx, ry)] = (encode_terrain(tiles), encode_locs(locs))
+    landmarks = [(lm["name"], *_at(lm, areas)) for lm in spec.get("landmark", [])]
+    if len(landmarks) > 24:  # RC_GYM_MAX_LANDMARKS
+        raise SystemExit(f"{len(landmarks)} landmarks: the engine keeps at most 24")
+    return Gym(m["name"], mapsquares, areas, start, respawn, npc_spawns, ground_items, edges, zones,
+               landmarks)

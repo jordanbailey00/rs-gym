@@ -50,7 +50,7 @@ int runec_hitsplat_catalog_validate_assets(
 const RuneCHitsplatDef *runec_hitsplat_def(
     const RuneCHitsplatCatalog *catalog, int definition_id);
 int runec_hitsplat_basic_definition(const RcCombatRecentHit *hit,
-                                    int local_target);
+                                    int local_target, int local_slot);
 
 void runec_hitsplat_state_reset(RuneCHitsplatState *state);
 void runec_hitsplat_state_advance(RuneCHitsplatState *state,
@@ -61,7 +61,7 @@ int runec_hitsplat_state_add(RuneCHitsplatState *state,
 void runec_hitsplat_state_sync(RuneCHitsplatState *state,
                                const RuneCHitsplatCatalog *catalog,
                                const RcCombatRecentHit *hits, int hit_count,
-                               int local_target);
+                               int local_target, int local_slot);
 void runec_hitsplat_slot_offset(int slot, int *x, int *y);
 void runec_hitsplat_visual_offset(const RuneCHitsplatDef *definition,
                                   const RuneCHitsplatSlot *slot,
