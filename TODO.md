@@ -1,21 +1,44 @@
 # TODO
 
-## v1 follow-ups
-- Train a first baseline per benchmark task through PufferLib and record the scores in SPEC.
-- Run `tools/puffer_overlay.sh` against a real PufferLib 5.0 checkout (the binding is only tested
-  against a stand-in `pufferenv.h`).
-- Report a hash of the gym data with `RC_ENV_VERSION`, so results stay comparable across rebuilds.
-- Single-agent worlds run about 75k agent steps/s per thread; the per-tick NPC simulation is now
-  the largest cost. Profile `rc_world_tick` (NPC movement and combat ticks).
-- Observations describe items by category, value and tier; consider item-id embeddings with a
-  custom PufferLib policy.
-- Agents cannot open doors; either open every door at reset or add doors to the object list.
-- Viewer: other agents are drawn in the local player's pose (no per-agent animation); the replay
-  stops at the end of the recording instead of looping.
-- Viewer: the shop window reuses the bank panel; give it its own layout and a Value-on-hover tooltip.
-- Fishing spots never move (OSRS spots relocate every few minutes).
-- Smoother coastline (diagonal overlay shapes); blend floors and heights where stamps meet
-  generated ground.
+v1 is `compact_osrs_v1` (see `SPEC.md`). Open work by stage:
+
+## Stage 1: mode registration and map
+- Per-mode data directories (`data/modes/<mode>/`) so the `island` draft and `compact_osrs_v1`
+  build and run side by side.
+- Mode configuration (`modes/compact_osrs_v1/`), the mode compiler and content validator, the
+  machine-readable content manifest and the override ledger.
+- The compact reference map: about 128×128 overworld and a 64×64 dungeon with town, farm and
+  river, woods and quarry, outer resources, rune sites and the Scurrius arena.
+- Headless reset/step smoke test for the mode.
+
+## Stage 2: playable economy
+- Level cap 40, ×8 XP, band-rebased requirements (equipment, tools, recipes, spells, prayers).
+- Fletching, Crafting and Runecraft; tanner, spinning wheel, rune altars and pure essence.
+- Mode NPC stats and closed drop tables for the seven enemy families; elemental weaknesses.
+- Fixed-price shops (general store, Aubury, Ellis) and sale values; starter kit in the bank.
+
+## Stage 3: encounter and recovery
+- Scurrius: attack styles and cues, falling rocks, rat minions, feeding, group scaling,
+  participants, loot rotation, reset and respawn.
+- Bone mace, bone shortbow and bone staff recipes, Historian Aldo's service, staff charges.
+- Death: private recovery containers moving to the bank on expiry; respawn after 10 ticks.
+
+## Stage 4: shared world
+- Atomic player trading (engine, viewer, agent actions).
+- Loot ownership by non-overkill damage (100 private, 300 public ticks), seeded tie-breaks.
+- Rotating tick priority for contested resources, stock and ground items; up to 8 players.
+
+## Stage 5: RL interface
+- Versioned action and observation schema for the mode (local window, hidden-state rules,
+  wait versus stop, trade actions), masks, diagnostics for failed actions.
+- Benchmark wrappers (free play, solo boss, shared-world development, cooperative boss),
+  sparse rewards, termination versus truncation, metrics and event logs.
+- Snapshot and restore, canonical state hashes, replay, PufferLib binding.
+
+## Stage 6: balance and acceptance
+- Scripted fresh-start runs to a Scurrius kill for melee, ranged and magic over five seeds.
+- Four-player cooperative run with a real trade; eight-player contention.
+- Economy conservation and exploit tests, recovery tests, throughput, balance report.
 
 ## Other
 - Make `data/` reproducible inside RS-gym. Non-spatial data was seeded by copying RuneC_v4's

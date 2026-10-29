@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-28: v1 becomes compact_osrs_v1
+
+**What.** `SPEC.md` now defines v1 as the `compact_osrs_v1` mode from the design baseline 1.0
+handoff: a questless compact progression sandbox with 15 skills capped at 40, closed production
+chains, a fixed-price economy, player trading, mild death recovery, Scurrius as the shared boss, and
+a versioned RL interface with benchmark wrappers. `TODO.md` lists the work by the handoff's stages.
+
+**Why.** This is the agreed v1 direction. It replaces the earlier v1 draft as the benchmark.
+
+**Decisions.**
+- The first v1 draft (island map, KBD and Chaos Elemental, Firemaking, wilderness) is kept as the
+  `island` mode instead of being deleted, since the handoff requires existing modes to keep working.
+- Trading moves from v2 into v1. PvP stays out.
+
 ## 2026-10-25: v1 implementation
 
 **What.** All six v1 milestones: a dense island plus dungeon, up to 16 players per world, six
