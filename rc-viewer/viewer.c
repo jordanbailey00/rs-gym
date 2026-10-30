@@ -1004,7 +1004,7 @@ static RuneCRenderSettings render_settings_from_env(void) {
     settings.camera_fovy =
         env_float("RUNEC_CAMERA_FOV", settings.camera_fovy);
     settings.camera_pitch = clamp_float(settings.camera_pitch, 0.1f, 1.4f);
-    settings.camera_dist = clamp_float(settings.camera_dist, 5.0f, 300.0f);
+    settings.camera_dist = clamp_float(settings.camera_dist, 5.0f, 600.0f);  // past 300: overview shots
     settings.camera_fovy = clamp_float(settings.camera_fovy, 10.0f, 120.0f);
     return settings;
 }
@@ -5657,6 +5657,45 @@ static int mapsquare_chunk_in_active_scene(
         && max_y > g_world_origin_y && min_y < g_world_origin_y + g_world_h;
 }
 
+// regions/roofs.bin (tools/build_mode.py): the tiles under a roof, which the client marks with
+// tile setting 4. The planes above draw only while the player stands outside them.
+#define VIEWER_ROOF_MAGIC 0x464F4F52u  // "ROOF"
+#define VIEWER_ROOF_MAX_SQUARES 64
+static struct {
+    int count;
+    struct { int region_x, region_y; uint8_t bits[RC_MAX_PLANES][64 * 64 / 8]; } squares[VIEWER_ROOF_MAX_SQUARES];
+} g_roofs;
+
+static void viewer_load_roofs(const char *regions_dir) {
+    char path[1100];
+    snprintf(path, sizeof(path), "%s/roofs.bin", regions_dir);
+    FILE *f = fopen(path, "rb");
+    if (!f) return;
+    uint32_t magic = 0, count = 0;
+    if (fread(&magic, 4, 1, f) == 1 && magic == VIEWER_ROOF_MAGIC && fread(&count, 4, 1, f) == 1) {
+        for (uint32_t i = 0; i < count && g_roofs.count < VIEWER_ROOF_MAX_SQUARES; i++) {
+            int32_t rx = 0, ry = 0;
+            if (fread(&rx, 4, 1, f) != 1 || fread(&ry, 4, 1, f) != 1) break;
+            int k = g_roofs.count;
+            if (fread(g_roofs.squares[k].bits, sizeof(g_roofs.squares[k].bits), 1, f) != 1) break;
+            g_roofs.squares[k].region_x = rx;
+            g_roofs.squares[k].region_y = ry;
+            g_roofs.count++;
+        }
+    }
+    fclose(f);
+}
+
+static int viewer_tile_under_roof(int x, int y, int plane) {
+    if (plane < 0 || plane >= RC_MAX_PLANES || x < 0 || y < 0) return 0;
+    for (int i = 0; i < g_roofs.count; i++) {
+        if (g_roofs.squares[i].region_x != x >> 6 || g_roofs.squares[i].region_y != y >> 6) continue;
+        int bit = (x & 63) * 64 + (y & 63);
+        return g_roofs.squares[i].bits[plane][bit >> 3] >> (bit & 7) & 1;
+    }
+    return 0;
+}
+
 static void draw_mapsquare_chunks(ViewerState *v, int plane, float frame_dt) {
     if (!v || !v->mapsquare_streaming_active)
         return;
@@ -6571,7 +6610,7 @@ static int viewer_request_mapsquare_window(ViewerState *v, int center_x,
     int retained_count = 0;
     for (int i = 0; i < v->mapsquare_chunk_count; i++) {
         ViewerMapsquareChunk *chunk = &v->mapsquare_chunks[i];
-        if ((chunk->plane == plane || chunk->plane == player_plane)
+        if ((chunk->plane >= plane || chunk->plane == player_plane)
                 && viewer_streaming_mapsquare_in_plan(
                     load->plan, load->plan_count,
                     chunk->region_x, chunk->region_y)) {
@@ -6609,6 +6648,21 @@ static int viewer_request_mapsquare_window(ViewerState *v, int center_x,
             continue;
         }
         submitted_chunks++;
+    }
+    // The planes above (roofs, upper floors) load alongside when there is room; none is required.
+    for (int up = plane + 1; up < RC_MAX_PLANES; up++) {
+        for (int i = 0; i < load->plan_count && submitted_chunks < stage_limit; i++) {
+            int region_x = load->plan[i].region_x;
+            int region_y = load->plan[i].region_y;
+            if (find_mapsquare_chunk(v, region_x, region_y, up) >= 0
+                    || !viewer_mapsquare_chunk_available(v, region_x, region_y, up))
+                continue;
+            ViewerAsyncMapsquareRequest *request = mapsquare_chunk_request(
+                v, region_x, region_y, up);
+            if (request && submit_mapsquare_request(
+                    v, request, mapsquare_job_key(region_x, region_y, up)))
+                submitted_chunks++;
+        }
     }
 
     if (kind != VIEWER_STREAMING_REQUEST_PLANE) {
@@ -9905,6 +9959,13 @@ static void draw_scene(ViewerState *v, int ui_capture) {
         DrawModel(scene_objects->model, (Vector3){0, 0, 0}, 1.0f, WHITE);
     }
     draw_mapsquare_chunks(v, scene_plane, frame_dt);
+    // Roofs and upper floors, unless the player stands under them (the client's roof hiding).
+    static int roofs = -1;
+    if (roofs < 0) roofs = env_bool("RUNEC_VIEWER_ROOFS", 1);
+    if (roofs && !viewer_tile_under_roof(presented_x, presented_y, scene_plane)) {
+        for (int up = scene_plane + 1; up < RC_MAX_PLANES; up++)
+            draw_mapsquare_chunks(v, up, 0.0f);
+    }
     draw_object_chunks(v, scene_plane);
     models_update_texture_anims(v->object_anim_model_planes[scene_plane],
                                 frame_dt);
@@ -10336,6 +10397,7 @@ int main(int argc, char **argv) {
     snprintf(v.mapsquare_directory, sizeof(v.mapsquare_directory), "%s",
              env_path("RUNEC_MAPSQUARE_DIR", g_gym_layout.regions));
     viewer_load_mapsquare_catalog(&v);
+    viewer_load_roofs(v.mapsquare_directory);
     if (v.scene_auto_export) {
         fprintf(stderr,
                 "viewer scene: development-only runtime export enabled by "
@@ -10348,6 +10410,8 @@ int main(int argc, char **argv) {
     if (!viewer_smoke) {
         SetTraceLogLevel(viewer_trace_log_level_from_env());
         unsigned int window_flags = FLAG_WINDOW_RESIZABLE;
+        if (env_bool("RC_VIEWER_HIDDEN", 0))  // screenshots without a window on screen
+            window_flags |= FLAG_WINDOW_HIDDEN;
         if (render_settings.msaa_enabled)
             window_flags |= FLAG_MSAA_4X_HINT;
         SetConfigFlags(window_flags);
@@ -10529,7 +10593,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    InitWindow(WINDOW_W, WINDOW_H,
+    InitWindow(env_int("RC_VIEWER_WIDTH", WINDOW_W), env_int("RC_VIEWER_HEIGHT", WINDOW_H),
                env_path("RUNEC_VIEWER_TITLE", "RuneC Viewer"));
     if (!IsWindowReady()) {
         print_gl_context_help("raylib InitWindow");
@@ -10585,7 +10649,7 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
 
-    v.cam_yaw = 0;
+    v.cam_yaw = env_float("RUNEC_CAMERA_YAW", 0.0f);
     v.cam_pitch = render_settings.camera_pitch;
     v.cam_dist = render_settings.camera_dist;
     v.camera_locked = 1;
@@ -10772,8 +10836,11 @@ int main(int argc, char **argv) {
     int max_frames = 0;
     const char *exit_frames = getenv("RC_VIEWER_EXIT_FRAMES");
     if (exit_frames) max_frames = atoi(exit_frames);
+    // RC_VIEWER_SCREENSHOT saves the first frame, or the last one when RC_VIEWER_EXIT_FRAMES gives
+    // the mapsquare loader time to finish; RC_VIEWER_HIDE_UI leaves only the scene.
     const char *screenshot_path = getenv("RC_VIEWER_SCREENSHOT");
     int screenshot_taken = 0;
+    int hide_ui = env_bool("RC_VIEWER_HIDE_UI", 0);
     int frame_count = 0;
     double frame_benchmark_started_ms = max_frames > 0
         ? viewer_streaming_now_ms() : 0.0;
@@ -11052,12 +11119,15 @@ int main(int argc, char **argv) {
         sync_ui_player_status(&v);
         viewer_sync_scene_plane_ui(&v);
         sync_ui_minimap(&v);
-        runec_ui_draw(&v.ui, GetScreenWidth(), GetScreenHeight());
-        viewer_draw_click_feedback(&v);
-        draw_hover_action_label(&v, ui_capture);
-        draw_streaming_telemetry_overlay(&v);
+        if (!hide_ui) {
+            runec_ui_draw(&v.ui, GetScreenWidth(), GetScreenHeight());
+            viewer_draw_click_feedback(&v);
+            draw_hover_action_label(&v, ui_capture);
+            draw_streaming_telemetry_overlay(&v);
+        }
         EndDrawing();
-        if (screenshot_path && screenshot_path[0] && !screenshot_taken) {
+        if (screenshot_path && screenshot_path[0] && !screenshot_taken
+                && (max_frames <= 0 || frame_count + 1 >= max_frames)) {
             Image screenshot = LoadImageFromScreen();
             if (screenshot.data) {
                 ExportImage(screenshot, screenshot_path);

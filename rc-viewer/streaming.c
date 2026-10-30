@@ -251,7 +251,8 @@ int viewer_streaming_chunk_retained(const ViewerMapsquareCoord *plan,
                                     int plan_count, int region_x,
                                     int region_y, int chunk_plane,
                                     int scene_plane, int player_plane) {
-    return (chunk_plane == scene_plane || chunk_plane == player_plane)
+    // Planes above the scene hold its roofs and upper floors.
+    return (chunk_plane >= scene_plane || chunk_plane == player_plane)
         && viewer_streaming_mapsquare_in_plan(
             plan, plan_count, region_x, region_y);
 }

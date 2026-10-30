@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tomllib
@@ -27,6 +28,7 @@ sys.path.insert(0, str(ROOT / "tools" / "cache_pipeline"))
 from gymmap.cachewrite import write_overlay_cache  # noqa: E402
 from gymmap.compile import compile_gym  # noqa: E402
 from gymmap.drops import merge_gym_drops, write_drops  # noqa: E402
+from gymmap.mapformat import PLANES, SIZE, decode_terrain  # noqa: E402
 from gymmap.nodes import write_gathering_nodes  # noqa: E402
 from gymmap.spatial import write_area_flags, write_traversal  # noqa: E402
 from spawn_index import write_ground_item_spawns, write_npc_spawns  # noqa: E402
@@ -93,6 +95,7 @@ def main() -> None:
     run("tools/cache_pipeline/export_spawn_objects.py", map_path, "--cache", SOURCE_CACHE,
         "--output", out / "models/spawn_objects.models")
 
+    write_roofs(gym, out / "regions/roofs.bin")
     write_npc_spawns(out / "spawns/world.npc-spawns.indexed.bin", gym.npc_spawns)
     write_ground_item_spawns(out / "spawns/world.ground-items.indexed.bin", gym.ground_items)
     write_traversal(out / "defs/traversal_edges.bin", gym.edges)
@@ -116,6 +119,24 @@ def main() -> None:
         print("build the C targets, then run ./build/cmake/rs-gym-validate", name, "for the manifest")
     x, y, plane = gym.start
     print(f"mode {name} ready in {out.relative_to(ROOT)}: start tile {x},{y},{plane}")
+
+
+def write_roofs(gym, path: Path) -> None:
+    """The tiles under a roof (tile setting 4) per mapsquare and plane, as bitmaps: the viewer
+    draws roofs and upper floors only while the player stands outside them."""
+    rows = []
+    for (rx, ry), (terrain, _) in sorted(gym.mapsquares.items()):
+        tiles = decode_terrain(terrain)
+        bits = bytearray(PLANES * SIZE * SIZE // 8)
+        for plane in range(PLANES):
+            for x in range(SIZE):
+                for y in range(SIZE):
+                    if tiles[plane][x][y].settings & 4:
+                        k = plane * SIZE * SIZE + x * SIZE + y
+                        bits[k >> 3] |= 1 << (k & 7)
+        if any(bits):
+            rows.append(struct.pack("<ii", rx, ry) + bytes(bits))
+    path.write_bytes(struct.pack("<II", 0x464F4F52, len(rows)) + b"".join(rows))
 
 
 def write_layout(gym, path: Path, mode: str) -> None:

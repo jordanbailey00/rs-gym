@@ -32,9 +32,16 @@ RUNEC_DEV_VALIDATION=1 ./build/cmake/rc-viewer   # dev: 99 stats, seeded bank, d
 - PageUp and PageDown change the viewed plane; Home follows the player.
 - In a replay, 1–9 follow agent 1–9. Clicks are ignored so the replay stays exact.
 
+Roofs and upper floors are drawn while the player stands outdoors and hidden under a roof, as in
+the client (`regions/roofs.bin` marks the roofed tiles).
+
 **Environment:**
-- `RUNEC_PLAYER_START_X/Y/PLANE` override the start.
+- `RUNEC_PLAYER_START_X/Y/PLANE` override the start; `RUNEC_CAMERA_YAW/PITCH/DIST` the camera.
+- `RUNEC_VIEWER_ROOFS=0` never draws roofs.
 - `RUNEC_VIEWER_SMOKE=1` checks startup without opening a window.
+- Screenshots: `RC_VIEWER_SCREENSHOT=out.png` with `RC_VIEWER_EXIT_FRAMES=N` saves frame N and exits;
+  `RC_VIEWER_HIDE_UI=1` leaves only the scene, `RC_VIEWER_HIDDEN=1` keeps the window off screen and
+  `RC_VIEWER_WIDTH/HEIGHT` size it.
 
 ## Data
 
