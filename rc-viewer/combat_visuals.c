@@ -15,6 +15,7 @@ typedef struct {
     int impact_gfx_height;
     int impact_gfx_delay;
     int impact_gfx_rotation;
+    int impact_gfx_lead;
     int primitive_type;
     int source_attachment;
     int target_attachment;
@@ -173,6 +174,7 @@ static void capture_rich_columns(RcCombatVisualRichColumns *cols,
         find_header_col(parts, count, "impact_gfx_delay");
     cols->impact_gfx_rotation =
         find_header_col(parts, count, "impact_gfx_rotation");
+    cols->impact_gfx_lead = find_header_col(parts, count, "impact_gfx_lead");
     cols->primitive_type = find_header_col(parts, count, "primitive_type");
     cols->source_attachment =
         find_header_col(parts, count, "source_attachment");
@@ -295,6 +297,10 @@ static void infer_authority(char dst[64], const char *note) {
 
 int rc_load_combat_visuals(const char *path) {
     g_rc_combat_visual_count = 0;
+    return rc_append_combat_visuals(path);
+}
+
+int rc_append_combat_visuals(const char *path) {
     if (!path || !path[0]) return -1;
     FILE *f = rc_asset_fopen(path, "r");
     if (!f) return -1;
@@ -304,6 +310,7 @@ int rc_load_combat_visuals(const char *path) {
         .impact_gfx_height = -1,
         .impact_gfx_delay = -1,
         .impact_gfx_rotation = -1,
+        .impact_gfx_lead = -1,
         .primitive_type = -1,
         .source_attachment = -1,
         .target_attachment = -1,
@@ -397,6 +404,8 @@ int rc_load_combat_visuals(const char *path) {
             optional_col(parts, n, rich_cols.impact_gfx_delay));
         def->impact_spotanim_rotation = parse_int_field(
             optional_col(parts, n, rich_cols.impact_gfx_rotation));
+        def->impact_spotanim_lead = parse_int_field(
+            optional_col(parts, n, rich_cols.impact_gfx_lead));
         int primitive_type = parse_primitive_type(
             optional_col(parts, n, rich_cols.primitive_type));
         if (primitive_type < 0)

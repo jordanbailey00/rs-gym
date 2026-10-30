@@ -28,6 +28,8 @@ enum {
 int runec_dev_validation_enabled(void);
 // The gym start (from the layout file): the Start teleport and the combat dummy use it.
 void runec_dev_validation_set_start(int x, int y, int plane);
+// The mode boss's spawn: the Boss teleport lands beside it and starts its fight.
+void runec_dev_validation_set_boss(int x, int y, int plane, int npc_id, int size);
 int runec_dev_validation_set_spellbook(RcWorld *world, int book);
 int runec_dev_validation_set_god_mode(RcWorld *world, bool enabled);
 int runec_dev_validation_seed_prayers(RcWorld *world);

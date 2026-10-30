@@ -86,6 +86,9 @@ typedef struct {
     AnimFrameData frame;
 } AnimSequenceFrame;
 
+struct SkelSequence;
+struct SkelSet;
+
 typedef struct {
     uint16_t           seq_id;
     uint16_t           frame_count;
@@ -93,6 +96,8 @@ typedef struct {
     uint8_t*           interleave_order;
     int8_t             walk_flag;  /* -1=default (no stall), 0=stall movement during anim */
     AnimSequenceFrame* frames;
+    /* skeletal sequence (skeletal.h): frames are one-tick stubs, poses are bones */
+    const struct SkelSequence* skel;
 } AnimSequence;
 
 static int anim_sequence_game_ticks(const AnimSequence *seq) {
@@ -109,6 +114,8 @@ typedef struct {
 
     AnimSequence*  sequences;
     int            seq_count;
+
+    struct SkelSet* skeletal;   /* skeletal sequences' rigs and bones; not owned */
 } AnimCache;
 
 /* per-model animation working state */

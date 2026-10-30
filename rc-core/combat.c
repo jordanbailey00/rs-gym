@@ -498,6 +498,11 @@ static void record_npc_action(RcWorld *world, const RcNpc *npc,
 // Presentation-only records never take the slots attack launches need.
 #define RC_COMBAT_LAUNCH_EVENT_RESERVE 16
 
+const char *rc_combat_npc_stand_key(const RcWorld *world, const RcNpc *npc) {
+    return world && npc && world->combat_hooks.npc_stand_key
+         ? world->combat_hooks.npc_stand_key(world, npc) : NULL;
+}
+
 void rc_combat_record_encounter_action(RcWorld *world, const RcNpc *npc,
                                        bool target_player, int target_x,
                                        int target_y, RcCombatStyle style,
@@ -1704,9 +1709,12 @@ static void finish_npc_launch(RcWorld *world, RcNpc *npc, const RcNpcDef *d,
     npc->combat.leash_state = 0;
     combat_register_attacker(&p->combat, npc_actor);
     bool tile = enc && (enc->flags & RC_ENC_ATTACK_TILE_TARGET);
+    const char *key = enc ? enc->name
+                    : world->combat_hooks.npc_attack_key
+                    ? world->combat_hooks.npc_attack_key(world, npc, style) : NULL;
     record_npc_action(world, npc, d,
                       tile ? RC_COMBAT_ACTOR_NONE : RC_COMBAT_ACTOR_PLAYER,
-                      p->x, p->y, style, delay, enc ? enc->name : NULL);
+                      p->x, p->y, style, delay, key);
     npc->attack_timer = encounter ? d->attack_speed
                       : content_modify_npc_attack_speed(world, npc, d->attack_speed);
     npc->attack_count++;

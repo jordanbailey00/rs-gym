@@ -83,10 +83,12 @@ int runec_dev_validation_set_god_mode(RcWorld *world, bool enabled) {
     return 1;
 }
 
-// The gym has no boss arenas yet, so the panel only returns to the start.
+// The gym start and, when the mode has one, its boss.
 static RuneCDevTransport g_dev_transports[] = {
     {"start", "Start", 0, 0, 0, -1, 1},
+    {"boss", "Boss", 0, 0, 0, -1, 1},
 };
+static int g_dev_transport_count = 1;
 
 void runec_dev_validation_set_start(int x, int y, int plane) {
     g_dev_transports[0].target_x = x;
@@ -94,9 +96,14 @@ void runec_dev_validation_set_start(int x, int y, int plane) {
     g_dev_transports[0].plane = plane;
 }
 
+void runec_dev_validation_set_boss(int x, int y, int plane, int npc_id, int size) {
+    g_dev_transports[1] = (RuneCDevTransport){"boss", "Boss", x, y, plane, npc_id, size};
+    g_dev_transport_count = 2;
+}
+
 const RuneCDevTransport *runec_dev_validation_transports(int *count) {
     if (count)
-        *count = runec_dev_validation_enabled() ? ARRAY_COUNT(g_dev_transports) : 0;
+        *count = runec_dev_validation_enabled() ? g_dev_transport_count : 0;
     return runec_dev_validation_enabled() ? g_dev_transports : NULL;
 }
 

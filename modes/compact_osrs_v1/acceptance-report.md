@@ -8,21 +8,21 @@ Each run: one fresh character, the 12,000-tick horizon, a scripted plan through 
 
 | Style | Seed | Kill with credit | Ticks | Prep | Fight | Attempts | Deaths | Kills | Food eaten | Supplies bought (coins) | Gear bought (coins) | Levels (att/str/def/hp/rng/mag/pray) | State hash |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| melee | 1 | yes | 10343 | 9531 | 550 | 1 | 0 | 125 | 105 | 789 | 1060 | 40/40/30/38/1/1/25 | 7c6283dccf840580 |
-| melee | 2 | yes | 10474 | 9509 | 724 | 1 | 0 | 121 | 118 | 913 | 960 | 39/39/28/37/1/1/24 | f62d50138702fbf6 |
-| melee | 3 | yes | 10538 | 9564 | 724 | 1 | 0 | 116 | 113 | 890 | 410 | 39/39/28/37/1/1/24 | e57972d5d53fa1f5 |
-| melee | 4 | yes | 10547 | 9502 | 808 | 1 | 0 | 111 | 131 | 1097 | 310 | 40/39/29/37/1/1/25 | 67a7bd6e6d7fc98c |
-| melee | 5 | yes | 10482 | 9539 | 707 | 1 | 0 | 113 | 126 | 967 | 410 | 39/39/28/37/1/1/25 | c1b826a1eb324f2d |
-| ranged | 1 | yes | 10248 | 9432 | 539 | 1 | 1 | 139 | 85 | 1628 | 650 | 1/1/39/39/40/1/26 | 022141880b17e826 |
-| ranged | 2 | yes | 10340 | 9538 | 537 | 1 | 0 | 166 | 78 | 1455 | 560 | 1/1/40/39/40/1/25 | 18ce04e7b6e2cc95 |
-| ranged | 3 | yes | 10366 | 9547 | 562 | 1 | 0 | 144 | 73 | 1671 | 710 | 1/1/40/40/40/1/27 | 3f308537c8bad944 |
-| ranged | 4 | yes | 10550 | 9578 | 700 | 1 | 0 | 134 | 100 | 1564 | 240 | 1/1/38/39/40/1/26 | fbb0b025a5b1ed8d |
-| ranged | 5 | yes | 10354 | 9528 | 568 | 1 | 0 | 151 | 80 | 1669 | 710 | 1/1/40/39/40/1/27 | 3dcc6a54d33e316a |
-| magic | 1 | yes | 10302 | 9521 | 539 | 1 | 0 | 220 | 46 | 2386 | 0 | 12/1/33/37/1/40/25 | 90b55db034260fb2 |
-| magic | 2 | yes | 10342 | 9533 | 551 | 1 | 0 | 233 | 33 | 2553 | 0 | 7/1/33/37/1/40/25 | cff92e5fb0823b7e |
-| magic | 3 | yes | 10355 | 9527 | 563 | 1 | 0 | 223 | 50 | 2514 | 0 | 6/1/33/37/1/40/25 | 5104d660127a88a0 |
-| magic | 4 | yes | 10392 | 9514 | 626 | 1 | 0 | 237 | 47 | 2682 | 0 | 8/1/33/37/1/40/25 | 1bad075e236ba870 |
-| magic | 5 | yes | 10445 | 9514 | 665 | 1 | 0 | 226 | 40 | 2592 | 0 | 9/1/33/37/1/40/25 | bb8c6da6a1ed02ce |
+| melee | 1 | yes | 10432 | 9531 | 641 | 1 | 0 | 125 | 105 | 789 | 1060 | 40/40/30/38/1/1/25 | cc6fef3577d8f617 |
+| melee | 2 | yes | 10399 | 9509 | 651 | 1 | 0 | 121 | 105 | 913 | 960 | 39/39/28/37/1/1/24 | c24e5d1526a5f9da |
+| melee | 3 | yes | 10460 | 9564 | 650 | 1 | 0 | 116 | 103 | 890 | 410 | 39/39/28/37/1/1/24 | bc91ebec31e15c9e |
+| melee | 4 | yes | 10410 | 9502 | 671 | 1 | 0 | 111 | 112 | 1097 | 310 | 40/39/29/37/1/1/25 | 492e9177dd196d60 |
+| melee | 5 | yes | 10465 | 9539 | 688 | 1 | 0 | 113 | 117 | 967 | 410 | 39/39/28/37/1/1/25 | 39ca50f563857b5c |
+| ranged | 1 | yes | 10318 | 9432 | 610 | 1 | 1 | 140 | 82 | 1658 | 650 | 1/1/40/39/40/1/26 | 8f1ffd492e895c88 |
+| ranged | 2 | yes | 10474 | 9538 | 673 | 1 | 0 | 131 | 81 | 1551 | 560 | 1/1/38/38/40/1/26 | d8036ff8f744f9d0 |
+| ranged | 3 | yes | 10462 | 9547 | 657 | 1 | 0 | 146 | 73 | 1723 | 710 | 1/1/40/40/40/1/27 | 25e64898ac216802 |
+| ranged | 4 | yes | 10510 | 9578 | 659 | 1 | 0 | 133 | 90 | 1568 | 240 | 1/1/38/39/40/1/26 | dedd94482e03fe51 |
+| ranged | 5 | yes | 10339 | 9528 | 553 | 1 | 0 | 151 | 76 | 1725 | 710 | 1/1/40/39/40/1/27 | 683e5bdd8a5087c7 |
+| magic | 1 | yes | 10237 | 9521 | 474 | 1 | 0 | 220 | 29 | 2386 | 0 | 12/1/33/36/1/40/25 | e800cad04ba39e2e |
+| magic | 2 | yes | 10544 | 9533 | 756 | 1 | 0 | 233 | 46 | 2553 | 0 | 7/1/33/37/1/40/25 | 6bd310fa9f14fce1 |
+| magic | 3 | yes | 10262 | 9527 | 471 | 1 | 0 | 223 | 40 | 2514 | 0 | 6/1/33/37/1/40/25 | 9015fe6ef133f9f1 |
+| magic | 4 | yes | 10255 | 9514 | 488 | 1 | 0 | 237 | 33 | 2682 | 0 | 8/1/33/37/1/40/25 | 126995cc758ae92e |
+| magic | 5 | yes | 10547 | 9514 | 770 | 1 | 0 | 226 | 30 | 2592 | 0 | 9/1/33/37/1/40/25 | 1e3b49cb9af64147 |
 
 15 of 15 routes killed Scurrius with credit inside the horizon. Logs: `build/acceptance/route-<style>-<seed>.log`.
 
@@ -34,8 +34,8 @@ Ticks include travel, town trips and waiting for respawns; coins are those picke
 |---|---|---|---|---|---|
 | Goblins (sewers) | 1480 | 66948 | 22.1 | 12.0 | 266 |
 | Hill giants (moss cave) | 495 | 64529 | 7.7 | 27.5 | 211 |
-| Dark wizards (north rooms; ranged, after its kill) | 80 | 6167 | 13.0 | 8.9 | 115 |
-| Scurrius | 15 | 9363 | 1.6 | 150 plus one bundle | - |
+| Dark wizards (north rooms; ranged, after its kill) | 85 | 7037 | 12.1 | 9.2 | 111 |
+| Scurrius | 15 | 9412 | 1.6 | 150 plus one bundle | - |
 
 ## Four-player co-op
 
@@ -43,7 +43,7 @@ A melee fighter and a mage train as in the solo routes; a cook (fishing, cooking
 
 | Team kill | Kill tick | Fight participants | Boss max HP | Supplier trades | All trades | Food cooked | Mind runes crafted | Deaths (melee/mage/cook/crafter) | State hash |
 |---|---|---|---|---|---|---|---|---|---|
-| yes | 10599 | 2 | 420 | 3 | 3 | 401 | 969 | 0/0/0/0 | 3494fea1198567ae |
+| yes | 10745 | 2 | 420 | 3 | 3 | 401 | 969 | 0/0/0/0 | d7b6e77d367a9f2d |
 
 Production from level 1 (travel and banking included): the cook made 401 food in 9047 ticks (44 per 1,000), shrimps until Fishing and Cooking 15, trout after; the runecrafter made 969 mind runes in 8806 ticks (110 per 1,000).
 
@@ -76,10 +76,10 @@ Random masked actions through the compact-v2 interface, observations and masks c
 
 | Worlds (threads) | Agents per world | Ticks per world | World ticks/s | Agent steps/s |
 |---|---|---|---|---|
-| 1 | 1 | 3000 | 32008 | 32008 |
-| 1 | 4 | 3000 | 8910 | 35642 |
-| 1 | 8 | 3000 | 4565 | 36521 |
-| 16 | 4 | 2000 | 97087 | 388347 |
+| 1 | 1 | 3000 | 32463 | 32463 |
+| 1 | 4 | 3000 | 9174 | 36696 |
+| 1 | 8 | 3000 | 4601 | 36805 |
+| 16 | 4 | 2000 | 97242 | 388966 |
 
 Resident memory after the runs: 204 MB (shared game data, plus each world while it lives).
 

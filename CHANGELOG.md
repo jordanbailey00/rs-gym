@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-10-30: Scurrius moves, attacks and fights like the boss it is
+
+**What.**
+- Skeletal animation. Scurrius' models and sequences are bone-animated ("maya"), which the viewer
+  could not play, so it stood frozen. `tools/cache_pipeline/rc_cache/skeletal.py` decodes skeletons,
+  keyframe curves and per-vertex bone weights; `export_skeletal.py` (a new `build_mode.py` step)
+  bakes per-tick skin matrices for each skeletal NPC and spot animation a mode uses into
+  `data/modes/<mode>/models/skeletal.bin`. `rc-viewer/skeletal.h` registers those sequences with the
+  animation cache and skins the models, so its idle, walk, run, attacks, eating, spawn and death play.
+- Presentation. `modes/compact_osrs_v1/combat_visuals.tsv` (copied into the mode's data and read
+  ahead of the shared table) gives each named action its sequence and effects: two tail swipes,
+  flying fur and its impact, bolts of electricity with the cast glow, bolt and sparks, eating
+  variants, the jump, falling debris timed to land on the hit (new `impact_gfx_lead` column), the
+  screech, the roar in the centre, the eating stand, spawn and death. Two new content hooks name
+  ordinary NPC attacks (`npc_attack_key`) and stand poses (`npc_stand_key`) for presentation.
+- Mechanics (`rc-content/encounters/scurrius.c`). Falling bricks come from a jump on the spot and
+  rats from a screech; each takes the place of an attack, on the boss's turn and not while it walks.
+  It roars on reaching the centre in the final phase. Twelve rat waves at most per fight. Its body
+  stays five ticks so the death plays out.
+- Viewer. Summoned giant rats are drawn (their model was never preloaded). For watching fights: a
+  dev Boss teleport (`RUNEC_DEV_TRANSPORT_DEST=boss`, `RUNEC_DEV_BOSS_HP_PCT`) and
+  `RC_VIEWER_SCREENSHOT_EVERY`.
+
+**Why.** The boss did not move and showed only plain attacks; its animations, projectiles and
+mechanics were missing.
+
+**Checked.** The baked matrices equal the decoder's for all 21 sequences, and the shared models
+hold the cache's vertices in the same order. Screenshots of dev fights at full, 25% and 2%
+hitpoints show each action, the rats, the death and the respawn. The boss test now checks every
+named action, the wave cap and the death hold; ctest and the map tests pass. Acceptance (five
+seeds): 15 of 15 credited kills, the co-op kill and every contention and economy check; fights took
+471-770 ticks (537-808 before).
+
 ## 2026-10-30: square wall corners block only their diagonal
 
 **What.** Loc type 3 (a square wall corner, such as a pillar at a corridor's mouth) now marks the

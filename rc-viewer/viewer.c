@@ -27,6 +27,7 @@
 #include "objects.h"
 #include "models.h"
 #include "anims.h"
+#include "skeletal.h"
 #include "ui.h"
 #include "equipment_render.h"
 #include "equipment_slots.h"
@@ -282,6 +283,7 @@ typedef struct {
     int impact_spotanim_height;
     int impact_spotanim_delay;
     int impact_spotanim_rotation;
+    int impact_spotanim_lead;
     int projectile_start_height;
     int projectile_end_height;
     int projectile_start_time;
@@ -2117,6 +2119,13 @@ static int append_encounter_role_model_ids(const RcWorld *world, uint32_t *ids,
             count = append_unique_model_id(ids, count, id);
         }
     }
+    // A mode boss and the minions it summons later.
+    const RcModeRules *mode = rc_mode_active();
+    if (mode && mode->has_boss && count >= 0) {
+        if (count + 2 > max_ids) return -1;
+        count = append_unique_model_id(ids, count, (uint32_t)mode->boss.npc);
+        count = append_unique_model_id(ids, count, (uint32_t)mode->boss.minion);
+    }
     return count;
 }
 
@@ -3397,6 +3406,13 @@ static void viewer_start_dev_boss_combat(ViewerState *v,
     if (idx < 0)
         return;
     RcNpc *npc = &v->world->npcs[idx];
+    // RUNEC_DEV_BOSS_HP_PCT starts the fight with the boss at that share of
+    // its hitpoints, to reach later phases quickly.
+    int hp_pct = env_int("RUNEC_DEV_BOSS_HP_PCT", 100);
+    if (hp_pct > 0 && hp_pct < 100) {
+        int hp = npc->current_hp * hp_pct / 100;
+        npc->current_hp = hp > 0 ? hp : 1;
+    }
     if (rc_combat_start_npc_vs_player(v->world, npc->uid, 0)) {
         npc->attack_timer = 0;
     }
@@ -5406,11 +5422,17 @@ static int animate_model_entry_sequence(ModelEntry *entry,
     }
 
     AnimSequenceFrame *sf = &seq->frames[frame_idx];
-    AnimFrameBase *fb = anim_get_framebase(cache, sf->frame.framebase_id);
-    if (!fb)
-        return 0;
-
-    anim_apply_frame(state, entry->base_verts, &sf->frame, fb);
+    if (seq->skel) {
+        const SkelRig *rig = skel_rig_find(cache, entry->model_id,
+                                           entry->base_vert_count);
+        if (!skel_apply_frame(state, entry->base_verts, rig, seq->skel, frame_idx))
+            return 0;
+    } else {
+        AnimFrameBase *fb = anim_get_framebase(cache, sf->frame.framebase_id);
+        if (!fb)
+            return 0;
+        anim_apply_frame(state, entry->base_verts, &sf->frame, fb);
+    }
     anim_update_mesh(entry->model.meshes[0].vertices, state,
                      entry->face_indices, entry->face_priorities,
                      entry->face_count);
@@ -7799,6 +7821,27 @@ static void viewer_expire_npc_ghosts(ViewerState *v) {
     }
 }
 
+// Starts `anim_id` as NPC slot `idx`'s primary sequence for at least `ticks`
+// game ticks (its own length when longer).
+static void viewer_npc_play(ViewerState *v, int idx, int anim_id, int ticks) {
+    AnimSequence *seq = anim_id >= 0 && anim_id <= 0xFFFF
+        ? anim_get_sequence(v->anims, (uint16_t)anim_id) : NULL;
+    int seq_ticks = anim_sequence_game_ticks(seq);
+    v->npc_render[idx].attack_anim_timer = seq_ticks > ticks ? seq_ticks : ticks;
+    v->npc_render[idx].attack_anim_id = anim_id;
+    v->npc_render[idx].primary_frame_idx = 0;
+    v->npc_render[idx].primary_frame_timer = 0.0f;
+    v->npc_render[idx].primary_finished = 0;
+    runec_actor_motion_begin_primary(&v->npc_render[idx].motion);
+}
+
+// An NPC definition's named presentation row (Spawn, Death, or a stand pose
+// content names) as a sequence, or `fallback`.
+static int viewer_npc_named_anim(int npc_id, const char *key, int fallback) {
+    const RcCombatVisualDef *row = rc_combat_visual_for_npc_action(npc_id, key);
+    return row && row->attack_anim_id >= 0 ? row->attack_anim_id : fallback;
+}
+
 static void viewer_start_npc_attack_anim(
     ViewerState *v,
     const RcCombatAttackEvent *event,
@@ -7816,15 +7859,7 @@ static void viewer_start_npc_attack_anim(
                 ? visual->attack_anim_id : -1;
     int ticks = viewer_npc_attack_anim_ticks(event);
     if (hold_ticks > ticks) ticks = hold_ticks;
-    AnimSequence *seq = anim_id >= 0 && anim_id <= 0xFFFF
-        ? anim_get_sequence(v->anims, (uint16_t)anim_id) : NULL;
-    int seq_ticks = anim_sequence_game_ticks(seq);
-    v->npc_render[idx].attack_anim_timer = seq_ticks > ticks ? seq_ticks : ticks;
-    v->npc_render[idx].attack_anim_id = anim_id;
-    v->npc_render[idx].primary_frame_idx = 0;
-    v->npc_render[idx].primary_frame_timer = 0.0f;
-    v->npc_render[idx].primary_finished = 0;
-    runec_actor_motion_begin_primary(&v->npc_render[idx].motion);
+    viewer_npc_play(v, idx, anim_id, ticks);
 }
 
 static int viewer_npc_size(const ViewerState *v, const RcNpc *npc) {
@@ -8093,6 +8128,8 @@ static void viewer_spawn_projectile_instance(
     }
     proj->impact_spotanim_delay =
         visual ? visual->impact_spotanim_delay : -1;
+    proj->impact_spotanim_lead =
+        visual ? visual->impact_spotanim_lead : -1;
     proj->impact_spotanim_rotation =
         visual ? visual->impact_spotanim_rotation : -1;
     proj->start_tick = event->world_tick;
@@ -8725,15 +8762,19 @@ static int draw_projectile_impact(ViewerState *v,
                                   float impact_start) {
     if (proj->impact_spotanim_delay >= 0)
         impact_start = (float)proj->impact_spotanim_delay;
-    if (proj->impact_spotanim_id < 0 || client_time < impact_start)
+    // An effect that leads up to its impact (debris falling) starts that many
+    // cycles early, so it lands on the impact.
+    float lead = proj->impact_spotanim_lead > 0
+               ? (float)proj->impact_spotanim_lead : 0.0f;
+    if (proj->impact_spotanim_id < 0 || client_time < impact_start - lead)
         return 0;
     const SpotAnimDef *spot = projectile_impact_spotanim(v, proj);
     int anim_id = spot && spot->animation_id >= 0 ? spot->animation_id : -1;
     int anim_duration = projectile_sequence_duration(v->anims, anim_id);
-    float elapsed = client_time - impact_start;
+    float elapsed = client_time - (impact_start - lead);
     float retain = (float)(proj->impact_duration_ticks > 0
                          ? proj->impact_duration_ticks * 30 : 30);
-    float draw_until = fminf((float)anim_duration, retain);
+    float draw_until = fminf((float)anim_duration, lead + retain);
     if (elapsed >= draw_until)
         return 0;
 
@@ -8946,6 +8987,11 @@ static void npc_pose_set(const ViewerState *v, const RcNpc *npc,
     const RuneCNpcRenderDef *render_def = viewer_npc_render_def(v, npc);
     if (!render_def) return;
     poses->seq[RUNEC_ACTOR_POSE_IDLE] = render_def->stand_anim;
+    // Content may stand the NPC in another sequence for now (a boss eating).
+    const char *stand = rc_combat_npc_stand_key(v->world, npc);
+    if (stand)
+        poses->seq[RUNEC_ACTOR_POSE_IDLE] = viewer_npc_named_anim(
+            render_def->id, stand, render_def->stand_anim);
     poses->seq[RUNEC_ACTOR_POSE_WALK] = render_def->walk_anim;
     poses->seq[RUNEC_ACTOR_POSE_RUN] = render_def->run_anim;
 }
@@ -9021,7 +9067,8 @@ static int npc_primary_anim_id(ViewerState *v, int npc_idx,
                                const RuneCNpcRenderDef *render_def) {
     const RcNpc *n = &v->world->npcs[npc_idx];
     if (!render_def) return -1;
-    if (n->is_dead) return render_def->death_anim;
+    if (n->is_dead)
+        return viewer_npc_named_anim(render_def->id, "Death", render_def->death_anim);
     if (v->npc_render[npc_idx].attack_anim_timer <= 0) return -1;
     int attack = v->npc_render[npc_idx].attack_anim_id > 0
                ? v->npc_render[npc_idx].attack_anim_id
@@ -9070,6 +9117,12 @@ static void viewer_sync_npc_motion(ViewerState *v) {
                 || v->npc_render[i].uid != npc->uid) {
             memset(&v->npc_overlays[i], 0, sizeof(v->npc_overlays[i]));
             snap_npc_render_state(v, i, npc);
+            // A new NPC plays its spawn sequence, when it has one.
+            const RuneCNpcRenderDef *render_def = viewer_npc_render_def(v, npc);
+            int spawn = render_def && life == RC_NPC_LIFE_ALIVE
+                ? viewer_npc_named_anim(render_def->id, "Spawn", -1) : -1;
+            if (spawn >= 0)
+                viewer_npc_play(v, i, spawn, 0);
             continue;
         }
         RuneCActorMotion *motion = &v->npc_render[i].motion;
@@ -9576,13 +9629,18 @@ static AnimSequence *viewer_sequence(AnimCache *cache, int seq_id) {
 // Poses `state` with a primary sequence's frame over a pose frame (either
 // may be -1). While the actor moves (`merge`), the primary's walkmerge
 // labels leave the legs to the pose, as the client does; otherwise the
-// primary alone. 0 when neither has a frame.
+// primary alone. Skeletal sequences pose `rig`'s bones, a primary alone (no
+// bone masks are exported). 0 when neither has a frame.
 static int apply_actor_frames(AnimCache *cache, AnimModelState *state,
-                              const int16_t *base_verts, int pose_seq,
-                              int pose_frame, int primary_seq,
+                              const int16_t *base_verts, const SkelRig *rig,
+                              int pose_seq, int pose_frame, int primary_seq,
                               int primary_frame, int merge) {
     AnimSequence *pose = viewer_sequence(cache, pose_seq);
     AnimSequence *primary = viewer_sequence(cache, primary_seq);
+    if (primary && primary->skel)
+        return skel_apply_frame(state, base_verts, rig, primary->skel, primary_frame);
+    if (!primary && pose && pose->skel)
+        return skel_apply_frame(state, base_verts, rig, pose->skel, pose_frame);
     AnimSequenceFrame *sf = pose
         ? &pose->frames[(pose_frame < 0 ? 0 : pose_frame) % pose->frame_count]
         : NULL;
@@ -9615,7 +9673,7 @@ static int apply_actor_frames(AnimCache *cache, AnimModelState *state,
 static int apply_player_frames(ViewerState *v, AnimModelState *state,
                                const int16_t *base_verts) {
     return apply_actor_frames(
-        v->anims, state, base_verts, v->cur_anim_id, v->anim_frame_idx,
+        v->anims, state, base_verts, NULL, v->cur_anim_id, v->anim_frame_idx,
         v->player_one_shot_finished ? -1 : v->primary_anim_id,
         v->primary_frame_idx,
         v->player_motion.pose != RUNEC_ACTOR_POSE_IDLE);
@@ -9748,8 +9806,9 @@ static int update_npc_anim(ViewerState *v, int npc_idx, ModelEntry *me) {
                             &v->npc_render[npc_idx].frame_timer, cycles);
 
     AnimCache *cache = v->anims;
-    if (!apply_actor_frames(cache, state, me->base_verts, pose,
-                            v->npc_render[npc_idx].frame_idx,
+    if (!apply_actor_frames(cache, state, me->base_verts,
+                            skel_rig_find(cache, me->model_id, me->base_vert_count),
+                            pose, v->npc_render[npc_idx].frame_idx,
                             v->npc_render[npc_idx].primary_finished
                                 ? -1 : primary,
                             v->npc_render[npc_idx].primary_frame_idx,
@@ -10269,6 +10328,19 @@ static void draw_streaming_telemetry_overlay(ViewerState *v) {
         DrawText(lines[i], x + 7, y + 5 + i * line_height, 12, RAYWHITE);
 }
 
+// The mode's combat visuals (data/modes/<mode>/defs/combat_visuals.tsv, when
+// it has one) ahead of the shared table: lookups take the first matching row,
+// so the mode's rows win. The count, or -1 without the shared table.
+static int viewer_load_combat_visuals(const char *shared_path) {
+    char mode_path[RC_GYM_PATH_LEN + 32];
+    snprintf(mode_path, sizeof(mode_path), "%s/defs/combat_visuals.tsv",
+             g_gym_layout.dir);
+    int mode_rows = rc_load_combat_visuals(mode_path);
+    if (mode_rows > 0)
+        fprintf(stderr, "combat visuals: %d mode rows from %s\n", mode_rows, mode_path);
+    return rc_append_combat_visuals(shared_path);
+}
+
 static RcWorldConfig viewer_world_config(
     RcWorldStreamingConfig backend_streaming, const char *combat_visuals_path) {
     RcWorldConfig cfg = rc_gym_world_config(&g_gym_layout, 1);
@@ -10515,6 +10587,12 @@ int main(int argc, char **argv) {
     // rc-content/README.md for the engine/content split.
     if (!v.replay_env && !v.replay_cenv && !rc_world_install_content(v.world, rc_content_register_all))
         fprintf(stderr, "content: registration failed; see messages above\n");
+    const RcModeRules *mode_rules = rc_mode_active();
+    if (mode_rules && mode_rules->has_boss) {
+        const RcNpcDef *boss = rc_npc_def_get(rc_npc_def_find(mode_rules->boss.npc));
+        runec_dev_validation_set_boss(mode_rules->boss.spawn[0], mode_rules->boss.spawn[1], 0,
+                                      mode_rules->boss.npc, boss && boss->size > 0 ? boss->size : 1);
+    }
 
     if (!v.replay_env && !v.replay_cenv && !rc_world_relocate_player(v.world, g_player_start_x,
                                                    g_player_start_y, g_player_start_plane)) {
@@ -10552,7 +10630,7 @@ int main(int argc, char **argv) {
     if (!v.replay_env && !v.replay_cenv) runec_dev_validation_seed_bank(v.world);
 
     if (viewer_smoke) {
-        int combat_visual_count = rc_load_combat_visuals(combat_visuals_path);
+        int combat_visual_count = viewer_load_combat_visuals(combat_visuals_path);
         if (combat_visual_count < 0) {
             fprintf(stderr, "viewer smoke: failed to load combat visuals\n");
             free(v.npc_overlays);
@@ -10609,7 +10687,7 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     viewer_sync_dev_transport_labels(&v.ui);
-    rc_load_combat_visuals(combat_visuals_path);
+    viewer_load_combat_visuals(combat_visuals_path);
     fprintf(stderr,
             "render profile: %s color_lift=%s msaa=%s camera_pitch=%.3f "
             "camera_dist=%.1f camera_fov=%.1f\n",
@@ -10727,6 +10805,13 @@ int main(int argc, char **argv) {
         fprintf(stderr, "viewer: shared animation cache is missing or invalid\n");
         return 1;
     }
+    // The mode's skeletal sequences (bone-animated NPCs and spot animations).
+    char skeletal_path[RC_GYM_PATH_LEN + 32];
+    snprintf(skeletal_path, sizeof(skeletal_path), "%s/models/skeletal.bin", g_gym_layout.dir);
+    if (!skel_register(v.anims, skel_set_load(env_path("RUNEC_SKELETAL", skeletal_path)))) {
+        fprintf(stderr, "viewer: out of memory registering skeletal sequences\n");
+        return 1;
+    }
     if (v.npc_models && v.npc_models->loaded) {
         int created = 0;
         int npc_def_count = 0;
@@ -10840,6 +10925,9 @@ int main(int argc, char **argv) {
     // the mapsquare loader time to finish; RC_VIEWER_HIDE_UI leaves only the scene.
     const char *screenshot_path = getenv("RC_VIEWER_SCREENSHOT");
     int screenshot_taken = 0;
+    // RC_VIEWER_SCREENSHOT_EVERY=N also saves every Nth frame beside it
+    // (out.png -> out_00120.png ...), to watch something play out.
+    int screenshot_every = env_int("RC_VIEWER_SCREENSHOT_EVERY", 0);
     int hide_ui = env_bool("RC_VIEWER_HIDE_UI", 0);
     int frame_count = 0;
     double frame_benchmark_started_ms = max_frames > 0
@@ -11126,6 +11214,19 @@ int main(int argc, char **argv) {
             draw_streaming_telemetry_overlay(&v);
         }
         EndDrawing();
+        if (screenshot_path && screenshot_path[0] && screenshot_every > 0
+                && (frame_count + 1) % screenshot_every == 0) {
+            char numbered[1024];
+            const char *dot = strrchr(screenshot_path, '.');
+            int stem = dot ? (int)(dot - screenshot_path) : (int)strlen(screenshot_path);
+            snprintf(numbered, sizeof(numbered), "%.*s_%05d%s", stem, screenshot_path,
+                     frame_count + 1, dot ? dot : ".png");
+            Image shot = LoadImageFromScreen();
+            if (shot.data) {
+                ExportImage(shot, numbered);
+                UnloadImage(shot);
+            }
+        }
         if (screenshot_path && screenshot_path[0] && !screenshot_taken
                 && (max_frames <= 0 || frame_count + 1 >= max_frames)) {
             Image screenshot = LoadImageFromScreen();
@@ -11174,6 +11275,7 @@ cleanup:
     anim_model_state_free(v.anim_state);
     for (int i = 0; i < RC_MAX_NPC_DEFS; i++)
         anim_model_state_free(v.npc_anim_state[i]);
+    skel_set_free(v.anims ? v.anims->skeletal : NULL);
     anim_cache_free(v.anims);
     anim_cache_free(v.object_anim_cache);
     if (v.replay_cenv) {

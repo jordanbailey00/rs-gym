@@ -1,15 +1,19 @@
 // Scurrius, a gym mode's shared boss (SPEC.md, "Scurrius as the shared advanced encounter";
 // parameters in modes/<mode>/scurrius.toml through rc-core/mode.h). The fight follows the OSRS boss
-// as RuneC's encounter notes describe it: tail swipes in melee, bolts of electricity and flying fur
-// at range, a walk to a food pile to eat at 80% and every so often after, a final phase in the
-// centre below 30% with faster ranged and magic attacks and more frequent falling bricks, bricks
-// telegraphed on each player's tile and on random tiles, and screeches that summon giant rats.
+// as RuneC's encounter notes and the wiki describe it: tail swipes in melee, bolts of electricity
+// and flying fur at range, a walk to a food pile to eat at 80% and every so often after, a final
+// phase in the centre below 30% with faster ranged and magic attacks and more frequent falling
+// bricks, a jump on the spot that brings bricks down (telegraphed on each player's tile and on
+// random tiles), and screeches that summon giant rats, at most twelve waves a fight. A jump, a
+// screech and the roar on reaching the centre each take the place of an attack.
 // The mode adds group scaling over a monotonic participant set, kill credit by damage share, a
 // seeded loot rotation among qualified players, respawn after a kill and an abandoned-fight reset.
 //
 // Runs as the world's mode tick (after the tick's damage and deaths resolve) and through the NPC
-// combat hooks for the boss's style, range and attack speed.
+// combat hooks for the boss's style, range, attack speed and the names its attacks and stand pose
+// are presented by (modes/<mode>/combat_visuals.tsv).
 #include "../content.h"
+#include "../../rc-core/combat.h"
 #include "../../rc-core/combat_hit.h"
 #include "../../rc-core/interaction.h"
 #include "../../rc-core/items.h"
@@ -21,7 +25,11 @@
 
 #include <string.h>
 
-enum { CENTRE = 3, FOOD_PILE_A = 14205, FOOD_PILE_B = 14206 };
+enum {
+    CENTRE = 3, FOOD_PILE_A = 14205, FOOD_PILE_B = 14206,
+    MAX_SUMMONS = 12,   // rat waves per fight
+    DEATH_TICKS = 5,    // its death sequence runs 150 client cycles before the body goes
+};
 
 static const RcModeBoss *boss_rules(void) {
     const RcModeRules *m = rc_mode_active();
@@ -102,6 +110,29 @@ static void walk_boss(RcWorld *w, RcNpc *boss, int x, int y) {
     (void)rc_npc_route_request(w, boss, &target, RC_NPC_ROUTE_SCRIPTED, true);
 }
 
+static int boss_size(const RcWorld *w, const RcNpc *boss) {
+    const RcNpcDef *d = rc_npc_def_for_npc(w, boss);
+    return d && d->size > 0 ? d->size : 1;
+}
+
+static int boss_speed(const RcWorld *w, const RcModeBoss *b) {
+    return w->mode_boss.phase >= 3 ? b->final_attack_speed : b->attack_speed;
+}
+
+// An action at the boss's own centre for presentation (encounter-action keys in the mode's
+// combat visuals); it takes the place of the boss's next attack.
+static void boss_act(RcWorld *w, const RcModeBoss *b, RcNpc *boss, const char *key) {
+    int half = boss_size(w, boss) / 2;
+    rc_combat_record_encounter_action(w, boss, false, boss->x + half, boss->y + half, COMBAT_NONE,
+                                      0, key);
+    boss->attack_timer = boss_speed(w, b);
+}
+
+// The boss can act in place of its attack: not walking, and its attack due within a tick.
+static int boss_turn(const RcWorld *w, const RcNpc *boss) {
+    return w->mode_boss.moving_to < 0 && boss->attack_timer <= 1;
+}
+
 static int boss_beside(const RcNpc *boss, int size, int x, int y) {
     int dx = x < boss->x ? boss->x - x : x > boss->x + size - 1 ? x - (boss->x + size - 1) : 0;
     int dy = y < boss->y ? boss->y - y : y > boss->y + size - 1 ? y - (boss->y + size - 1) : 0;
@@ -120,6 +151,7 @@ static void clear_fight(RcWorld *w) {
     s->moving_to = s->feeding_pile = -1;
     s->heals_left = 0;
     s->hazard_count = 0;
+    s->summons = 0;
 }
 
 // No living player has been inside for reset_ticks: the boss, its rats and its bricks start over.
@@ -213,26 +245,38 @@ static void land_bricks(RcWorld *w, const RcModeBoss *b, const RcNpc *boss) {
     s->hazard_count = kept;
 }
 
-static void add_hazard(RcWorld *w, int x, int y, int warning) {
+// A brick falling on (x, y) after `warning` ticks; its debris is presented falling there.
+static void add_hazard(RcWorld *w, const RcNpc *boss, int x, int y, int warning) {
     RcModeBossState *s = &w->mode_boss;
     for (int i = 0; i < s->hazard_count; i++)
         if (s->hazards[i].x == x && s->hazards[i].y == y) return;
-    if (s->hazard_count < RC_MODE_BOSS_HAZARDS)
-        s->hazards[s->hazard_count++] = (RcModeHazard){(int16_t)x, (int16_t)y,
-                                                        w->tick + (RcTick)warning};
+    if (s->hazard_count >= RC_MODE_BOSS_HAZARDS) return;
+    s->hazards[s->hazard_count++] = (RcModeHazard){(int16_t)x, (int16_t)y,
+                                                    w->tick + (RcTick)warning};
+    rc_combat_record_encounter_action(w, boss, false, x, y, COMBAT_NONE, warning,
+                                      "Falling bricks:debris");
 }
 
-// One volley: a brick on each living player's tile inside, and some on random tiles.
-static void drop_bricks(RcWorld *w, const RcModeBoss *b, uint16_t inside) {
+// One volley: the boss jumps on the spot, and a brick falls on each living player's tile inside
+// and on some random tiles.
+static void drop_bricks(RcWorld *w, const RcModeBoss *b, RcNpc *boss, uint16_t inside) {
+    boss_act(w, b, boss, w->mode_boss.feeding_pile >= 0 ? "Falling bricks:jump (eating)"
+                                                        : "Falling bricks:jump");
     for (int p = 0; p < w->player_count; p++)
-        if (inside >> p & 1) add_hazard(w, w->players[p].x, w->players[p].y, b->hazard_warning_ticks);
+        if (inside >> p & 1)
+            add_hazard(w, boss, w->players[p].x, w->players[p].y, b->hazard_warning_ticks);
     int extra = b->hazard_random_tiles * (w->mode_boss.phase >= 3 ? 2 : 1), x, y;
     for (int i = 0; i < extra; i++)
-        if (random_tile(w, b, &x, &y)) add_hazard(w, x, y, b->hazard_warning_ticks);
+        if (random_tile(w, b, &x, &y)) add_hazard(w, boss, x, y, b->hazard_warning_ticks);
 }
 
-static void summon_rats(RcWorld *w, const RcModeBoss *b) {
+// A screech summons a wave of giant rats.
+static void summon_rats(RcWorld *w, const RcModeBoss *b, RcNpc *boss) {
     RcModeBossState *s = &w->mode_boss;
+    static const char *const screech[2][2] = {{"Rats:screech", "Rats:screech 2"},
+                                              {"Rats:screech (eating)", "Rats:screech 2 (eating)"}};
+    boss_act(w, b, boss, screech[s->feeding_pile >= 0][s->summons & 1]);
+    s->summons++;
     int def_idx = rc_npc_def_find(b->minion), x, y;
     int room = b->max_minions - s->minion_count;
     if (room > RC_MODE_BOSS_MINIONS - s->minion_count) room = RC_MODE_BOSS_MINIONS - s->minion_count;
@@ -270,7 +314,10 @@ static void scurrius_tick(RcWorld *w) {
     if (!boss) return;
     if (boss->is_dead || boss->current_hp <= 0) {
         boss->owner_controlled = false;
-        if (s->active) resolve_kill(w, b, boss);
+        if (s->active) {
+            if (boss->death_timer > 0) boss->death_timer = DEATH_TICKS;
+            resolve_kill(w, b, boss);
+        }
         s->hazard_count = 0;
         return;
     }
@@ -321,18 +368,18 @@ static void scurrius_tick(RcWorld *w) {
     if (s->moving_to >= 0) {
         int tx = s->moving_to == CENTRE ? b->centre[0] : b->food[s->moving_to][0];
         int ty = s->moving_to == CENTRE ? b->centre[1] : b->food[s->moving_to][1];
-        const RcNpcDef *d = rc_npc_def_for_npc(w, boss);
-        int size = d && d->size > 0 ? d->size : 1;
-        if (boss_beside(boss, size, tx, ty) || boss->route_status == RC_ROUTE_FAILED
+        if (boss_beside(boss, boss_size(w, boss), tx, ty) || boss->route_status == RC_ROUTE_FAILED
                 || boss->movement_result == RC_MOVEMENT_ARRIVED
                 || boss->movement_result == RC_MOVEMENT_NO_ROUTE) {
             boss->owner_controlled = false;
-            if (s->moving_to != CENTRE) {
+            int centre = s->moving_to == CENTRE;
+            if (!centre) {
                 s->feeding_pile = s->moving_to;
                 s->heals_left = (uint8_t)b->feed_heals;
                 s->next_heal = w->tick + (RcTick)b->feed_ticks;
             }
             s->moving_to = -1;
+            if (centre) boss_act(w, b, boss, "Enrage");  // roars on reaching the centre
         } else if (boss->route_mode != RC_NPC_ROUTE_SCRIPTED) {
             walk_boss(w, boss, tx, ty);
         }
@@ -353,13 +400,14 @@ static void scurrius_tick(RcWorld *w) {
             s->next_feed = w->tick + (RcTick)b->feed_interval;
         }
     }
-    if (inside && w->tick >= s->next_bricks) {
-        drop_bricks(w, b, inside);
+    // A jump or a screech when one is due and the boss has a turn to spend.
+    if (inside && w->tick >= s->next_bricks && boss_turn(w, boss)) {
+        drop_bricks(w, b, boss, inside);
         int interval = s->phase >= 3 ? b->hazard_interval / 2 : b->hazard_interval;
         s->next_bricks = w->tick + (RcTick)(interval > 1 ? interval : 1);
-    }
-    if (inside && s->phase >= 2 && w->tick >= s->next_summon) {
-        summon_rats(w, b);
+    } else if (inside && s->phase >= 2 && s->summons < MAX_SUMMONS && w->tick >= s->next_summon
+               && boss_turn(w, boss)) {
+        summon_rats(w, b, boss);
         s->next_summon = w->tick + (RcTick)b->summon_interval;
     }
 }
@@ -369,6 +417,8 @@ static void scurrius_tick(RcWorld *w) {
 static RcCombatStyle (*base_select_style)(RcWorld *, RcNpc *, const RcPlayer *, RcCombatStyle);
 static int (*base_attack_range)(const RcWorld *, const RcNpc *, RcCombatStyle, int);
 static int (*base_attack_speed)(RcWorld *, RcNpc *, int);
+static const char *(*base_attack_key)(const RcWorld *, const RcNpc *, RcCombatStyle);
+static const char *(*base_stand_key)(const RcWorld *, const RcNpc *);
 
 static RcCombatStyle select_style(RcWorld *w, RcNpc *npc, const RcPlayer *p, RcCombatStyle style) {
     if (!is_boss(w, npc))
@@ -388,9 +438,23 @@ static int attack_range(const RcWorld *w, const RcNpc *npc, RcCombatStyle style,
 }
 
 static int attack_speed(RcWorld *w, RcNpc *npc, int speed) {
-    const RcModeBoss *b = boss_rules();
-    if (is_boss(w, npc)) return w->mode_boss.phase >= 3 ? b->final_attack_speed : b->attack_speed;
+    if (is_boss(w, npc)) return boss_speed(w, boss_rules());
     return base_attack_speed ? base_attack_speed(w, npc, speed) : speed;
+}
+
+// Presentation: the boss's attacks by name, the eating variants at a food pile, and two tail
+// swipes in turn.
+static const char *attack_key(const RcWorld *w, const RcNpc *npc, RcCombatStyle style) {
+    if (!is_boss(w, npc)) return base_attack_key ? base_attack_key(w, npc, style) : NULL;
+    int eating = w->mode_boss.feeding_pile >= 0;
+    if (style == COMBAT_MAGIC) return eating ? "Bolts of electricity (eating)" : "Bolts of electricity";
+    if (style == COMBAT_RANGED) return eating ? "Flying fur (eating)" : "Flying fur";
+    return npc->attack_count & 1 ? "Tail swipe 2" : "Tail swipe";
+}
+
+static const char *stand_key(const RcWorld *w, const RcNpc *npc) {
+    if (!is_boss(w, npc)) return base_stand_key ? base_stand_key(w, npc) : NULL;
+    return w->mode_boss.feeding_pile >= 0 ? "Food pile:eating" : NULL;
 }
 
 static RcInteractionHandlerResult food_pile(RcWorld *world, RcPlayer *player,
@@ -420,6 +484,14 @@ int rc_content_scurrius_register(RcWorld *world) {
     if (world->combat_hooks.modify_npc_attack_speed != attack_speed) {
         base_attack_speed = world->combat_hooks.modify_npc_attack_speed;
         world->combat_hooks.modify_npc_attack_speed = attack_speed;
+    }
+    if (world->combat_hooks.npc_attack_key != attack_key) {
+        base_attack_key = world->combat_hooks.npc_attack_key;
+        world->combat_hooks.npc_attack_key = attack_key;
+    }
+    if (world->combat_hooks.npc_stand_key != stand_key) {
+        base_stand_key = world->combat_hooks.npc_stand_key;
+        world->combat_hooks.npc_stand_key = stand_key;
     }
     // Players cannot eat from the lair's food piles in this mode.
     int ok = 1;

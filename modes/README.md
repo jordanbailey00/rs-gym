@@ -26,6 +26,10 @@ python3 tools/build_mode.py island
   source), spells, prayers, bones, and the ordinary enemies with their closed drop tables.
 - `economy.toml`: fixed-price shops, the tanner and Historian Aldo, sale values.
 - `scurrius.toml`: the boss's tuning, arena tiles and loot.
+- `combat_visuals.tsv` (optional): presentation rows over `data/defs/combat_visuals.tsv`, same
+  columns; the viewer reads them first. NPC rows are keyed by the action names content records
+  (Scurrius' attacks and mechanics) and by `Spawn`, `Death` and stand poses. Their spot animations
+  also select the mode's skeletal export.
 - `manifest.json` (generated): every selected item, NPC, loc, recipe and service with its id, roles,
   sources, consumers and overrides.
 - `override-ledger.json` (generated): every inherited value or rule the mode replaces, from what to
@@ -65,6 +69,7 @@ colon-separated (`inputs=436:1,438:1`).
 | Starter kit | `rc_content_compact_new_character` |
 | Map | `maps/compact_v1.toml` |
 | Scurrius encounter | `rc-content/encounters/scurrius.c`, `modes/compact_osrs_v1/scurrius.toml` |
+| Scurrius presentation | `modes/compact_osrs_v1/combat_visuals.tsv`, skeletal export (`tools/cache_pipeline/export_skeletal.py`, `rc-viewer/skeletal.h`) |
 | Trading, contention, loot ownership | `rc-core/trade.c`, rotating player order in `rc-core/tick.c`, `rc-core/drops.c` |
 | RL interface (compact-v2) | `rc-env/compact_env.h`, `rc-env/puffer/compact/` |
 | Acceptance runs | `rc-env/tools/acceptance.c` (`rs-gym-acceptance`) |

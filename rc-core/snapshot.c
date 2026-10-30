@@ -149,7 +149,7 @@ uint64_t rc_world_state_hash(const RcWorld *w) {
         }
     const RcModeBossState *b = &w->mode_boss;
     mix(&h, b->active); mix(&h, b->phase); mix(&h, b->participants); mix(&h, b->max_hp);
-    mix(&h, b->feeding_pile); mix(&h, b->moving_to); mix(&h, b->heals_left);
+    mix(&h, b->feeding_pile); mix(&h, b->moving_to); mix(&h, b->heals_left); mix(&h, b->summons);
     mix(&h, b->hazard_count); mix(&h, b->minion_count); mix(&h, b->kills); mix(&h, b->rotation);
     for (int i = 0; i < b->hazard_count; i++) {
         mix(&h, b->hazards[i].x); mix(&h, b->hazards[i].y); mix(&h, b->hazards[i].land_tick);

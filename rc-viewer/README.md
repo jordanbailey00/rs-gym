@@ -35,16 +35,25 @@ RUNEC_DEV_VALIDATION=1 ./build/cmake/rc-viewer   # dev: 99 stats, seeded bank, d
 Roofs and upper floors are drawn while the player stands outdoors and hidden under a roof, as in
 the client (`regions/roofs.bin` marks the roofed tiles).
 
+Bone-animated ("maya") models play their sequences through `skeletal.h`: the mode's
+`models/skeletal.bin` holds per-vertex bone weights and per-tick bone matrices, registered with
+the animation cache so they time and blend like frame sequences.
+
 **Environment:**
 - `RUNEC_PLAYER_START_X/Y/PLANE` override the start; `RUNEC_CAMERA_YAW/PITCH/DIST` the camera.
 - `RUNEC_VIEWER_ROOFS=0` never draws roofs.
 - `RUNEC_VIEWER_SMOKE=1` checks startup without opening a window.
 - Screenshots: `RC_VIEWER_SCREENSHOT=out.png` with `RC_VIEWER_EXIT_FRAMES=N` saves frame N and exits;
+  `RC_VIEWER_SCREENSHOT_EVERY=K` also saves every Kth frame (`out_00120.png` ...);
   `RC_VIEWER_HIDE_UI=1` leaves only the scene, `RC_VIEWER_HIDDEN=1` keeps the window off screen and
   `RC_VIEWER_WIDTH/HEIGHT` size it.
+- Dev fights: with `RUNEC_DEV_VALIDATION=1`, `RUNEC_DEV_TRANSPORT_DEST=boss` lands beside the mode's
+  boss and starts its fight; `RUNEC_DEV_BOSS_HP_PCT=N` starts the boss at N% of its hitpoints.
 
 ## Data
 
 The viewer streams `data/modes/<mode>/regions/{rx}_{ry}.p{plane}.*` for the mapsquares listed in
 the mode's `regions/mapsquare.catalog`, plus models, sprites, fonts and animations under `data/`.
-Locs the engine spawns (fires) are drawn from the mode's `models/spawn_objects.*`.
+Locs the engine spawns (fires) are drawn from the mode's `models/spawn_objects.*`, skeletal
+animation from its `models/skeletal.bin`, and its `defs/combat_visuals.tsv` rows (when it has them)
+are read ahead of `data/defs/combat_visuals.tsv`.

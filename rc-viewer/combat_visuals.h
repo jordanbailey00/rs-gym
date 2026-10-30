@@ -75,6 +75,7 @@ typedef struct {
     int impact_spotanim_height;
     int impact_spotanim_delay;
     int impact_spotanim_rotation;
+    int impact_spotanim_lead;   // cycles of the impact animation before it lands
     uint8_t primitive_type;
     uint8_t source_attachment;
     uint8_t target_attachment;
@@ -95,7 +96,11 @@ extern int g_rc_combat_visual_count;
 
 const char *rc_combat_visual_primitive_name(int primitive_type);
 const char *rc_combat_visual_attachment_name(int attachment_rule);
+// Loads a table, replacing the rows held; rc_append_combat_visuals adds a table's rows after
+// them. Lookups take the first matching row. Both return the row count, -1 when the file is
+// missing.
 int rc_load_combat_visuals(const char *path);
+int rc_append_combat_visuals(const char *path);
 const RcCombatVisualDef *rc_combat_visual_for_item(int item_id,
                                                    RcCombatStyle style);
 const RcCombatVisualDef *rc_combat_visual_for_item_stance(

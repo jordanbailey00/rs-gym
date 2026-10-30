@@ -162,6 +162,9 @@ void rc_combat_record_encounter_action(struct RcWorld *world, const RcNpc *npc,
                                        bool target_player, int target_x,
                                        int target_y, RcCombatStyle style,
                                        int hit_delay, const char *key);
+// Presentation: the visuals key whose sequence replaces the NPC's stand pose
+// now (content's npc_stand_key hook), or NULL.
+const char *rc_combat_npc_stand_key(const struct RcWorld *world, const RcNpc *npc);
 void rc_player_apply_teleblock(struct RcWorld *world, int ticks);
 int rc_player_freeze_ticks_remaining(const struct RcWorld *world);
 int rc_player_teleblock_ticks_remaining(const struct RcWorld *world);

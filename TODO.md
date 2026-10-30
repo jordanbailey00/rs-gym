@@ -20,6 +20,15 @@ v1 is `compact_osrs_v1` (see `SPEC.md`). Stages 1-6 are done; the acceptance evi
 - The post-boss spine weapons and their paid alternative are covered by `tests/test_compact_boss.c`
   and `tests/test_compact_economy.c` with test setup, not by a scripted route.
 
+## Scurrius
+- The falling-brick warning is the mode's 3 ticks; the debris animation takes about 6 ticks to land
+  its bricks, so the viewer starts it part-way (`impact_gfx_lead`) and the falling dust is cut short.
+  Decide whether the warning should match the animation.
+- Its giant rats have 10 hitpoints; the wiki has players kill them in one hit and bone weapons attack
+  them without delay. Neither rule is modelled.
+- Skeletal sequences play alone while an actor moves: bone masks (`anim_maya_masks`) are not
+  exported. Scurrius' sequences have none.
+
 ## Map and viewer
 - Scurrius' lair keeps no ceiling (its blank-out sat higher than the sewers' rock), so the lair's
   outer walls show dark faces from above.

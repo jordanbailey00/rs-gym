@@ -12,7 +12,9 @@ OSRS-specific content on top of `rc-core`:
   and `gym.c` stand down.
 - `encounters/`: boss scripts (real-world bosses; the gym's King Black Dragon and Chaos Elemental
   run from the encounter data without scripts). `scurrius.c` is a mode's shared boss: phases,
-  feeding, falling bricks, rat summons, group scaling, kill credit, loot rotation and reset
+  feeding, a jump that drops bricks, a screech that summons rats (twelve waves at most), group
+  scaling, kill credit, loot rotation and reset. It names its attacks and actions for the viewer
+  (the `npc_attack_key` and `npc_stand_key` hooks, `rc_combat_record_encounter_action`)
 - `combat/`: spells and runes, ammunition, dragonfire, NPC spell-target attributes
 - consumables, and the bank storage policy (which objects and NPCs open the bank)
 

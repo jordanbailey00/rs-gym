@@ -1,7 +1,9 @@
 // Scurrius and the mode's recovery rules (run tools/build_mode.py first). Test setup gives the
 // fighters level 40 and mode equipment directly; every fight action is a player command.
-//   - a solo kill: the phases, a feeding trip, rat summons, falling bricks, one loot bundle owned
-//     by the qualified killer, and the respawn 100 ticks later;
+//   - a solo kill: the phases, a feeding trip, rat summons (at most twelve waves), falling bricks,
+//     the named actions the viewer presents (attacks and their eating variants, the jump and its
+//     debris, the screech, the roar in the centre), the body held for its five-tick death, one
+//     loot bundle owned by the qualified killer, and the respawn 100 ticks later;
 //   - group scaling: each participant adds 180 HP to the maximum and the current, once;
 //   - an abandoned fight resets after 50 ticks with nobody inside;
 //   - bone weapons: the rat bonus, the staff's charges (made with 100, one per cast, charged and
@@ -9,6 +11,7 @@
 //   - death: carried and worn items wait privately, then move to the bank when they expire; with a
 //     full bank they stay on the ground, still private, and bank as soon as a slot frees.
 #include "../rc-core/api.h"
+#include "../rc-core/combat.h"
 #include "../rc-core/items.h"
 #include "../rc-core/mode.h"
 #include "../rc-core/npc.h"
@@ -71,7 +74,28 @@ static void enter_arena(RcWorld *w, int slot, int dx) {
     CHECK(rc_world_relocate_player(w, B->rect[0] + 1 + dx, B->centre[1], 0), "player %d into the arena", slot);
 }
 
-typedef struct { int saw_phase3, saw_feed, saw_rats, saw_bricks, max_hp_seen; } FightLog;
+// Encounter-action keys the boss's attack events carry (rc-content/encounters/scurrius.c).
+static const char *const ACTIONS[] = {
+    "Tail swipe", "Flying fur", "Bolts of electricity", "(eating)", "Falling bricks:jump",
+    "Falling bricks:debris", "Rats:screech", "Enrage",
+};
+enum { ACTION_COUNT = sizeof(ACTIONS) / sizeof(ACTIONS[0]) };
+
+typedef struct {
+    int saw_phase3, saw_feed, saw_rats, saw_bricks, max_hp_seen, max_summons;
+    int actions[ACTION_COUNT];
+} FightLog;
+
+static void log_actions(const RcWorld *w, const RcNpc *s, FightLog *log) {
+    int n = 0;
+    const RcCombatAttackEvent *e = rc_combat_attack_events(w, &n);
+    for (int i = 0; e && i < n; i++) {
+        if (!e[i].active || e[i].source_uid != s->uid || e[i].action_kind != RC_COMBAT_ACTION_ENCOUNTER)
+            continue;
+        for (int k = 0; k < ACTION_COUNT; k++)
+            if (strstr(e[i].action_key_name, ACTIONS[k])) log->actions[k]++;
+    }
+}
 
 // Fights Scurrius with protection prayers matched to its cue, eating below half hitpoints.
 static void fight_plan(ScAgent *a, void *arg) {
@@ -87,6 +111,8 @@ static void fight_plan(ScAgent *a, void *arg) {
         if (w->mode_boss.minion_count) log->saw_rats = 1;
         if (w->mode_boss.hazard_count) log->saw_bricks = 1;
         if (w->mode_boss.max_hp > log->max_hp_seen) log->max_hp_seen = w->mode_boss.max_hp;
+        if (w->mode_boss.summons > log->max_summons) log->max_summons = w->mode_boss.summons;
+        log_actions(w, s, log);
         // Step off a brick's shadow.
         for (int h = 0; h < w->mode_boss.hazard_count; h++)
             if (w->mode_boss.hazards[h].x == p->x && w->mode_boss.hazards[h].y == p->y) {
@@ -117,6 +143,12 @@ static void check_solo_kill(RcWorld *w) {
           "fight mechanics: feed %d rats %d bricks %d phase3 %d", log.saw_feed, log.saw_rats,
           log.saw_bricks, log.saw_phase3);
     CHECK(log.max_hp_seen == B->hp, "solo max HP %d", log.max_hp_seen);
+    CHECK(log.max_summons >= 1 && log.max_summons <= 12, "%d rat waves", log.max_summons);
+    for (int k = 0; k < ACTION_COUNT; k++)
+        CHECK(log.actions[k] > 0, "no '%s' action presented", ACTIONS[k]);
+    s = boss(w);  // a tick after the death: the body stays for its five-tick death sequence
+    CHECK(s && rc_npc_life_phase(s) == RC_NPC_LIFE_DYING && s->death_timer == 4,
+          "the body has %d ticks left", s ? s->death_timer : -1);
     rc_world_tick(w);  // the kill resolves in the mode tick after the death
     CHECK(w->mode_boss.kills == 1 && w->mode_boss.last_owner == 0 && (w->mode_boss.last_qualified & 1),
           "kill: %u kills, owner %d, qualified %x", w->mode_boss.kills, w->mode_boss.last_owner,

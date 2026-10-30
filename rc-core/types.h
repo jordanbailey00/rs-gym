@@ -1319,6 +1319,7 @@ typedef struct {
     uint32_t damage[RC_MAX_PLAYERS];   // actual non-overkill damage this fight
     RcTick empty_since;                // first tick with no living player inside (0: occupied)
     RcTick next_bricks, next_summon, next_feed;
+    uint8_t summons;                   // rat waves summoned this fight
     int8_t moving_to;                  // -1, a food pile index, or 3 for the centre
     int8_t feeding_pile;               // eating at this pile, -1 none
     uint8_t heals_left;
@@ -1398,6 +1399,14 @@ typedef struct {
     int (*player_consume_spell_runes)(struct RcWorld *world,
                                       RcPlayer *player,
                                       const struct RcSpellDef *spell);
+    // Presentation: the encounter-action key an ordinary NPC attack is drawn
+    // from (an attack_key row of the NPC's combat visuals), or NULL for the
+    // NPC's style row.
+    const char *(*npc_attack_key)(const struct RcWorld *world, const RcNpc *npc,
+                                  RcCombatStyle style);
+    // Presentation: the attack_key row whose sequence replaces the NPC's
+    // stand pose (a boss eating), or NULL.
+    const char *(*npc_stand_key)(const struct RcWorld *world, const RcNpc *npc);
 } RcCombatContentHooks;
 
 // World (top-level game state). Named struct tag so other subsystem

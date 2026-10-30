@@ -5,8 +5,9 @@
 
 Steps: map spec -> mapsquares -> overlay cache (build/modes/<mode>/cache) -> object placements ->
 mode rules (modes/<mode>/*.toml, when the mode has them) -> gathering nodes -> regions (terrain,
-objects, minimaps, collision) -> spawned-loc templates -> spawns -> traversal, area-flag and drop
-tables -> gym.cfg layout -> content manifest and override ledger (build/cmake/rs-gym-validate).
+objects, minimaps, collision) -> spawned-loc templates -> combat visuals and skeletal animation ->
+spawns -> traversal, area-flag and drop tables -> gym.cfg layout -> content manifest and override
+ledger (build/cmake/rs-gym-validate).
 """
 
 from __future__ import annotations
@@ -94,6 +95,13 @@ def main() -> None:
         "--report", ROOT / "build/reports" / f"{name}-collision-tiles.txt")
     run("tools/cache_pipeline/export_spawn_objects.py", map_path, "--cache", SOURCE_CACHE,
         "--output", out / "models/spawn_objects.models")
+    spotanims = write_visuals(mode_dir / "combat_visuals.tsv", out / "defs/combat_visuals.tsv")
+    npcs = {row[0] for row in gym.npc_spawns}
+    if (mode_dir / "manifest.json").is_file():
+        npcs |= {n["id"] for n in json.loads((mode_dir / "manifest.json").read_text())["npcs"]}
+    run("tools/cache_pipeline/export_skeletal.py", "--cache", SOURCE_CACHE,
+        "--npcs", ",".join(map(str, sorted(npcs))), "--spotanims", ",".join(map(str, spotanims)),
+        "--output", out / "models/skeletal.bin")
 
     write_roofs(gym, out / "regions/roofs.bin")
     write_npc_spawns(out / "spawns/world.npc-spawns.indexed.bin", gym.npc_spawns)
@@ -119,6 +127,21 @@ def main() -> None:
         print("build the C targets, then run ./build/cmake/rs-gym-validate", name, "for the manifest")
     x, y, plane = gym.start
     print(f"mode {name} ready in {out.relative_to(ROOT)}: start tile {x},{y},{plane}")
+
+
+def write_visuals(source: Path, path: Path) -> list[int]:
+    """Copies the mode's combat visuals table (rows over data/defs/combat_visuals.tsv, same
+    columns), when it has one, and returns the spot animations its rows name."""
+    if not source.is_file():
+        return []
+    shutil.copyfile(source, path)
+    columns = ("launch_spotanim", "travel_spotanim", "impact_spotanim", "aux_travel_spotanim",
+               "aux_impact_spotanim", "double_launch_spotanim")
+    lines = [l.split("|") for l in source.read_text().splitlines() if l.strip() and not l.startswith("#")]
+    header = lines[0]
+    found = {int(row[header.index(c)]) for row in lines[1:] for c in columns
+             if c in header and row[header.index(c)].strip().lstrip("-").isdigit()}
+    return sorted(i for i in found if i >= 0)
 
 
 def write_roofs(gym, path: Path) -> None:
