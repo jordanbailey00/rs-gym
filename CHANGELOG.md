@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-29: one island and one dungeon (visual pass)
+
+**What.** `maps/compact_v1.toml` is rebuilt from real b237 areas laid out as one place: Rimmington's
+houses round the well with the Draynor bank and the Lumbridge church, general store and smithy on
+the square; Fred's farm and a fenced cow pasture to the south; a curved river under the Lumbridge
+bridge to the woods; the Rimmington mine on the hill; a dark east with a graveyard round the
+trapdoor, the dark wizards' stone circle round the chaos altar and the Catherby pier; an essence
+quarry and henge-ringed altars. The dungeon is the Varrock sewers and the moss cave as one 192x64
+stamp: planks join the ladder rooms to the main channel, two of the sewers' doors are two-way gates
+into the north rooms, and the east trapdoor now comes down among the hill giants in the moss cave.
+The map compiler gained smooth coasts, rivers and roads with the client's overlay shapes on their
+edges, a grass underlay mix, ground decoration in real-world proportions, fences, floor overrides,
+and stamp options (decorative swaps for gatherable look-alikes, coast clipping, blended edges,
+plane limits). The viewer draws roofs and upper floors while the player is outdoors and can take
+hidden-window screenshots. In the engine, a mapsquare's placements carry a by-tile index, so tile
+lookups no longer scan the whole mapsquare, and the route search marks visited tiles with a
+generation counter; the compact-v2 loc index skips locs without options.
+
+**Why.** The old map looked unfinished: straight, stair-stepped roads across a bare green disk with
+four buildings, and a dungeon of three separate stamps joined by pipes. Decorated land holds about
+ten times the placements per mapsquare, which made every tile lookup slow (multi-agent throughput
+had halved), hence the index.
+
+**Checked.** `rs-gym-validate`: 698 checks pass; walking distances from the bank are 10-18 to town
+services, 40-56 to basic resources and goblins, 71-94 to advanced resources and Scurrius. Acceptance
+(five seeds): 15 of 15 routes kill Scurrius with credit; the co-op, contention and economy checks
+pass; hill giants pay about 215 coins per 1,000 ticks (182 before) and dark wizards about 12 kills per 1,000
+(about 3). Throughput: 38k ticks/s for one agent, about 100k world ticks/s for 16 worlds of 4 agents
+(132k on the old map: random agents now try more unreachable tiles, and each failed route search
+covers its whole window). Python map tests 15 of 15; ctest passes.
+
 ## 2026-10-29: balance and acceptance (Stage 6)
 
 **What.** `rs-gym-acceptance` (`rc-env/tools/acceptance.c`) runs the mode's acceptance evidence

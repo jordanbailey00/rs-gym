@@ -37,10 +37,10 @@ qualify_pct = 5                 # share of total actual player damage needed for
 
 [arena]                         # tiles of the map area below (maps/compact_v1.toml)
 area = "dungeon"
-rect = [44, 45, 59, 60]         # inside the lair walls
-centre = [51, 52]
-spawn = [51, 52]
-food_piles = [[51, 43], [51, 61], [60, 53]]   # the lair's three food piles
+rect = [139, 4, 154, 19]        # inside the lair walls
+centre = [146, 11]
+spawn = [146, 11]
+food_piles = [[146, 2], [146, 20], [155, 12]]   # the lair's three food piles
 
 [loot]
 always = [["Coins", 150, 150]]

@@ -45,9 +45,10 @@ enum {
     RAW_BEEF = 2132, COWHIDE = 1739, SMALL_NET = 303, FLY_ROD = 309, FEATHER = 314,
     RAW_SHRIMPS = 317, RAW_TROUT = 335, BURNT_SHRIMP = 7954, BURNT_FISH = 343, NET_SPOT = 1525,
     ROD_SPOT = 1526, BRONZE_PICKAXE = 1265, PURE_ESSENCE = 7936, ESSENCE_ROCK = 34773,
-    MIND_ALTAR = 34761, COOKED_MEAT = 2142, BURNT_MEAT = 2146, RANGE = 7183,
+    MIND_ALTAR = 34761, COOKED_MEAT = 2142, BURNT_MEAT = 2146, RANGE = 9682,
     COW = 2790, GOBLIN = 3029, SCURRIUS = 7222, SHOPKEEPER = 2813, AUBURY = 11434,
-    TRAPDOOR = 14880, LADDER = 17385, PIPE = 16511, BARS = 14203, SEWAGE = 14204, ALTAR = 409,
+    TRAPDOOR = 14880, LADDER = 17385, MANHOLE = 882, SEWER_LADDER = 11806, DOOR = 1535,
+    BARS = 14203, SEWAGE = 14204, ALTAR = 409,
 };
 
 static RcGymLayout layout;
@@ -92,18 +93,23 @@ static RcWorld *new_world(int players, uint32_t seed) {
 
 // ---- Places ----------------------------------------------------------------------------------------
 // World tiles of the reference map's links (maps/compact_v1.toml; the dungeon area starts at
-// 512,128). The surface has two ways down: the manhole into the sewers (rats, goblins) and the
-// trapdoor into the cave (skeletons, dark wizards, hill giants); a pipe joins the two, and the
-// cave's far pipe leads to Scurrius' lair.
+// 512,128). The manhole on the village square and the trapdoor in the east graveyard lead into one
+// dungeon: the sewers (rats and goblins by the manhole's ladder, hill giants in the moss cave under
+// the trapdoor), the north rooms behind two gates (dark wizards, skeletons), and Scurrius' arena
+// beyond the broken bars at the channel's east end.
 
-enum { SURFACE, SEWERS, CAVE, LAIR, ARENA };
+enum { SURFACE, SEWERS, NORTH, ARENA };
 
 static int region(int x, int y) {
     if (x < 512) return SURFACE;
-    if (x >= 578) return SEWERS;
-    if (x >= 555 && x <= 572 && y >= 172 && y <= 189) return ARENA;  // the arena side of the water
-    return y >= 169 ? LAIR : CAVE;
+    int lx = x - 512, ly = y - 128;
+    if (lx >= 138 && lx <= 155 && ly >= 3 && ly <= 20) return ARENA;  // the arena side of the water
+    if ((lx >= 95 && lx <= 135 && ly >= 32) || (lx >= 86 && lx <= 94 && ly >= 55)) return NORTH;
+    return SEWERS;
 }
+
+// Where the routes fish: the west beach's shrimp nets and the river's trout, below the bridge.
+enum { BEACH_X = 138, BEACH_Y = 166, RIVER_X = 145, RIVER_Y = 221 };
 
 typedef struct {
     int from, to, loc, x, y;
@@ -112,16 +118,16 @@ typedef struct {
 } Link;
 
 static const Link links[] = {
-    {SURFACE, SEWERS, 882, 174, 172, "Climb-down", 598, 133},
-    {SEWERS, SURFACE, 11806, 599, 133, "Climb-up", 174, 171},
-    {SURFACE, CAVE, TRAPDOOR, 228, 186, "Climb-down", 538, 160},
-    {CAVE, SURFACE, LADDER, 538, 161, "Climb-up", 228, 185},
-    {SEWERS, CAVE, PIPE, 615, 146, "Squeeze-through", 539, 164},
-    {CAVE, SEWERS, PIPE, 539, 166, "Squeeze-through", 614, 144},
-    {CAVE, LAIR, PIPE, 526, 139, "Squeeze-through", 545, 179},
-    {LAIR, CAVE, PIPE, 544, 183, "Squeeze-through", 526, 140},
-    {LAIR, ARENA, BARS, 547, 180, "Climb-through (normal)", 556, 180},
-    {ARENA, LAIR, SEWAGE, 553, 180, "Cross", 546, 179},
+    {SURFACE, SEWERS, MANHOLE, 168, 180, "Climb-down", 597, 131},
+    {SEWERS, SURFACE, SEWER_LADDER, 597, 130, "Climb-up", 168, 179},
+    {SURFACE, SEWERS, TRAPDOOR, 230, 200, "Climb-down", 527, 153},
+    {SEWERS, SURFACE, LADDER, 527, 154, "Climb-up", 230, 199},
+    {SEWERS, NORTH, DOOR, 607, 164, "Open", 607, 164},  // the gate off the channel's corridor
+    {NORTH, SEWERS, DOOR, 607, 164, "Open", 606, 164},
+    {SEWERS, NORTH, DOOR, 601, 182, "Open", 601, 183},  // the study door from the west rooms
+    {NORTH, SEWERS, DOOR, 601, 182, "Open", 601, 182},
+    {SEWERS, ARENA, BARS, 642, 139, "Climb-through (normal)", 651, 139},
+    {ARENA, SEWERS, SEWAGE, 648, 139, "Cross", 641, 138},
 };
 enum { LINK_COUNT = sizeof(links) / sizeof(links[0]) };
 
@@ -751,7 +757,7 @@ static void team_gather(ScAgent *a, Route *r) {
 static int fight_boss(ScAgent *a, Route *r) {
     RcWorld *w = sc_world(a);
     const RcModeBoss *b = &rules->boss;
-    if (!go(a, 545, 179)) return 0;  // the lair, by the bars
+    if (!go_lm(a, "lair_bars")) return 0;
     if (r->team) team_gather(a, r);
     for (int t = 0; t < 30 && sc_player(a)->current_hp < sc_player(a)->max_hp - 120 && food_count(a) > 4; t++)
         (void)sc_eat(a);
@@ -1046,11 +1052,11 @@ static void route_plan(ScAgent *a, void *arg) {
             // the boss has reset to full health.
             const RcModeBoss *b = &rules->boss;
             town_trip(a, r, 6);
-            (void)go(a, 545, 179);
+            (void)go_lm(a, "lair_bars");
             while (w->mode_boss.active && (int)w->tick < deadline) sc_wait(a, 10);
             (void)b;
             recover(a, r, dx, dy);
-            (void)go(a, 545, 179);
+            (void)go_lm(a, "lair_bars");
         }
         // Train more between attempts.
         train_until(a, r, npc, where, r->style != 2, style_level(a, r) + 2, coins(a) + 300, deadline - 900);
@@ -1111,7 +1117,7 @@ static int run_routes(int seeds) {
     }
     out("\n%d of %d routes killed Scurrius with credit inside the horizon. Logs: "
         "`build/acceptance/route-<style>-<seed>.log`.\n\n", wins, total);
-    static const char *names[] = {"Goblins (sewers)", "Hill giants (cave)", "Dark wizards (cave; ranged, after its kill)"};
+    static const char *names[] = {"Goblins (sewers)", "Hill giants (moss cave)", "Dark wizards (north rooms; ranged, after its kill)"};
     out("### Activity throughput (all routes above)\n\nTicks include travel, town trips and waiting for "
         "respawns; coins are those picked up from the kills.\n\n| Activity | Kills | Ticks | Kills per 1,000 "
         "ticks | Coins per kill | Coins per 1,000 ticks |\n|---|---|---|---|---|---|\n");
@@ -1299,11 +1305,11 @@ static void cook_plan(ScAgent *a, void *arg) {
         trout &= sc_count(a, FEATHER) > 0;
         int free_slots = sc_free_slots(a);
         if (trout) {
-            (void)go(a, 158, 224);  // the river
+            (void)go(a, RIVER_X, RIVER_Y);
             (void)sc_fish(a, ROD_SPOT, "Lure", RAW_TROUT, free_slots, 30);
         } else {
-            go_lm(a, "cows");
-            (void)sc_fish(a, NET_SPOT, "Small Net", RAW_SHRIMPS, free_slots, 60);
+            (void)go(a, BEACH_X, BEACH_Y);
+            (void)sc_fish(a, NET_SPOT, "Small Net", RAW_SHRIMPS, free_slots, 30);
         }
         go_lm(a, "range");
         for (int round = 0; round < 2; round++) {  // a Cook click cooks one kind of food
@@ -1683,7 +1689,7 @@ static void recovery_plan(ScAgent *a, void *arg) {
         beef_run(a, r, 6);
         while (coins(a) < price_of(0, BRONZE_SCIM) && (int)w->tick < eco.death_tick[0] + 3000) {
             const RcGymLandmark *g = lm("goblins");
-            if (region(sc_player(a)->x, sc_player(a)->y) != SEWERS) (void)go(a, g->x, g->y);
+            if (region(sc_player(a)->x, sc_player(a)->y) != region(g->x, g->y)) (void)go(a, g->x, g->y);
             if (fight_one(a, r, GOBLIN, 16, sc_player(a)->max_hp / 3) == 2) beef_run(a, r, 6);
         }
         go_lm(a, "general_store");
@@ -1749,9 +1755,9 @@ static void arrow_plan(ScAgent *a, void *arg) {
         while (sc_count(a, HEADLESS_ARROW) && sc_count(a, BRONZE_ARROWTIPS)
                && sc_use_items(a, HEADLESS_ARROW, BRONZE_ARROWTIPS) && sc_make(a, BRONZE_ARROW, 0) > 0) {}
         eco.arrows_made += sc_count(a, BRONZE_ARROW) - before;
+        if (sc_count(a, BRONZE_ARROW) > before) eco.arrow_ticks = (int)w->tick - start;  // the run may end mid-loop
         if (sc_count(a, BRONZE_ARROW) == before && !sc_count(a, HEADLESS_ARROW)) sc_wait(a, 5);
     }
-    eco.arrow_ticks = (int)w->tick - start;
     sc_note(a, "made %d bronze arrows in %d ticks; fletching %d smithing %d", eco.arrows_made, eco.arrow_ticks,
             level(a, SKILL_FLETCHING), level(a, SKILL_SMITHING));
 }

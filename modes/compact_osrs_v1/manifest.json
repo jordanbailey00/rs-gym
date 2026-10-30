@@ -2403,7 +2403,7 @@
    "roles": [
     "woodcutting node"
    ],
-   "placed": 5
+   "placed": 4
   },
   {
    "id": 1278,
@@ -2411,7 +2411,7 @@
    "roles": [
     "woodcutting node"
    ],
-   "placed": 6
+   "placed": 4
   },
   {
    "id": 2097,
@@ -2427,7 +2427,7 @@
    "roles": [
     "range"
    ],
-   "placed": 1
+   "placed": 0
   },
   {
    "id": 7184,
@@ -2443,7 +2443,7 @@
    "roles": [
     "range"
    ],
-   "placed": 0
+   "placed": 1
   },
   {
    "id": 10819,
@@ -2491,7 +2491,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 1
+   "placed": 2
   },
   {
    "id": 11161,
@@ -2499,7 +2499,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 3
+   "placed": 2
   },
   {
    "id": 11360,
@@ -2507,7 +2507,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 4
+   "placed": 2
   },
   {
    "id": 11361,
@@ -2515,7 +2515,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 0
+   "placed": 2
   },
   {
    "id": 11364,
@@ -2539,7 +2539,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 2
+   "placed": 3
   },
   {
    "id": 11367,
@@ -2547,7 +2547,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 4
+   "placed": 3
   },
   {
    "id": 11372,
@@ -2555,7 +2555,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 2
+   "placed": 3
   },
   {
    "id": 11373,
@@ -2563,7 +2563,7 @@
    "roles": [
     "mining node"
    ],
-   "placed": 2
+   "placed": 1
   },
   {
    "id": 12269,

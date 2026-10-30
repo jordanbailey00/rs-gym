@@ -8,21 +8,21 @@ Each run: one fresh character, the 12,000-tick horizon, a scripted plan through 
 
 | Style | Seed | Kill with credit | Ticks | Prep | Fight | Attempts | Deaths | Kills | Food eaten | Supplies bought (coins) | Gear bought (coins) | Levels (att/str/def/hp/rng/mag/pray) | State hash |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| melee | 1 | yes | 11889 | 9534 | 1439 | 2 | 1 | 122 | 130 | 1239 | 1060 | 40/40/30/39/1/1/26 | 089eecfcd697ded3 |
-| melee | 2 | yes | 10343 | 9507 | 634 | 1 | 0 | 121 | 110 | 882 | 960 | 40/40/29/37/1/1/25 | 85a228fad04aa96b |
-| melee | 3 | yes | 10364 | 9530 | 640 | 1 | 0 | 127 | 109 | 914 | 1060 | 40/40/30/38/1/1/26 | 5dd4ed5738e521a9 |
-| melee | 4 | yes | 10451 | 9529 | 724 | 1 | 0 | 130 | 117 | 848 | 1260 | 40/40/30/38/1/1/26 | 8f59371c7cb4453a |
-| melee | 5 | yes | 10427 | 9529 | 712 | 1 | 0 | 130 | 129 | 828 | 860 | 40/39/29/37/1/1/25 | 849da62af5f6b08a |
-| ranged | 1 | yes | 10257 | 9525 | 532 | 1 | 0 | 135 | 115 | 1486 | 240 | 1/1/37/37/40/1/25 | 12799f81f8b97acf |
-| ranged | 2 | yes | 10467 | 9542 | 707 | 1 | 0 | 105 | 97 | 1610 | 240 | 1/1/37/37/40/1/24 | 2b4b5d9403df10ea |
-| ranged | 3 | yes | 10343 | 9502 | 634 | 1 | 1 | 108 | 100 | 1522 | 150 | 1/1/34/36/40/1/23 | 9d244962797dd246 |
-| ranged | 4 | yes | 10422 | 9502 | 708 | 1 | 2 | 112 | 76 | 1787 | 240 | 1/1/37/37/40/1/24 | dfc1ffcddaa0c117 |
-| ranged | 5 | yes | 10313 | 9512 | 592 | 1 | 1 | 89 | 105 | 961 | 240 | 1/1/28/33/40/1/20 | 4f3ffc37fc4651a8 |
-| magic | 1 | yes | 10198 | 9524 | 469 | 1 | 0 | 271 | 34 | 2966 | 50 | 9/1/34/38/1/40/27 | 22191d2c0e5133c0 |
-| magic | 2 | yes | 10338 | 9536 | 580 | 1 | 0 | 259 | 35 | 2993 | 0 | 7/1/34/38/1/40/26 | 88f2f32bfa80afe1 |
-| magic | 3 | yes | 10485 | 9528 | 738 | 1 | 0 | 262 | 38 | 2999 | 50 | 8/1/35/38/1/40/26 | 3dd43467a544803d |
-| magic | 4 | yes | 10254 | 9529 | 502 | 1 | 0 | 230 | 47 | 2570 | 0 | 12/1/33/37/1/40/25 | cdc1071a677b24a3 |
-| magic | 5 | yes | 10266 | 9506 | 538 | 1 | 0 | 239 | 46 | 2690 | 0 | 6/1/34/37/1/40/25 | 85dcc90c7370bbcf |
+| melee | 1 | yes | 10338 | 9511 | 582 | 1 | 0 | 120 | 106 | 904 | 860 | 40/39/29/37/1/1/25 | 762ad24b4ceb3bed |
+| melee | 2 | yes | 10593 | 9753 | 586 | 1 | 0 | 113 | 105 | 912 | 860 | 40/40/29/37/1/1/25 | 3f2cf23bd73efab5 |
+| melee | 3 | yes | 10519 | 9517 | 754 | 1 | 0 | 109 | 130 | 1162 | 310 | 40/39/29/37/1/1/25 | 848bc9b9ad1df98e |
+| melee | 4 | yes | 10559 | 9587 | 726 | 1 | 0 | 123 | 121 | 867 | 860 | 40/40/29/37/1/1/25 | 2cad3b7f335c9cc8 |
+| melee | 5 | yes | 10579 | 9588 | 742 | 1 | 0 | 121 | 118 | 829 | 1060 | 40/40/29/37/1/1/25 | 47a255abc1b18195 |
+| ranged | 1 | yes | 10537 | 9520 | 748 | 1 | 0 | 133 | 95 | 1714 | 240 | 1/1/39/39/40/1/26 | 8727aee264a7f59b |
+| ranged | 2 | yes | 10533 | 9575 | 692 | 1 | 0 | 131 | 79 | 1808 | 240 | 1/1/39/39/40/1/26 | 51983ec38eaab1c1 |
+| ranged | 3 | yes | 10489 | 9550 | 668 | 1 | 0 | 135 | 74 | 1667 | 710 | 1/1/40/39/40/1/27 | 01bcafc1d0f2fe70 |
+| ranged | 4 | yes | 10357 | 9551 | 544 | 1 | 0 | 116 | 90 | 1448 | 710 | 1/1/38/38/40/1/26 | 8ca6bfae3b8af30a |
+| ranged | 5 | yes | 10573 | 9580 | 719 | 1 | 0 | 151 | 82 | 1788 | 710 | 1/1/40/40/40/1/27 | 5d62993cc780119e |
+| magic | 1 | yes | 10394 | 9501 | 652 | 1 | 0 | 247 | 36 | 2751 | 0 | 5/1/34/38/1/40/26 | b98f502ed4ae9117 |
+| magic | 2 | yes | 10258 | 9519 | 479 | 1 | 0 | 250 | 44 | 2826 | 50 | 7/1/34/38/1/40/26 | ba45b80181587dbc |
+| magic | 3 | yes | 10281 | 9529 | 491 | 1 | 0 | 250 | 37 | 2832 | 0 | 6/1/34/38/1/40/26 | bd1d7aaa8e066960 |
+| magic | 4 | yes | 10263 | 9503 | 514 | 1 | 0 | 233 | 34 | 2718 | 0 | 6/1/33/37/1/40/25 | 5ad39d497b0c3974 |
+| magic | 5 | yes | 10267 | 9511 | 491 | 1 | 0 | 255 | 30 | 2854 | 50 | 9/1/34/38/1/40/26 | c4f4b50133124732 |
 
 15 of 15 routes killed Scurrius with credit inside the horizon. Logs: `build/acceptance/route-<style>-<seed>.log`.
 
@@ -32,10 +32,10 @@ Ticks include travel, town trips and waiting for respawns; coins are those picke
 
 | Activity | Kills | Ticks | Kills per 1,000 ticks | Coins per kill | Coins per 1,000 ticks |
 |---|---|---|---|---|---|
-| Goblins (sewers) | 1657 | 67696 | 24.5 | 12.1 | 296 |
-| Hill giants (cave) | 420 | 64929 | 6.5 | 28.1 | 182 |
-| Dark wizards (cave; ranged, after its kill) | 22 | 7102 | 3.1 | 10.7 | 33 |
-| Scurrius | 15 | 10149 | 1.5 | 150 plus one bundle | - |
+| Goblins (sewers) | 1565 | 64581 | 24.2 | 12.0 | 292 |
+| Hill giants (moss cave) | 527 | 67085 | 7.9 | 27.3 | 215 |
+| Dark wizards (north rooms; ranged, after its kill) | 77 | 6516 | 11.8 | 9.0 | 106 |
+| Scurrius | 15 | 9388 | 1.6 | 150 plus one bundle | - |
 
 ## Four-player co-op
 
@@ -43,9 +43,9 @@ A melee fighter and a mage train as in the solo routes; a cook (fishing, cooking
 
 | Team kill | Kill tick | Fight participants | Boss max HP | Supplier trades | All trades | Food cooked | Mind runes crafted | Deaths (melee/mage/cook/crafter) | State hash |
 |---|---|---|---|---|---|---|---|---|---|
-| yes | 10520 | 2 | 420 | 3 | 3 | 357 | 925 | 0/0/0/0 | d3e7ccaf7b2fce55 |
+| yes | 10646 | 2 | 420 | 3 | 3 | 399 | 969 | 0/0/0/0 | 1573cc9d26c66d4b |
 
-Production from level 1 (travel and banking included): the cook made 357 food in 9201 ticks (39 per 1,000), shrimps until Fishing and Cooking 15, trout after; the runecrafter made 925 mind runes in 8958 ticks (103 per 1,000).
+Production from level 1 (travel and banking included): the cook made 399 food in 9049 ticks (44 per 1,000), shrimps until Fishing and Cooking 15, trout after; the runecrafter made 969 mind runes in 8807 ticks (110 per 1,000).
 
 ## Eight-player contention
 
@@ -53,7 +53,7 @@ Eight fresh characters at once: four mine the same copper and tin rocks; four bu
 
 | Check | Result | Detail |
 |---|---|---|
-| Shared rocks | pass | ore per miner 56/43/54/54 (no player under a third of the best) |
+| Shared rocks | pass | ore per miner 52/59/52/55 (no player under a third of the best) |
 | One shop stock | pass | 8 bought by four players (2/2/2/2) from a stock of 4; lowest stock seen 0; scimitars in the world rose by exactly the purchases |
 | Coins | pass | world coins fell by exactly the purchase prices |
 | Ground race | pass | 3 players reached for one dropped scimitar; 1 got it |
@@ -66,9 +66,9 @@ Eight fresh characters at once: four mine the same copper and tin rocks; four bu
 | Buy and sell back | pass | 57 shop rows; 0 sell for at least their price |
 | Dose splitting | pass | prayer potion (3)/(2)/(1) sell for at most their share of a (4) (96) |
 | Conservation | pass | bank, equip, drop and pick up, shop buy and sell, a trade: 9 checks |
-| Death from zero | pass | all 11 kit items and every coin carried or spent; died at tick 186; respawned with nothing and no starter grant; a scimitar earned back by tick 1763; died again at tick 1882; both graves expired into the bank: 11 of 11 kit items and the scimitar, none left on the ground |
+| Death from zero | pass | all 11 kit items and every coin carried or spent; died at tick 160; respawned with nothing and no starter grant; a scimitar earned back by tick 2217; died again at tick 2325; both graves expired into the bank: 11 of 11 kit items and the scimitar, none left on the ground |
 | Full bank at expiry | covered by test | tests/test_compact_boss.c fills the bank (test setup); the expiring items stay private on the ground and bank once a slot frees |
-| Arrow production | pass | 120 bronze arrows from logs, bought feathers and smithed tips in 4012 ticks from a fresh character |
+| Arrow production | pass | 120 bronze arrows from logs, bought feathers and smithed tips in 1087 ticks from a fresh character |
 
 ## Throughput
 
@@ -76,10 +76,10 @@ Random masked actions through the compact-v2 interface, observations and masks c
 
 | Worlds (threads) | Agents per world | Ticks per world | World ticks/s | Agent steps/s |
 |---|---|---|---|---|
-| 1 | 1 | 3000 | 33930 | 33930 |
-| 1 | 4 | 3000 | 13572 | 54290 |
-| 1 | 8 | 3000 | 5910 | 47282 |
-| 16 | 4 | 2000 | 144191 | 576766 |
+| 1 | 1 | 3000 | 35183 | 35183 |
+| 1 | 4 | 3000 | 9047 | 36187 |
+| 1 | 8 | 3000 | 4594 | 36755 |
+| 16 | 4 | 2000 | 98275 | 393098 |
 
-Resident memory after the runs: 203 MB (shared game data, plus each world while it lives).
+Resident memory after the runs: 204 MB (shared game data, plus each world while it lives).
 
