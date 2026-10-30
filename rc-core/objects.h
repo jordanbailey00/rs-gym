@@ -6,6 +6,7 @@
 #define RC_MAX_OBJECT_ID 65536
 #define RC_OBJECT_ACTIONS 5
 #define RC_OBJECT_PLACEMENT_DEFAULT_CACHE_PAGES 64
+#define RC_OBJECT_TILE_PLACEMENTS 32  // the most locs one tile holds (one per layer, plus spares)
 
 typedef struct RcObjectPlacementStore RcObjectPlacementStore;
 

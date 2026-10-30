@@ -13,12 +13,13 @@ enum {
 };
 
 typedef struct {
-    uint8_t visited[SEARCH_SIZE][SEARCH_SIZE];
+    uint16_t visited[SEARCH_SIZE][SEARCH_SIZE];  // == generation: reached in the current search
     int8_t parent_x[SEARCH_SIZE][SEARCH_SIZE];
     int8_t parent_y[SEARCH_SIZE][SEARCH_SIZE];
     uint16_t distance[SEARCH_SIZE][SEARCH_SIZE];
     uint16_t queue_x[SEARCH_SIZE * SEARCH_SIZE];
     uint16_t queue_y[SEARCH_SIZE * SEARCH_SIZE];
+    uint16_t generation;  // a new search marks with a new number instead of clearing `visited`
 } RcRouteScratch;
 
 static _Thread_local RcRouteScratch route_scratch;
@@ -663,12 +664,16 @@ RcRoute rc_find_route(const RcWorldMap *map, int start_x, int start_y,
     }
 
     RcRouteScratch *scratch = &route_scratch;
-    memset(scratch->visited, 0, sizeof(scratch->visited));
+    if (++scratch->generation == 0) {
+        memset(scratch->visited, 0, sizeof(scratch->visited));
+        scratch->generation = 1;
+    }
+    uint16_t generation = scratch->generation;
     int origin_x = start_x - SEARCH_HALF;
     int origin_y = start_y - SEARCH_HALF;
     int local_source_x = SEARCH_HALF;
     int local_source_y = SEARCH_HALF;
-    scratch->visited[local_source_x][local_source_y] = 1;
+    scratch->visited[local_source_x][local_source_y] = generation;
     scratch->distance[local_source_x][local_source_y] = 0;
     int head = 0, tail = 1;
     scratch->queue_x[0] = local_source_x;
@@ -712,12 +717,12 @@ RcRoute rc_find_route(const RcWorldMap *map, int start_x, int start_y,
             int next_y = local_y + step_y[direction];
             if (next_x < 0 || next_x >= SEARCH_SIZE
                     || next_y < 0 || next_y >= SEARCH_SIZE
-                    || scratch->visited[next_x][next_y]
+                    || scratch->visited[next_x][next_y] == generation
                     || !rc_can_move_rect(map, world_x, world_y,
                                          entity_width, entity_height,
                                          step_x[direction], step_y[direction],
                                          plane)) continue;
-            scratch->visited[next_x][next_y] = 1;
+            scratch->visited[next_x][next_y] = generation;
             scratch->parent_x[next_x][next_y] = (int8_t)-step_x[direction];
             scratch->parent_y[next_x][next_y] = (int8_t)-step_y[direction];
             scratch->distance[next_x][next_y] = next_distance;

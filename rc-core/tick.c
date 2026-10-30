@@ -1618,15 +1618,11 @@ void rc_player_interact_object(RcWorld *world, int obj_id, int opt) {
 static int object_exact_placement(int obj_id, int x, int y, int plane,
                                   RcObjectPlacement *out) {
     if (!out || obj_id < 0 || !rc_world_tile_valid(x, y, plane)) return 0;
-    uint16_t mapsquare;
-    if (!rc_world_to_mapsquare(x, y, &mapsquare, NULL, NULL)) return 0;
-    int count = 0;
     int matches = 0;
-    const RcObjectPlacement *rows = rc_object_region_placements(
-        mapsquare, &count);
-    for (int i = 0; rows && i < count; i++) {
-        if ((int)rows[i].obj_id == obj_id && rows[i].x == x
-                && rows[i].y == y && rows[i].plane == plane) {
+    RcObjectPlacement rows[RC_OBJECT_TILE_PLACEMENTS];
+    int count = rc_object_placements_at(x, y, plane, rows, RC_OBJECT_TILE_PLACEMENTS);
+    for (int i = 0; i < count; i++) {
+        if ((int)rows[i].obj_id == obj_id) {
             *out = rows[i];
             matches++;
         }
@@ -2072,15 +2068,10 @@ static int find_paired_dynamic_placement(const RcObjectPlacement *base,
     }
     int x = base->x + dx;
     int y = base->y + dy;
-    uint16_t mapsquare;
-    if (!rc_world_to_mapsquare(x, y, &mapsquare, NULL, NULL)) return 0;
-    int count = 0;
-    const RcObjectPlacement *rows = rc_object_region_placements(
-        mapsquare, &count);
+    RcObjectPlacement rows[RC_OBJECT_TILE_PLACEMENTS];
+    int count = rc_object_placements_at(x, y, base->plane, rows, RC_OBJECT_TILE_PLACEMENTS);
     int matches = 0;
-    for (int i = 0; rows && i < count; i++) {
-        if (rows[i].x != x || rows[i].y != y || rows[i].plane != base->plane)
-            continue;
+    for (int i = 0; i < count; i++) {
         const RcObjectBehavior *other =
             rc_object_behavior_get((int)rows[i].obj_id);
         if (!other)

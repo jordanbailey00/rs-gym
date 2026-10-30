@@ -26,6 +26,7 @@ enum {
 
 typedef struct {
     RcObjectPlacement *rows;
+    uint32_t *by_tile;  // row indices by plane, x, y, then row order: one tile's rows sit together
     uint32_t count;
     uint64_t last_used;
     uint16_t mapsquare;
@@ -98,8 +99,10 @@ static char *copy_string(const char *s) {
 static void object_placement_store_free(RcObjectPlacementStore *store) {
     if (!store) return;
     if (store->pages) {
-        for (uint32_t i = 0; i < store->cache_capacity; i++)
+        for (uint32_t i = 0; i < store->cache_capacity; i++) {
             free(store->pages[i].rows);
+            free(store->pages[i].by_tile);
+        }
     }
     free(store->pages);
     free(store->cache_slots);
@@ -620,6 +623,38 @@ static int parse_placement_page(const unsigned char *raw, uint32_t count,
     return 1;
 }
 
+// A row's tile within its mapsquare: plane, then local x, then local y.
+static uint32_t placement_tile_key(const RcObjectPlacement *row) {
+    return (uint32_t)row->plane << 12 | (uint32_t)(row->x & 63) << 6 | (uint32_t)(row->y & 63);
+}
+
+typedef struct {
+    uint32_t key, row;
+} TileSortEntry;
+
+static int compare_tile_entries(const void *a, const void *b) {
+    const TileSortEntry *l = a, *r = b;
+    if (l->key != r->key) return l->key < r->key ? -1 : 1;
+    return l->row < r->row ? -1 : l->row > r->row;
+}
+
+// The page's rows ordered by tile, keeping row order within a tile, so a tile's lookups are a
+// binary search instead of a scan of the whole mapsquare (decorated land holds thousands of rows).
+static uint32_t *index_page_by_tile(const RcObjectPlacement *rows, uint32_t count) {
+    TileSortEntry *entries = malloc((size_t)(count ? count : 1) * sizeof(*entries));
+    uint32_t *order = malloc((size_t)(count ? count : 1) * sizeof(*order));
+    if (!entries || !order) {
+        free(entries);
+        free(order);
+        return NULL;
+    }
+    for (uint32_t i = 0; i < count; i++) entries[i] = (TileSortEntry){placement_tile_key(&rows[i]), i};
+    qsort(entries, count, sizeof(*entries), compare_tile_entries);
+    for (uint32_t i = 0; i < count; i++) order[i] = entries[i].row;
+    free(entries);
+    return order;
+}
+
 static RcObjectPlacementPage *cached_placement_page(
     RcObjectPlacementStore *store, uint16_t mapsquare) {
     uint32_t slot = store->cache_slots[mapsquare];
@@ -677,7 +712,8 @@ static int object_placement_page_get(RcObjectPlacementStore *store,
         && parse_placement_page(raw, source.count, mapsquare, rows);
     free(raw);
     if (close_reader) rc_asset_reader_close(reader);
-    if (!ok) {
+    uint32_t *by_tile = ok ? index_page_by_tile(rows, source.count) : NULL;
+    if (!ok || !by_tile) {
         free(rows);
         return 0;
     }
@@ -687,11 +723,13 @@ static int object_placement_page_get(RcObjectPlacementStore *store,
         store->cache_slots[page->mapsquare] = UINT32_MAX;
         store->resident_rows -= page->count;
         free(page->rows);
+        free(page->by_tile);
     } else {
         store->resident_pages++;
     }
     *page = (RcObjectPlacementPage){
         .rows = rows,
+        .by_tile = by_tile,
         .count = source.count,
         .last_used = ++store->use_clock,
         .mapsquare = mapsquare,
@@ -958,8 +996,10 @@ int rc_object_placements_set_cache_limit(int max_pages) {
     RcObjectPlacementPage *pages = calloc(
         (size_t)max_pages, sizeof(*pages));
     if (!pages) return -1;
-    for (uint32_t i = 0; i < store->cache_capacity; i++)
+    for (uint32_t i = 0; i < store->cache_capacity; i++) {
         free(store->pages[i].rows);
+        free(store->pages[i].by_tile);
+    }
     free(store->pages);
     store->pages = pages;
     memset(store->cache_slots, 0xff,
@@ -1094,6 +1134,26 @@ int rc_object_placements_at(int x, int y, int plane,
     if (!rc_world_tile_valid(x, y, plane)
             || !rc_world_to_mapsquare(x, y, &ms, NULL, NULL)
             || !out || max_out <= 0) return 0;
+    RcObjectPlacementStore *store = active_placement_store();
+    RcObjectPlacementPage *page = NULL;
+    if (store) {
+        if (!object_placement_page_get(store, NULL, ms, &page, NULL) || !page) return 0;
+        // Binary search for the tile's first row in tile order; its rows follow in row order.
+        uint32_t key = (uint32_t)plane << 12 | (uint32_t)(x & 63) << 6 | (uint32_t)(y & 63);
+        uint32_t lo = 0, hi = page->count;
+        while (lo < hi) {
+            uint32_t mid = lo + (hi - lo) / 2;
+            if (placement_tile_key(&page->rows[page->by_tile[mid]]) < key) lo = mid + 1;
+            else hi = mid;
+        }
+        int n = 0;
+        for (uint32_t i = lo; i < page->count && n < max_out; i++) {
+            const RcObjectPlacement *row = &page->rows[page->by_tile[i]];
+            if (placement_tile_key(row) != key) break;
+            out[n++] = *row;
+        }
+        return n;
+    }
     int count = 0;
     const RcObjectPlacement *rows = rc_object_region_placements(ms, &count);
     int n = 0;
@@ -1119,12 +1179,11 @@ int rc_object_placement_find_key(uint64_t key, int x, int y, int plane,
             || !rc_world_to_mapsquare(x, y, &mapsquare, NULL, NULL)) {
         return 0;
     }
-    int count = 0;
-    const RcObjectPlacement *rows = rc_object_region_placements(
-        mapsquare, &count);
-    for (int i = 0; rows && i < count; i++) {
-        if (rows[i].key == key && rows[i].x == x && rows[i].y == y
-                && rows[i].plane == plane) {
+    (void)mapsquare;
+    RcObjectPlacement rows[RC_OBJECT_TILE_PLACEMENTS];
+    int count = rc_object_placements_at(x, y, plane, rows, RC_OBJECT_TILE_PLACEMENTS);
+    for (int i = 0; i < count; i++) {
+        if (rows[i].key == key) {
             *out = rows[i];
             return 1;
         }
@@ -1140,15 +1199,12 @@ int rc_object_placement_find_layer(int x, int y, int plane, int layer,
             || !rc_world_to_mapsquare(x, y, &mapsquare, NULL, NULL)) {
         return 0;
     }
-    int count = 0;
+    (void)mapsquare;
     int matches = 0;
-    const RcObjectPlacement *rows = rc_object_region_placements(
-        mapsquare, &count);
-    for (int i = 0; rows && i < count; i++) {
-        if (rows[i].x != x || rows[i].y != y || rows[i].plane != plane
-                || rc_object_layer_for_type(rows[i].type) != layer) {
-            continue;
-        }
+    RcObjectPlacement rows[RC_OBJECT_TILE_PLACEMENTS];
+    int count = rc_object_placements_at(x, y, plane, rows, RC_OBJECT_TILE_PLACEMENTS);
+    for (int i = 0; i < count; i++) {
+        if (rc_object_layer_for_type(rows[i].type) != layer) continue;
         *out = rows[i];
         matches++;
     }

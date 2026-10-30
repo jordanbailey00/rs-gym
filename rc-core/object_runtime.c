@@ -299,6 +299,7 @@ int rc_world_object_current_placement(const RcWorld *world, int obj_id,
 
     uint16_t mapsquare;
     if (!rc_world_to_mapsquare(x, y, &mapsquare, NULL, NULL)) return 0;
+    (void)mapsquare;
     int count = 0;
     int matches = 0;
     RcObjectPlacement resolved = {0};
@@ -317,11 +318,9 @@ int rc_world_object_current_placement(const RcWorld *world, int obj_id,
         resolved = candidate;
         matches++;
     }
-    const RcObjectPlacement *rows = rc_object_region_placements(
-        mapsquare, &count);
-    for (int i = 0; rows && i < count; i++) {
-        if (rows[i].x != x || rows[i].y != y || rows[i].plane != plane)
-            continue;
+    RcObjectPlacement rows[RC_OBJECT_TILE_PLACEMENTS];
+    count = rc_object_placements_at(x, y, plane, rows, RC_OBJECT_TILE_PLACEMENTS);
+    for (int i = 0; i < count; i++) {
         if (rows[i].key
                 && rc_world_object_state_find_key_const(world, rows[i].key)) {
             continue;

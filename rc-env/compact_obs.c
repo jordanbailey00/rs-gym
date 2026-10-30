@@ -171,6 +171,8 @@ static void index_locs(RcCompactEnv *env) {
             RcObjectPlacement rows[6];
             int count = rc_object_placements_at(x, y, 0, rows, 6);
             for (int r = 0; r < count; r++) {
+                const RcObjectDef *def = rc_object_def_get((int)rows[r].obj_id);
+                if (!def || !def->action_count) continue;  // scenery: grass, flowers, fences
                 RcCenvLoc loc = {.id = (int)rows[r].obj_id, .x = x, .y = y, .plane = 0,
                                  .ops = {-1, -1, -1}};
                 int k = 0;
