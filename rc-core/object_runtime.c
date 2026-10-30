@@ -47,7 +47,7 @@ static void change_wall(RcWorld *world, const RcObjectPlacement *object,
                       object->plane, wall_flags((flags), projectile), add)
     int rotation = object->rotation & 3;
     int type = object->type;
-    if (type == 0 || type == 3) {
+    if (type == 0) {
         if (rotation == 0) {
             CHANGE(0, 0, COL_WALL_W); CHANGE(-1, 0, COL_WALL_E);
         } else if (rotation == 1) {
@@ -71,7 +71,7 @@ static void change_wall(RcWorld *world, const RcObjectPlacement *object,
             CHANGE(0, 0, COL_WALL_W | COL_WALL_S);
             CHANGE(-1, 0, COL_WALL_E); CHANGE(0, -1, COL_WALL_N);
         }
-    } else if (type == 1) {
+    } else if (type == 1 || type == 3) {  // diagonal and square corners block the diagonal
         if (rotation == 0) {
             CHANGE(0, 0, COL_WALL_NW); CHANGE(-1, 1, COL_WALL_SE);
         } else if (rotation == 1) {

@@ -546,7 +546,10 @@ def mark_wall(
                 _flag_safe(flags, height, lx - 1, ly, IMPENETRABLE_WALL_EAST)
                 _flag_safe(flags, height, lx, ly - 1, IMPENETRABLE_WALL_NORTH)
 
-    elif obj_type == OBJ_DIAGONAL_CORNER:
+    # A square corner (type 3) blocks only the diagonal past its corner, as the
+    # client's collision map does for both corner types; marking it as a straight
+    # wall closed passages the game leaves open (the corridor to Scurrius' lair).
+    elif obj_type in (OBJ_DIAGONAL_CORNER, OBJ_WALL_CORNER):
         if direction == DIR_WEST:
             _flag(flags, height, lx, ly, WALL_NORTH_WEST)
             _flag_safe(flags, height, lx - 1, ly + 1, WALL_SOUTH_EAST)
@@ -572,31 +575,6 @@ def mark_wall(
                 _flag(flags, height, lx, ly, IMPENETRABLE_WALL_SOUTH_WEST)
                 _flag_safe(flags, height, lx - 1, ly - 1, IMPENETRABLE_WALL_NORTH_EAST)
 
-    elif obj_type == OBJ_WALL_CORNER:
-        if direction == DIR_WEST:
-            _flag(flags, height, lx, ly, WALL_WEST)
-            _flag_safe(flags, height, lx - 1, ly, WALL_EAST)
-            if impenetrable:
-                _flag(flags, height, lx, ly, IMPENETRABLE_WALL_WEST)
-                _flag_safe(flags, height, lx - 1, ly, IMPENETRABLE_WALL_EAST)
-        elif direction == DIR_NORTH:
-            _flag(flags, height, lx, ly, WALL_NORTH)
-            _flag_safe(flags, height, lx, ly + 1, WALL_SOUTH)
-            if impenetrable:
-                _flag(flags, height, lx, ly, IMPENETRABLE_WALL_NORTH)
-                _flag_safe(flags, height, lx, ly + 1, IMPENETRABLE_WALL_SOUTH)
-        elif direction == DIR_EAST:
-            _flag(flags, height, lx, ly, WALL_EAST)
-            _flag_safe(flags, height, lx + 1, ly, WALL_WEST)
-            if impenetrable:
-                _flag(flags, height, lx, ly, IMPENETRABLE_WALL_EAST)
-                _flag_safe(flags, height, lx + 1, ly, IMPENETRABLE_WALL_WEST)
-        elif direction == DIR_SOUTH:
-            _flag(flags, height, lx, ly, WALL_SOUTH)
-            _flag_safe(flags, height, lx, ly - 1, WALL_NORTH)
-            if impenetrable:
-                _flag(flags, height, lx, ly, IMPENETRABLE_WALL_SOUTH)
-                _flag_safe(flags, height, lx, ly - 1, IMPENETRABLE_WALL_NORTH)
 
 
 def mark_occupant(

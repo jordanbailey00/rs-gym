@@ -1658,7 +1658,7 @@ static int wall_side_reaches(const RcObjectPlacement *p, int tx, int ty) {
     int r = p->rotation & 3;
     if (tx == x && ty == y)
         return 1;
-    if (p->type == 0 || p->type == 3) {
+    if (p->type == 0) {
         if (r == 0) return tx == x - 1 && ty == y;
         if (r == 1) return tx == x && ty == y + 1;
         if (r == 2) return tx == x + 1 && ty == y;
@@ -1674,7 +1674,7 @@ static int wall_side_reaches(const RcObjectPlacement *p, int tx, int ty) {
         return (tx == x - 1 && ty == y)
             || (tx == x && ty == y - 1);
     }
-    if (p->type == 1) {
+    if (p->type == 1 || p->type == 3) {
         if (r == 0) return tx == x - 1 && ty == y + 1;
         if (r == 1) return tx == x + 1 && ty == y + 1;
         if (r == 2) return tx == x + 1 && ty == y - 1;

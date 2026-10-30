@@ -460,7 +460,7 @@ at = [0, 0]
 drop_ids = [16511, 733, 16285, 16286, 16288, 16290, 32534]  # the pipe out; the web; a hedge-walled pen
 planes = 2                         # the sewer's rock ceiling, not what stands on the streets above
 ground_only = [[122, 0, 160, 32]]  # and no ceiling over the lair: its blank-out sits higher
-drop_at = [[121, 14, 1620], [122, 14, 1620], [93, 60, 1535], [78, 48, 17385]]  # pillars; a door; a ladder to nowhere
+drop_at = [[93, 60, 1535], [78, 48, 17385]]  # a door; a ladder to nowhere
 
 [[floor]]                          # planks over the channel between the ladder rooms and the main sewer
 area = "dungeon"

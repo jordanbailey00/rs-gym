@@ -23,9 +23,6 @@ v1 is `compact_osrs_v1` (see `SPEC.md`). Stages 1-6 are done; the acceptance evi
 ## Map and viewer
 - Scurrius' lair keeps no ceiling (its blank-out sat higher than the sewers' rock), so the lair's
   outer walls show dark faces from above.
-- The collision exporter treats square wall corners (loc type 3) as straight walls; the client
-  only blocks the diagonal. Two such pillars were dropped from the sewers to open the bars
-  corridor; others may block passages the real game allows.
 - Random-action throughput is about a fifth lower than on the bare map: random walk targets are
   more often unreachable on the decorated island, and each failed search covers its window.
 

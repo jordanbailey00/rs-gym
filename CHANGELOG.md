@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-10-30: square wall corners block only their diagonal
+
+**What.** Loc type 3 (a square wall corner, such as a pillar at a corridor's mouth) now marks the
+corner flags the client uses, in the collision export (`tools/cache_pipeline/export_collision_map.py`),
+the engine's runtime door and wall changes (`rc-core/object_runtime.c`) and interaction reach
+(`rc-core/tick.c`); both had treated it as a straight wall. The two pillars dropped from the sewers
+stamp are back.
+
+**Why.** As straight walls the corners closed passages the game leaves open; the corridor to
+Scurrius' broken bars was one.
+
+**Checked.** The dungeon's walkable sections are unchanged with the pillars restored; ctest and the
+map tests pass; acceptance (five seeds) still has 15 of 15 credited kills and every co-op,
+contention and economy check passing.
+
 ## 2026-10-29: one island and one dungeon (visual pass)
 
 **What.** `maps/compact_v1.toml` is rebuilt from real b237 areas laid out as one place: Rimmington's
