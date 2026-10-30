@@ -76,10 +76,10 @@ Random masked actions through the compact-v2 interface, observations and masks c
 
 | Worlds (threads) | Agents per world | Ticks per world | World ticks/s | Agent steps/s |
 |---|---|---|---|---|
-| 1 | 1 | 3000 | 34482 | 34482 |
-| 1 | 4 | 3000 | 13785 | 55138 |
-| 1 | 8 | 3000 | 5986 | 47887 |
-| 16 | 4 | 2000 | 135078 | 540311 |
+| 1 | 1 | 3000 | 33930 | 33930 |
+| 1 | 4 | 3000 | 13572 | 54290 |
+| 1 | 8 | 3000 | 5910 | 47282 |
+| 16 | 4 | 2000 | 144191 | 576766 |
 
 Resident memory after the runs: 203 MB (shared game data, plus each world while it lives).
 
