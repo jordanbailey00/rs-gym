@@ -3,7 +3,13 @@
 A spec names its areas: an island surface and void areas such as a dungeon. Coordinates in a table
 are tiles relative to its area's south-west corner (`area` defaults to "surface"); `[[stamp]]
 source` coordinates are real b237 tiles.
-Order: terrain -> rivers -> paths -> stamps -> locs -> scatter -> links, zones, spawns, items.
+Order: terrain -> paint -> rivers -> paths -> stamps -> locs -> scatter -> decor -> links, zones,
+spawns, items.
+
+Opt-in smooth floors (`[island] coast = "smooth"`, `curve = true` on rivers and paths, `blob = true`
+on paint) give coasts, water and roads the client's shaped tile edges; `[island] grass` mixes grass
+underlays in noise patches; `[[decor]]` scatters ground decoration; `[replace]` turns stamped
+gatherable look-alikes into scenery so resource budgets stay with `[[loc]]` and `[[scatter]]`.
 """
 
 from __future__ import annotations
@@ -20,6 +26,7 @@ from rc_cache import RcCacheStore, read_map_region_file
 from rc_cache.definitions import decode_location_definition, decode_npc_definition
 
 from .mapformat import PLANES, PROCEDURAL, SIZE, Loc, Tile, decode_locs, decode_terrain, empty_tiles, encode_locs, encode_terrain
+from .shapes import Band, coverage, curve, fit_shape, fractal, noise
 from .spatial import (AREA_MULTICOMBAT, AREA_WILDERNESS, AREA_WILDERNESS_LEVEL, TRAVERSAL_OBJECT, Edge, Zone,
                       read_traversal)
 
@@ -260,10 +267,102 @@ def _island(canvas: Canvas, area: Area, spec: dict, mats: dict, seed: int) -> No
         _paint(t, mat)
 
 
+def _palette(points: list, pairs: list, value) -> dict:
+    """Underlay per point from [underlay, weight] pairs: noise quantiles, so weights are shares."""
+    vals = sorted(value(*p) for p in points)
+    total = sum(w for _, w in pairs)
+    cuts, acc = [], 0.0
+    for u, w in pairs:
+        acc += w / total
+        cuts.append((vals[min(len(vals) - 1, int(acc * len(vals)))], u))
+    return {p: next((u for cut, u in cuts if value(*p) <= cut), pairs[-1][0]) for p in points}
+
+
+def _island_smooth(canvas: Canvas, area: Area, spec: dict, mats: dict, seed: int) -> None:
+    """A curved coast: edge tiles take shaped sea overlays over sand, the beach is sand underlay
+    that blends inland into patches of grass underlays (`grass`), as on real coasts. `sea` and
+    `land` circles ([x, y, r], area tiles) cut bays and add headlands."""
+    rng = random.Random(seed)
+    x0, y0, x1, y1 = area.bounds
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    radius = spec["radius"]
+    wobble = [(spec["wobble"] / k, k, rng.uniform(0, 2 * math.pi)) for k in range(2, 7)]
+    rough = spec.get("coast_noise", 0.0)
+    seas = [(x0 + x, y0 + y, r) for x, y, r in spec.get("sea", [])]
+    lands = [(x0 + x, y0 + y, r) for x, y, r in spec.get("land", [])]
+
+    power = spec.get("squareness", 2.0)  # superellipse exponent: 2 is round, higher is squarer
+
+    def depth(px: float, py: float) -> float:  # > 0 on land: tiles inside the coast
+        angle = math.atan2(py - cy, px - cx)
+        c, s = abs(math.cos(angle)), abs(math.sin(angle))
+        reach = radius / max(1e-9, c ** power + s ** power) ** (1 / power)
+        d = reach * (1 + sum(a * math.sin(k * angle + p) for a, k, p in wobble)) - math.hypot(px - cx, py - cy)
+        d += rough * (fractal(px, py, 14.0, seed) - 0.5) * 2
+        for x, y, r in lands:
+            d = max(d, r - math.hypot(px - x, py - y))
+        for x, y, r in seas:
+            d = min(d, math.hypot(px - x, py - y) - r)
+        return d
+
+    def on_land(px: float, py: float) -> bool:
+        return x0 <= px < x1 and y0 <= py < y1 and depth(px, py) > 0
+
+    squares = area.squares()
+    tiles = canvas.tiles_of(squares)
+    in_area = lambda p: (p[0] >> 6, p[1] >> 6) in squares  # noqa: E731
+    land, edge = set(), {}
+    for x, y in tiles:
+        if not (x0 - 1 <= x <= x1 and y0 - 1 <= y <= y1) or depth(x + 0.5, y + 0.5) < -2:
+            continue
+        if depth(x + 0.5, y + 0.5) > 2:
+            land.add((x, y))
+            continue
+        bits = coverage(on_land, x, y)
+        fit = fit_shape(tuple(1 - b for b in bits))  # the sea's part of the tile
+        if fit is None:
+            land.add((x, y))
+        elif fit != (0, 0):
+            edge[(x, y)] = fit
+    coast = [p for p in land if any(n not in land for n in _neighbours(*p))]
+    dist = _distances(coast, lambda p: p in land)
+    shore = [p for p in edge] + [n for p in coast for n in _neighbours(*p) if n not in land and in_area(n)]
+    water_dist = _distances(list(set(shore)), lambda p: p not in land and in_area(p))
+
+    sea, beach, ramp, scale = spec["sea_height"], spec["beach_width"], spec["ramp_tiles"], spec["height_scale"]
+    sand = spec.get("sand_underlay", mats["sand"].get("underlay", 48))
+    grass_noise = lambda x, y: fractal(x, y, spec.get("grass_scale", 9.0), seed + 7)  # noqa: E731
+    grass = _palette(sorted(land), spec["grass"], grass_noise)
+    depths = spec["water_depths"]
+    for x, y in tiles:
+        t = canvas.tile(x, y)
+        if (x, y) in land:
+            d = dist[(x, y)]
+            hill = (calculate_height(x + 7919, y + 3571) - 10) * scale
+            t.height = _clamp_height(sea + 2 + min(1.0, d / ramp) * hill)
+            shore_band = beach + 2.5 * (noise(x, y, 5.0, seed + 3) - 0.5)
+            _paint(t, {"underlay": sand if d < shore_band else grass[(x, y)]})
+        elif (x, y) in edge:
+            t.height = sea
+            _paint(t, {"underlay": sand, **{k: v for k, v in mats[depths[0][1]].items() if k != "underlay"}})
+            t.shape, t.rotation = edge[(x, y)]
+        else:
+            d = water_dist.get((x, y), 99) + 1
+            t.height = sea
+            _paint(t, next((mats[name] for limit, name in depths if d <= limit), mats[depths[-1][1]]))
+
+
 def _paint_zones(canvas: Canvas, zones: list, areas: dict, mats: dict) -> None:
     """Repaint open land in a rect (water, beach and paths keep their floors); `alt` adds noise blobs."""
     for zone in zones:
         x0, y0, x1, y1 = _rect(zone, areas)
+        palette = _palette([(x, y) for x in range(x0, x1) for y in range(y0, y1)], zone["palette"],
+                           lambda x, y: fractal(x, y, 7.0, x0 + 3 * y0)) if "palette" in zone else None
+        inside = None
+        if zone.get("blob"):  # an ellipse in the rect with a noisy rim
+            cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2
+            inside = lambda px, py: (((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2  # noqa: E731
+                                     < 0.75 + 0.5 * fractal(px, py, 6.0, x0 * 31 + y0))
         for x in range(x0, x1):
             for y in range(y0, y1):
                 if not canvas.inside(x, y):
@@ -271,8 +370,17 @@ def _paint_zones(canvas: Canvas, zones: list, areas: dict, mats: dict) -> None:
                 t = canvas.tile(x, y)
                 if t.settings & 1 or t.overlay:
                     continue
+                mat = mats[zone["material"]] if "material" in zone else {"underlay": palette[(x, y)]}
+                if inside:
+                    fit = fit_shape(coverage(inside, x, y)) if "overlay" in mat else (
+                        (0, 0) if inside(x + 0.5, y + 0.5) else None)
+                    if fit is None:
+                        continue
+                    _paint(t, mat)
+                    t.shape, t.rotation = fit if "overlay" in mat else (0, 0)
+                    continue
                 alt = "alt" in zone and calculate_height(x + 4441, y + 7703) > 40
-                _paint(t, mats[zone["alt"] if alt else zone["material"]])
+                _paint(t, mats[zone["alt"]] if alt else mat)
 
 
 def _void(canvas: Canvas, area: Area, mats: dict) -> None:
@@ -300,16 +408,37 @@ def _polyline_tiles(canvas: Canvas, points: list, half: float) -> set:
 
 
 def _rivers(canvas: Canvas, rivers: list, areas: dict, mats: dict) -> None:
-    """Carve rivers and lower the land beside them so banks slope into the water."""
-    for river in rivers:
+    """Carve rivers and lower the land beside them so banks slope into the water. A `curve` river
+    follows a smooth curve through its points with shaped banks over `bank_underlay` (mud)."""
+    for k, river in enumerate(rivers):
         area = _area(river, areas)
         pts = [(area.rx * SIZE + x, area.ry * SIZE + y) for x, y in river["points"]]
-        water = {p for p in _polyline_tiles(canvas, pts, river["width"] / 2)
-                 if not canvas.tile(*p).settings & 1}  # the sea keeps its own water at the mouth
         level, bank = river.get("height", 2), river.get("bank", 5)
+        mat = mats[river.get("material", "shallow")]
+        if river.get("curve"):
+            band = Band()
+            band.add(curve(pts), river["width"] / 2, river.get("wobble", 0.0), 977 + k)
+            water = set()
+            for x, y in band.tiles():
+                if not canvas.inside(x, y) or canvas.tile(x, y).settings & 1:
+                    continue  # the sea keeps its own water at the mouth
+                fit = fit_shape(band.bits(x, y))
+                if fit is None:
+                    continue
+                t = canvas.tile(x, y)
+                _paint(t, mat)
+                t.shape, t.rotation = fit
+                if fit != (0, 0):
+                    t.underlay = river.get("bank_underlay", t.underlay)
+                t.height = level
+                water.add((x, y))
+        else:
+            water = {p for p in _polyline_tiles(canvas, pts, river["width"] / 2)
+                     if not canvas.tile(*p).settings & 1}  # the sea keeps its own water at the mouth
         for x, y in water:
             t = canvas.tile(x, y)
-            _paint(t, mats[river.get("material", "shallow")])
+            if not river.get("curve"):
+                _paint(t, mat)
             t.height = level
         near = _distances(list(water), lambda p: canvas.inside(*p) and p not in water
                           and not canvas.tile(*p).settings & 1)
@@ -320,17 +449,38 @@ def _rivers(canvas: Canvas, rivers: list, areas: dict, mats: dict) -> None:
 
 
 def _paths(canvas: Canvas, paths: list, areas: dict, mats: dict) -> None:
-    for path in paths:
+    """Paths in spec order. `curve` paths of one material share a band through smooth curves, so
+    crossings merge, and edge tiles take shaped overlays; `wobble` varies the width."""
+    bands: dict[str, Band] = {}
+    for k, path in enumerate(paths):
         area = _area(path, areas)
-        mat = mats[path.get("material", "path")]
+        name = path.get("material", "path")
         pts = [(area.rx * SIZE + x, area.ry * SIZE + y) for x, y in path["points"]]
+        if path.get("curve"):
+            band = bands.setdefault(name, Band())
+            band.add(curve(pts), path.get("width", 2) / 2, path.get("wobble", 0.0), 31 + k)
+            continue
         for x, y in _polyline_tiles(canvas, pts, path.get("width", 2) / 2):
             t = canvas.tile(x, y)
             if not t.settings & 1:  # never pave water
-                _paint(t, mat)
+                _paint(t, mats[name])
+    for name, band in bands.items():
+        mat = mats[name]
+        for x, y in sorted(band.tiles()):
+            if not canvas.inside(x, y):
+                continue
+            t = canvas.tile(x, y)
+            if t.settings & 1:  # never pave water
+                continue
+            fit = fit_shape(band.bits(x, y))
+            if fit is None or (t.overlay and t.overlay != mat.get("overlay") and fit != (0, 0)):
+                continue  # leave another floor's tile unless this one covers it
+            t.underlay = mat.get("underlay", t.underlay)
+            t.overlay = mat.get("overlay", 0)
+            t.shape, t.rotation = fit if t.overlay else (0, 0)
 
 
-def _stamp(canvas: Canvas, source: Source, stamp: dict, areas: dict) -> Stamp:
+def _stamp(canvas: Canvas, source: Source, stamp: dict, areas: dict, replace_ids: dict | None = None) -> Stamp:
     sx, sy = stamp["source"]
     w, h = stamp["size"]
     r = stamp.get("rotation", 0) % 4
@@ -345,24 +495,67 @@ def _stamp(canvas: Canvas, source: Source, stamp: dict, areas: dict) -> Stamp:
     src_mean = sum(source.height(sx + i, sy + j) for i, j in border) / len(border)
     dst_mean = sum(canvas.tile(*placed.tile(sx + i, sy + j)).height for i, j in border) / len(border)
     offset = stamp.get("height_offset", dst_mean - src_mean)
+    blend = stamp.get("blend", 0)  # outer tiles that keep the ground's own underlay, in a noisy band
+    ground = {(x, y): canvas.tile(x, y).underlay for x in range(dx, dx + dw) for y in range(dy, dy + dh)
+              if blend and min(x - dx, y - dy, dx + dw - 1 - x, dy + dh - 1 - y) < blend}
 
-    for plane in range(PLANES):
+    area = stamp.get("area", "surface")
+    rects = lambda key: [_rect({"area": area, "rect": rect}, areas) for rect in stamp.get(key, [])]  # noqa: E731
+    within = lambda x, y, rs: any(a <= x < c and b <= y < d for a, b, c, d in rs)  # noqa: E731
+    overlay_swap = {int(k): v for k, v in stamp.get("overlay_swap", {}).items()}
+    ground_only = rects("ground_only")  # copied at plane 0 only: no ceiling there
+    planes = stamp.get("planes", PLANES)  # copy only the lowest planes: what stands above stays behind
+    # clip "land": leave the sea alone, so the coast crops the stamp; clip "water": keep the map's own
+    # water where the source has water (a pier keeps its planks and posts, not its square of sea).
+    clip = stamp.get("clip")
+    sea, wet = set(), set()
+    for i in range(w):
+        for j in range(h):
+            to, below = placed.tile(sx + i, sy + j), source.tile(sx + i, sy + j, 0)
+            if clip == "land" and canvas.tile(*to).settings & 1:
+                sea.add(to)
+            elif clip == "water" and below.settings & 1 and below.overlay:
+                wet.add(to)
+    for plane in range(planes):
         for i in range(w):
             for j in range(h):
+                to = placed.tile(sx + i, sy + j)
+                if to in sea or plane == 0 and to in wet or plane and within(*to, ground_only):
+                    continue
                 src = source.tile(sx + i, sy + j, plane)
                 t = replace(src, rotation=(src.rotation + r) & 3 if src.overlay or src.shape else src.rotation)
+                t.overlay = overlay_swap.get(t.overlay, t.overlay)
                 if plane == 0:
                     t.height = _clamp_height(source.height(sx + i, sy + j) + offset)
-                canvas.put(*placed.tile(sx + i, sy + j), plane, t)
+                canvas.put(*to, plane, t)
 
     drop = set(stamp.get("drop_ids", []))
+    drop_at = {(_at({"area": area, "at": d[:2]}, areas)[:2], d[2])
+               for d in stamp.get("drop_at", [])}  # [x, y, id]: one placement, in area tiles
+    drop_walls = rects("drop_walls_in")  # walls and fences cut off by the crop
+    swap = {} if stamp.get("keep_resources") else (replace_ids or {})
     canvas.locs = [l for l in canvas.locs if not (dx <= l.x < dx + dw and dy <= l.y < dy + dh)]
+    covered = set()
     for loc in source.locs_in(sx, sy, w, h):
-        if loc.id in drop:
+        if loc.id in drop or loc.plane >= planes:
             continue
         fw, fh = _footprint(source, loc)
         ni, nj = _rotate_loc(loc.x - sx, loc.y - sy, fw, fh, w, h, r)
-        canvas.locs.append(Loc(loc.id, loc.plane, dx + ni, dy + nj, loc.type, (loc.rotation + r) & 3))
+        if any((dx + ni + i, dy + nj + j) in sea for i in range(fw) for j in range(fh)):
+            continue
+        if ((dx + ni, dy + nj), loc.id) in drop_at or loc.type in (0, 1, 2, 3, 9) and within(dx + ni, dy + nj, drop_walls):
+            continue
+        canvas.locs.append(Loc(swap.get(loc.id, loc.id), loc.plane, dx + ni, dy + nj, loc.type,
+                               (loc.rotation + r) & 3))
+        if loc.plane == 0 and loc.type != 22:
+            covered.update((dx + ni + i, dy + nj + j) for i in range(fw) for j in range(fh))
+    for (x, y), underlay in ground.items():
+        t = canvas.tile(x, y)
+        edge = min(x - dx, y - dy, dx + dw - 1 - x, dy + dh - 1 - y)
+        if (x, y) in covered or t.overlay or t.settings & 1 or not underlay:
+            continue
+        if noise(x, y, 2.5, 5) > (edge + 0.5) / blend:
+            t.underlay = underlay
     canvas.reserved.append((dx, dy, dx + dw, dy + dh))
     canvas.stamps.append(placed)
     if _area(stamp, areas).kind == "island":
@@ -421,30 +614,102 @@ def _occupied(canvas: Canvas, source: Source) -> set[tuple[int, int]]:
     return taken
 
 
+def _weighted(ids: list) -> tuple[list, list]:
+    """`ids` as plain ids or [id, weight] pairs."""
+    pairs = [(i, 1) if isinstance(i, int) else tuple(i) for i in ids]
+    return [i for i, _ in pairs], [w for _, w in pairs]
+
+
 def _scatter(canvas: Canvas, source: Source, spec: dict, areas: dict, rng: random.Random) -> None:
+    """`count` locs in `rect`, `spacing` tiles from other scenery and `margin` tiles from any floor
+    overlay (paths, water). `decor` scatters place what fits instead of failing; `cluster = [scale,
+    level]` keeps them where a noise field is above `level`, in groves with clearings."""
     taken = _occupied(canvas, source)
     ax0, ay0, ax1, ay1 = _rect(spec, areas)
-    spacing = spec.get("spacing", 1)
+    spacing, margin = spec.get("spacing", 1), spec.get("margin", 0)
+    ids, weights = _weighted(spec["ids"])
+    cluster = spec.get("cluster")
+    floors = set(spec.get("overlays", []))
     placed, tries = 0, 0
     while placed < spec["count"] and tries < spec["count"] * 200:
         tries += 1
-        loc_id = rng.choice(spec["ids"])
+        loc_id = rng.choices(ids, weights)[0]
         x, y = rng.randrange(ax0, ax1), rng.randrange(ay0, ay1)
+        if cluster and fractal(x, y, cluster[0], ax0 * 7 + ay0) < cluster[1]:
+            continue
         loc = Loc(loc_id, 0, x, y, spec.get("type", 10), rng.randrange(4))
         fw, fh = _footprint(source, loc)
         cells = [(x + i, y + j) for i in range(-spacing, fw + spacing) for j in range(-spacing, fh + spacing)]
         if any(not canvas.inside(cx, cy) or (cx, cy) in taken for cx, cy in cells):
             continue
-        if any(any(a <= cx < c and b <= cy < d for a, b, c, d in canvas.reserved) for cx, cy in cells):
-            continue
-        under = [canvas.tile(x + i, y + j) for i in range(fw) for j in range(fh)]
-        if any(t.settings & 1 or t.overlay for t in under):  # land, not beach, path or water
-            continue
+        if not spec.get("in_stamps") and any(any(a <= cx < c and b <= cy < d for a, b, c, d in canvas.reserved)
+                                              for cx, cy in cells):
+            continue  # stamps keep their own scenery unless the scatter belongs in one (a field)
+        near = [(x + i, y + j) for i in range(-margin, fw + margin) for j in range(-margin, fh + margin)]
+        if any(not canvas.inside(*p) or canvas.tile(*p).settings & 1
+               or canvas.tile(*p).overlay and canvas.tile(*p).overlay not in floors for p in near):
+            continue  # land, not beach, path or water (`overlays` lists floors it may stand on)
         canvas.locs.append(loc)
         taken.update((x + i, y + j) for i in range(fw) for j in range(fh))
         placed += 1
-    if placed < spec["count"]:
+    if placed < spec["count"] and not spec.get("decor"):
         raise SystemExit(f"scatter {spec['ids']} placed {placed}/{spec['count']}; widen its rect")
+
+
+def _decor(canvas: Canvas, source: Source, spec: dict, areas: dict, rng: random.Random) -> int:
+    """Ground decoration (grass tufts, flowers, stones) on open land outside stamps: each free tile
+    with an allowed underlay gets one with chance `density`, ids weighted as on real land."""
+    area = _area(spec, areas)
+    x0, y0, x1, y1 = _rect(spec, areas) if "rect" in spec else area.bounds
+    ids, weights = _weighted(spec["ids"])
+    kind = spec.get("type", 22)
+    allowed = set(spec.get("underlays", [])) or None
+    taken = _occupied(canvas, source)
+    taken.update((l.x, l.y) for l in canvas.locs if l.plane == 0 and l.type == kind)
+    placed = 0
+    for x in range(x0, x1):
+        for y in range(y0, y1):
+            if (x, y) in taken or not canvas.inside(x, y) or rng.random() >= spec["density"]:
+                continue
+            t = canvas.tile(x, y)
+            if t.overlay or t.settings & 1 or (allowed and t.underlay not in allowed):
+                continue
+            if any(a <= x < c and b <= y < d for a, b, c, d in canvas.reserved):
+                continue
+            canvas.locs.append(Loc(rng.choices(ids, weights)[0], 0, x, y, kind, rng.randrange(4)))
+            taken.add((x, y))
+            placed += 1
+    return placed
+
+
+def _floors(canvas: Canvas, floors: list, areas: dict, mats: dict) -> None:
+    """Re-floor whole tiles after stamping, e.g. planks laid over a stamped channel."""
+    for floor in floors:
+        x0, y0, x1, y1 = _rect(floor, areas)
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                _paint(canvas.tile(x, y), mats[floor["material"]])
+
+
+def _fences(canvas: Canvas, fences: list, areas: dict) -> None:
+    """A wall loc (`id`, e.g. a wooden fence) around the outer edges of the rect's border tiles:
+    straight pieces (type 0) along the sides, corner pieces (type 2) at the corners. `gaps` are border
+    tiles left open, so animals keep to the pen and people walk in."""
+    for fence in fences:
+        x0, y0, x1, y1 = _rect(fence, areas)
+        area = _area(fence, areas)
+        gaps = {(area.rx * SIZE + x, area.ry * SIZE + y) for x, y in fence.get("gaps", [])}
+        pieces = {}
+        for x in range(x0, x1):
+            pieces[(x, y0)] = (0, 3)
+            pieces[(x, y1 - 1)] = (0, 1)
+        for y in range(y0, y1):
+            pieces[(x0, y)] = (0, 0)
+            pieces[(x1 - 1, y)] = (0, 2)
+        pieces.update({(x0, y1 - 1): (2, 0), (x1 - 1, y1 - 1): (2, 1), (x1 - 1, y0): (2, 2), (x0, y0): (2, 3)})
+        for (x, y), (kind, rot) in pieces.items():
+            if (x, y) not in gaps and not canvas.tile(x, y).settings & 1:
+                canvas.locs.append(Loc(fence["id"], 0, x, y, kind, rot))
 
 
 def _links(canvas: Canvas, source: Source, links: list, areas: dict) -> list[Edge]:
@@ -585,7 +850,9 @@ def compile_gym(spec_path: Path, source_cache: Path, source_edges_path: Path | N
     rng = random.Random(m["seed"])
 
     for area in areas.values():
-        if area.kind == "island":
+        if area.kind == "island" and spec["island"].get("coast") == "smooth":
+            _island_smooth(canvas, area, spec["island"], mats, m["seed"])
+        elif area.kind == "island":
             _island(canvas, area, spec["island"], mats, m["seed"])
         elif area.kind == "void":
             _void(canvas, area, mats)
@@ -594,12 +861,26 @@ def compile_gym(spec_path: Path, source_cache: Path, source_edges_path: Path | N
     _paint_zones(canvas, spec.get("paint", []), areas, mats)
     _rivers(canvas, spec.get("river", []), areas, mats)
     _paths(canvas, spec.get("path", []), areas, mats)
-    stamps = [(_stamp(canvas, source, s, areas), set(s.get("drop_ids", []))) for s in spec.get("stamp", [])]
+    replace_ids = {int(k): v for k, v in spec.get("replace", {}).items()}
+    stamps = [(_stamp(canvas, source, s, areas, replace_ids), set(s.get("drop_ids", [])))
+              for s in spec.get("stamp", [])]
     for loc in spec.get("loc", []):
         x, y, plane = _at(loc, areas)
         canvas.locs.append(Loc(loc["id"], plane, x, y, loc.get("type", 10), loc.get("rotation", 0)))
+    _floors(canvas, spec.get("floor", []), areas, mats)
+    for a in spec["area"]:  # a void area's empty tiles (rock between tunnels) can take one solid floor
+        if a["kind"] == "void" and "fill_underlay" in a:
+            for x, y in canvas.tiles_of(areas[a["name"]].squares()):
+                t = canvas.tile(x, y)
+                if not t.underlay and not t.overlay:
+                    t.underlay = a["fill_underlay"]
+                    if not any(x0 <= x < x1 and y0 <= y < y1 for x0, y0, x1, y1 in canvas.reserved):
+                        t.height = a.get("fill_height", t.height)  # stamped rock keeps its heights
+    _fences(canvas, spec.get("fence", []), areas)
     for scatter in spec.get("scatter", []):
         _scatter(canvas, source, scatter, areas, rng)
+    for decor in spec.get("decor", []):
+        _decor(canvas, source, decor, areas, rng)
 
     for loc in canvas.locs:
         if not canvas.inside(loc.x, loc.y):

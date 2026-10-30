@@ -22,8 +22,11 @@ Steps, in order:
 
 - `mapformat.py` reads and writes b237 mapsquare terrain and loc files.
 - `compile.py` turns a spec into mapsquares and tables: areas, island terrain, rivers, paths,
-  rotated stamps (all planes, heights fitted, their stair rows moved along), locs, scatter, links,
-  zones, NPC and item spawns, landmarks.
+  rotated stamps (heights fitted, their stair rows moved along, decorative swaps, coast clipping,
+  blended edges), locs, fences, scatter, ground decoration, links, zones, NPC and item spawns,
+  landmarks.
+- `shapes.py` gives smooth floors their edges: curves, value noise, and the client's 12 overlay
+  shapes fitted to each edge tile from a 4x4 sample of the region.
 - `cachewrite.py` writes an OpenRS2-layout cache whose map index holds only the gym; every other
   index links back to `data/source/.../cache`.
 - `spatial.py` writes the traversal (stairs, ladders, links) and area-flag (zones) tables.
