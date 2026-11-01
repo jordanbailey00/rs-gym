@@ -1,78 +1,78 @@
-# RS-gym
+<p align="center">
+  <img src="media/logo.png" alt="rs-gym" width="392">
+</p>
 
-A miniature Old School RuneScape for reinforcement learning. RS-gym builds small custom worlds out of
-OSRS (b237) cache content, simulates them with a C engine, exposes them to RL agents through a C API
-and a PufferLib 5.0 binding, and shows them (or a recorded episode) in an OSRS-style client.
+<p align="center">A miniature Old School RuneScape for reinforcement learning.</p>
 
-Each world is a mode (`modes/`). The v1 benchmark is `compact_osrs_v1`: a questless compact
-progression sandbox with fifteen skills capped at 40, closed production chains, a fixed-price
-economy, trading, and Scurrius as the shared boss (`SPEC.md`).
+![The island](media/island.jpg)
 
-Everything needed to build and run it lives in this repo. `data/` is a local, git-ignored install.
+## What it is
 
-## Layout
+rs-gym is a small, complete OSRS-style world built from OSRS (b237) cache content. A headless C engine
+runs the game, agents play it through a C API or PufferLib 5.0, and an OSRS-style client lets you
+play it yourself or watch recorded episodes.
 
-```text
-rc-core/     headless C engine: ticks, movement, combat, skilling, shops, death, items, NPCs, collision
-rc-content/  OSRS content on top of rc-core: gym skilling rules, shops, death rules, bosses, combat hooks
-rc-env/      RL interface: observations, masked actions, tasks, replays, benchmark, PufferLib binding
-rc-viewer/   OSRS-style raylib client; also replays recorded episodes
-modes/       mode configuration: content whitelist, overrides, economy, boss tuning, manifest, ledger
-tools/       map compiler (gymmap), mode compiler (modec), export pipeline, build_mode.py
-maps/        map specs (compact_v1.toml, island.toml)
-tests/       compiler tests and headless C tests
-lib/raylib/  vendored prebuilt raylib 5.5
-data/        local runtime data (git-ignored, Jagex content)
-```
+## Purpose
 
-`SPEC.md` describes what each version contains, `TODO.md` holds open work, `CHANGELOG.md` records
-every change and why.
+To give RL agents a long-horizon game with the depth of OSRS at a size they can actually master.
+Agents start at level 1 with a starter kit, train skills, make their own supplies, earn money, trade
+with each other and work up to a boss, alone or as a team. Runs are deterministic for a seed and
+action sequence.
 
-## Quick start
+![Agents mining together](media/agents_mining.jpg)
 
-Run everything from the repo root.
+## Content
+
+The v1 benchmark mode is `compact_osrs_v1`:
+
+- **World:** one island with a village, bank, shops, farm, quarry and pier, above one connected
+  dungeon of sewers, a moss cave and gated rooms.
+- **Players:** 1 to 8 in a shared world.
+- **Skills:** Attack, Strength, Defence, Hitpoints, Ranged, Magic, Prayer, Mining, Smithing,
+  Woodcutting, Fletching, Fishing, Cooking, Crafting and Runecraft, capped at level 40.
+- **Enemies:** chickens, cows, giant rats, goblins, skeletons, dark wizards and hill giants.
+- **Boss:** Scurrius, shared and scaled to the group, with melee, ranged and magic attacks, falling
+  bricks, rat summons and feeding phases. Its drops make bone weapons.
+- **Economy:** closed production chains, fixed-price shops, a bank and player trading.
+
+## Usage
+
+You need Python 3.11+ with Pillow and NumPy, CMake 3.20+, a C11 compiler, zlib and OpenGL.
+
+You also need a local `data/` directory holding the OSRS b237 cache and the exported definitions,
+models and UI art. It isn't in this repo because it's Jagex content.
+
+Run everything from the repo root:
 
 ```bash
+# Build the code, the mode's data and run the tests
 cmake -S . -B build/cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build build/cmake --parallel
-python3 tools/build_mode.py                 # compact_osrs_v1; add "island" for the first draft
+python3 tools/build_mode.py
 ctest --test-dir build/cmake --output-on-failure
+
+# Play it
 ./build/cmake/rc-viewer --mode compact_osrs_v1
-./build/cmake/rs-gym-acceptance all --seeds 5 --report modes/compact_osrs_v1/acceptance-report.md
-```
 
-`build_mode.py` compiles the mode's map and rules into `data/modes/<mode>/` in under a minute and
-runs `rs-gym-validate`. `rs-gym-acceptance` plays scripted fresh-start routes to a Scurrius kill,
-a four-player co-op team, eight-player contention and the economy checks, and measures throughput
-(see `modes/README.md`).
-
-RL side:
-
-```bash
+# Record four random agents, then watch the replay
 ./build/cmake/rs-gym-rollout --mode compact_osrs_v1 --agents 4 --ticks 3000 --record build/replays/compact.rgc
 ./build/cmake/rc-viewer --replay build/replays/compact.rgc
-./build/cmake/rs-gym-rollout --task woodcutting --agents 4 --ticks 3000 --record build/replays/wc.rgr
-./build/cmake/rc-viewer --replay build/replays/wc.rgr
-./build/cmake/rs-gym-bench --envs 16 --agents 4 --threads 16
-tools/puffer_overlay.sh /path/to/PufferLib    # hook into a PufferLib 5.0 checkout
+
+# Hook into a PufferLib 5.0 checkout
+tools/puffer_overlay.sh /path/to/PufferLib
 ```
 
-See `rc-env/README.md` for the C API, observation and action layouts, and tasks.
+The C API, observations, actions and task profiles are in [rc-env/README.md](rc-env/README.md).
+Viewer controls are in [rc-viewer/README.md](rc-viewer/README.md).
 
-Requirements: Python 3.11+ with Pillow, CMake 3.20+, a C11 compiler, zlib and OpenGL.
+## Version
 
-## Data
+v1: mode `compact_osrs_v1` version 1, OSRS revision b237, RL schema compact-v2.
 
-| Path under `data/` | Contents | Source |
-|---|---|---|
-| `source/b237-openrs2-2528/cache` | OSRS b237 cache (OpenRS2 #2528) | copied once; the map compiler's source |
-| `source/traversal_edges.b237.bin`, `source/drops.b237.bin` | real-world stair/ladder rows and drop tables | copied once |
-| `defs/ models/ sprites/ fonts/ ui/ anims/` | definitions, models, UI art, animations | copied once from RuneC_v4's installed release `data-v2026.10.22-b237` |
-| `modes/<mode>/` | a mode's map, collision, objects, spawns, zones, links, nodes, drops, layout and rules | generated by `tools/build_mode.py` |
+The full design is in [SPEC.md](SPEC.md), open work in [TODO.md](TODO.md) and the history in
+[CHANGELOG.md](CHANGELOG.md).
 
-## Origin
+## Legal
 
-`rc-core`, `rc-content`, `rc-viewer` and the export pipeline were copied from RuneC_v4 at `338f2e6`.
-RS-gym maintains its own copies and never calls RuneC.
-
-Old School RuneScape content, cache data, names and assets belong to Jagex Ltd. Keep `data/` private.
+Old School RuneScape content, names and assets belong to Jagex Ltd. rs-gym is not affiliated with
+Jagex. Keep `data/` private.

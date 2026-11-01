@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-31: simpler README with a logo and screenshots
+
+**What.** Rewrote `README.md` around what rs-gym is, its purpose, content, usage and version, with an
+OSRS-font logo and two screenshots in `media/`.
+
+**Why.** The README had grown a layout and data reference that the component READMEs already cover.
+It also wrongly said everything needed lives in the repo (`data/` does not) and left NumPy out of
+the requirements.
+
 ## 2026-10-30: Scurrius moves, attacks and fights like the boss it is
 
 **What.**
